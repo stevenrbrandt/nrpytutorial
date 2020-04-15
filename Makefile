@@ -29,12 +29,6 @@ endif
 
 default: libSENR.a
 
-senr_lib_main: libSENR.a senr_lib_main.o
-	$(CC) $(CFLAGS) $(INCLUDE_DIRS) $(DEFINES) senr_lib_main.o -o senr_lib_main -L. -lSENR -lm
-
-senr_lib_main.o : $(BSSN_DIR)/senr_lib_main.c $(BSSN_DIR)/senr_lib.h
-	$(CC) -c $(CFLAGS) $(INCLUDE_DIRS) $(DEFINES) $(BSSN_DIR)/senr_lib_main.c
-
 libSENR.a: senr_lib.o 
 	$(AR)  r libSENR.a senr_lib.o 
 	$(RANLIB) libSENR.a
