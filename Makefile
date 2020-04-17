@@ -1,5 +1,4 @@
-CC=$(HOME)/Code/charm/bin/charmc
-#CC=gcc
+CC=gcc
 AR=ar
 RANLIB=ranlib
 
