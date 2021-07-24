@@ -18,15 +18,21 @@ par.initialize_param(par.glb_param("char", thismodule, "GridFuncMemAccess", "SEN
 par.initialize_param(par.glb_param("char", thismodule, "MemAllocStyle", "210"))
 par.initialize_param(par.glb_param("int",  thismodule, "DIM", 3))
 
-Nxx = par.Cparameters("int", thismodule,["Nxx0","Nxx1","Nxx2"],[64,32,64]) # Default to 64x32x64 grid
+# Multiple grid support.
+par.Cparameters("int",  thismodule, "numgrids", 1)
+
+Nxx = par.Cparameters("int", thismodule, ["Nxx0", "Nxx1", "Nxx2"], [64, 32, 64])  # Default to 64x32x64 grid
 Nxx_plus_2NGHOSTS = par.Cparameters("int", thismodule,
                       ["Nxx_plus_2NGHOSTS0","Nxx_plus_2NGHOSTS1","Nxx_plus_2NGHOSTS2"],
                       [                  70,                  38,                  70]) # Default to 64x32x64 grid w/ NGHOSTS=3
-xx = par.Cparameters("REAL", thismodule, ["xx0", "xx1", "xx2"],1e300) # These are C variables, not parameters, and
-                                                                      # will be overwritten; best to initialize to crazy
-                                                                      # number to ensure they are overwritten!
+xx = par.Cparameters("REAL", thismodule, ["xx0", "xx1", "xx2"], 1e300) # These are C variables, not parameters, and
+                                                                       # will be overwritten; best to initialize to crazy
+                                                                       # number to ensure they are overwritten!
 dxx = par.Cparameters("REAL", thismodule, ["dxx0", "dxx1", "dxx2"], 0.1)
 invdx = par.Cparameters("REAL", thismodule, ["invdx0", "invdx1", "invdx2"], 1.0)
+
+# Origin of grid in Cartesian coordinates, relative to global grid
+Cart_origin = par.Cparameters("REAL", thismodule, ["Cart_originx", "Cart_originy", "Cart_originz"], 0.0)
 
 def variable_type(var):
     var_is_gf = False
