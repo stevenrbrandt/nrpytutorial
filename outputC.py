@@ -488,11 +488,19 @@ def outCfunction(outfile="", includes=None, prefunc="", desc="",
 
 def construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_free_parameters_h=False,
                                                compiler_opt_option="fastdebug", addl_CFLAGS=None,
-                                               addl_libraries=None):
+                                               addl_libraries=None, mkdir_Ccodesrootdir=True):
     if "main" not in outC_function_dict:
         print("construct_Makefile_from_outC_function_dict() error: C codes will not compile if main() function not defined!")
         print("    Make sure that the main() function registered to outC_function_dict has name \"main\".")
         sys.exit(1)
+
+    if not os.path.isdir(Ccodesrootdir):
+        if not mkdir_Ccodesrootdir:
+            print("Error (in construct_Makefile_from_outC_function_dict): Directory \"" + Ccodesrootdir + "\" does not exist.")
+            sys.exit(1)
+        else:
+            import cmdline_helper as cmd
+            cmd.mkdir(Ccodesrootdir)
 
     Makefile_list_of_files = []
     def add_to_Makefile(Ccodesrootdir, path_and_file):
