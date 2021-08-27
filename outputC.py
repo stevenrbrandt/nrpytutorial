@@ -11,6 +11,7 @@
 #           "from outputC import *" is called.
 __all__ = ['lhrh', 'outCparams', 'nrpyAbs', 'superfast_uniq', 'check_if_string__error_if_not',
            'outputC','parse_outCparams_string',
+           'outC_NRPy_basic_defines_h_dict',
            'outC_function_prototype_dict', 'outC_function_dict', 'Cfunction', 'add_to_Cfunction_dict', 'outCfunction']
 
 import loop as lp                             # NRPy+: C code loop interface
@@ -18,7 +19,7 @@ import NRPy_param_funcs as par                # NRPy+: parameter interface
 from SIMD import expr_convert_to_SIMD_intrins # NRPy+: SymPy expression => SIMD intrinsics interface
 from cse_helpers import cse_preprocess,cse_postprocess  # NRPy+: CSE preprocessing and postprocessing
 import sympy as sp                            # SymPy: The Python computer algebra package upon which NRPy+ depends
-import re, sys, os                            # Standard Python: regular expressions, system, and multiplatform OS funcs
+import re, sys, os, stat                      # Standard Python: regular expressions, system, and multiplatform OS funcs
 from collections import namedtuple            # Standard Python: Enable namedtuple data type
 
 lhrh = namedtuple('lhrh', 'lhs rhs')
@@ -423,19 +424,21 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
         print(successstr + "to file \"" + filename + "\"")
 
 
+outC_NRPy_basic_defines_h_dict = {}
+
 outC_function_prototype_dict = {}
 outC_function_dict           = {}
 outC_function_outdir_dict    = {}
 
 def Cfunction(includes=None, prefunc="", desc="", type="void", name=None, params=None, preloop="", body=None,
-              loopopts="", postloop="", opts="", rel_path_to_Cparams=os.path.join("./")):
+              loopopts="", postloop="", enableCparameters=True, rel_path_to_Cparams=os.path.join("./"), rfm_enable=False):
     if name is None or params is None or body is None: # use "is None" instead of "==None", as the former is more correct.
         print("Cfunction() error: strings must be provided for function name, parameters, and body")
         sys.exit(1)
     func_prototype = type+" "+name+"("+params+")"
 
     include_Cparams_str = ""
-    if "DisableCparameters" not in opts:
+    if enableCparameters:
         if "EnableSIMD" in loopopts:
             include_Cparams_str = "#include \"" + os.path.join(rel_path_to_Cparams, "set_Cparameters-SIMD.h") + "\"\n"
         else:
@@ -444,8 +447,9 @@ def Cfunction(includes=None, prefunc="", desc="", type="void", name=None, params
     complete_func = ""
     if includes is not None:
         if not isinstance(includes, list):
-            print("Error in outCfunction(): includes must be set to a list of strings")
+            print("Error in Cfunction(name="+name+"): includes must be set to a list of strings")
             print("e.g., includes=[\"stdio.h\",\"stdlib.h\"] ;  or None (default)")
+            print("Found includes = " + str(includes))
             sys.exit(1)
         for inc in includes:
             complete_func += "#include \"" + inc + "\"\n"
@@ -468,18 +472,19 @@ def Cfunction(includes=None, prefunc="", desc="", type="void", name=None, params
     return func_prototype+";", complete_func
 
 def add_to_Cfunction_dict(includes=None, prefunc="", desc="", type="void", name=None, params=None,
-                          preloop="", body=None, loopopts="", postloop="", opts="",
-                          path_from_rootsrcdir_to_this_Cfunc="default", rel_path_to_Cparams=os.path.join("./")):
+                          preloop="", body=None, loopopts="", postloop="",
+                          path_from_rootsrcdir_to_this_Cfunc="default", enableCparameters=True,
+                          rel_path_to_Cparams=os.path.join("./"), rfm_enable=False):
     outC_function_outdir_dict[name] = path_from_rootsrcdir_to_this_Cfunc
     outC_function_prototype_dict[name], outC_function_dict[name] = \
-        Cfunction(includes, prefunc, desc, type, name, params, preloop, body, loopopts, postloop, opts,
-                  rel_path_to_Cparams)
+        Cfunction(includes, prefunc, desc, type, name, params, preloop, body, loopopts, postloop,
+                  enableCparameters, rel_path_to_Cparams, rfm_enable)
 
 def outCfunction(outfile="", includes=None, prefunc="", desc="",
                  type="void", name=None, params=None, preloop="", body=None, loopopts="", postloop="",
-                 opts="", rel_path_to_Cparams=os.path.join("./")):
+                 enableCparameters=True, rel_path_to_Cparams=os.path.join("./"), rfm_enable=False):
     _ignoreprototype,Cfunc = Cfunction(includes, prefunc, desc, type, name, params, preloop, body,
-                                       loopopts, postloop, opts, rel_path_to_Cparams)
+                                       loopopts, postloop, enableCparameters, rel_path_to_Cparams, rfm_enable)
     if outfile == "returnstring":
         return Cfunc
     with open(outfile, "w") as file:
@@ -488,7 +493,7 @@ def outCfunction(outfile="", includes=None, prefunc="", desc="",
 
 def construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_free_parameters_h=False,
                                                compiler_opt_option="fastdebug", addl_CFLAGS=None,
-                                               addl_libraries=None, mkdir_Ccodesrootdir=True):
+                                               addl_libraries=None, mkdir_Ccodesrootdir=True, use_make=True):
     if "main" not in outC_function_dict:
         print("construct_Makefile_from_outC_function_dict() error: C codes will not compile if main() function not defined!")
         print("    Make sure that the main() function registered to outC_function_dict has name \"main\".")
@@ -545,20 +550,94 @@ def construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_fr
         dep_list.append(object_file + ": " + c_file + addl_headers)
         compile_list.append("\t$(CC) $(CFLAGS)  -c " + c_file + " -o " + object_file)
 
-    with open(os.path.join(Ccodesrootdir, "Makefile"), "w") as Makefile:
-        Makefile.write("""CC     = """ + CC + """
+    if use_make:
+        with open(os.path.join(Ccodesrootdir, "Makefile"), "w") as Makefile:
+            Makefile.write("""CC     = """ + CC + """
 CFLAGS = """ + CHOSEN_CFLAGS + """
 #CFLAGS = """ + CFLAGS + """
 #CFLAGS = """ + DEBUGCFLAGS + """
 #CFLAGS = """ + OPTCFLAGS + "\n")
-        Makefile.write("all: " + all_str + "\n")
-        for idx, dep in enumerate(dep_list):
-            Makefile.write(dep + "\n")
-            Makefile.write(compile_list[idx] + "\n\n")
-        Makefile.write(exec_name + ": " + all_str.replace(exec_name, "") + "\n")
-        linked_libraries = " -lm"
-        if addl_libraries is not None:
-            for lib in addl_libraries:
-                linked_libraries += " " + lib
-        Makefile.write("\t$(CC) $(CFLAGS) main.c " + all_str.replace(exec_name, "").replace("main.o", "") + " -o " + exec_name + linked_libraries + "\n")
-        Makefile.write("\nclean:\n\trm -f *.o */*.o *~ */*~ ./#* *.txt *.dat *.avi *.png " + exec_name + "\n")
+            Makefile.write("all: " + all_str + "\n")
+            for idx, dep in enumerate(dep_list):
+                Makefile.write(dep + "\n")
+                Makefile.write(compile_list[idx] + "\n\n")
+            Makefile.write(exec_name + ": " + all_str.replace(exec_name, "") + "\n")
+            linked_libraries = " -lm"
+            if addl_libraries is not None:
+                for lib in addl_libraries:
+                    linked_libraries += " " + lib
+            Makefile.write("\t$(CC) $(CFLAGS) main.c " + all_str.replace(exec_name, "").replace("main.o", "") + " -o " + exec_name + linked_libraries + "\n")
+            Makefile.write("\nclean:\n\trm -f *.o */*.o *~ */*~ ./#* *.txt *.dat *.avi *.png " + exec_name + "\n")
+    else:
+        with open(os.path.join(Ccodesrootdir, "backup_script_nomake.sh"), "w") as backup:
+            for compile in compile_list:
+                backup.write(compile.replace("$(CC)", CC).replace("$(CFLAGS)", CFLAGS).replace("\t", "") + "\n")
+            backup.write(CC + " " + CFLAGS + " main.c " + all_str.replace(exec_name, "").replace("main.o", "") + " -o " + exec_name + linked_libraries + "\n")
+        os.chmod(os.path.join(Ccodesrootdir, "backup_script_nomake.sh"), stat.S_IRWXU)
+
+
+def construct_NRPy_basic_defines_h(Ccodesrootdir):
+    if not os.path.isdir(Ccodesrootdir):
+        print("Error (in construct_NRPy_basic_defines_h): Directory \"" + Ccodesrootdir + "\" does not exist.")
+        sys.exit(1)
+
+    with open(os.path.join(Ccodesrootdir, "NRPy_basic_defines.h"), "w") as file:
+        file.write("""// NRPy+ basic definitions, automatically generated from outC_NRPy_basic_defines_h_dict within outputC,
+//    and populated within NRPy+ modules. DO NOT EDIT THIS FILE BY HAND.""")
+        for key in ["outputC", "NRPy_param_funcs", "grid", "reference_metric", "finite_difference", "CurviBoundaryConditions"]:
+            if key in outC_NRPy_basic_defines_h_dict:
+                file.write("\n\n//********************************************\n")
+                file.write("// Basic definitions for module " + key + ":\n" + outC_NRPy_basic_defines_h_dict[key])
+                file.write("\n\n//********************************************\n")
+        file.write("\n")
+
+def construct_NRPy_function_prototypes_h(Ccodesrootdir):
+    if not os.path.isdir(Ccodesrootdir):
+        print("Error (in construct_NRPy_function_prototypes_h): Directory \"" + Ccodesrootdir + "\" does not exist.")
+        sys.exit(1)
+    with open(os.path.join(Ccodesrootdir, "NRPy_function_prototypes.h"), "w") as file:
+        for key, item in outC_function_prototype_dict.items():
+            file.write(item + "\n")
+
+
+def register_C_functions_and_NRPy_basic_defines():
+    # First register C functions needed by outputC
+
+    # Then set up the dictionary entry for outputC in NRPy_basic_defines
+    Nbd_str  = r"""
+#include "stdio.h"
+#include "stdlib.h"
+#include "math.h"
+#include "string.h" // "string.h Needed for strncmp, etc.
+#include "stdint.h" // "stdint.h" Needed for Windows GCC 6.x compatibility, and for int8_t
+
+#ifndef M_PI
+#define M_PI 3.141592653589793238462643383279502884L
+#endif
+#ifndef M_SQRT1_2
+#define M_SQRT1_2 0.707106781186547524400844362104849039L
+#endif
+"""
+    Nbd_str += "#define REAL " + par.parval_from_str("outputC::PRECISION") + "\n"
+
+    # Then set up the dictionary entry for grid in NRPy_basic_defines
+    # Step 2: Generate C code to declare C paramstruct;
+    #         output to "declare_Cparameters_struct.h"
+    #         We want the elements of this struct to be *sorted*,
+    #         to ensure that the struct is consistently ordered
+    #         for checkpointing purposes.
+    Nbd_str += "typedef struct __paramstruct__ {\n"
+    CCodelines = []
+    for i in range(len(par.glb_Cparams_list)):
+        if par.glb_Cparams_list[i].type != "#define":
+            if par.glb_Cparams_list[i].type == "char":
+                c_type = "char *"
+            else:
+                c_type = par.glb_Cparams_list[i].type
+            comment = "  // " + par.glb_Cparams_list[i].module + "::" + par.glb_Cparams_list[i].parname
+            CCodelines.append("    " + c_type + " " + par.glb_Cparams_list[i].parname + ";" + comment + "\n")
+    for line in sorted(CCodelines):
+        Nbd_str += line
+    Nbd_str += "} paramstruct;\n"
+
+    outC_NRPy_basic_defines_h_dict["outputC"] = Nbd_str

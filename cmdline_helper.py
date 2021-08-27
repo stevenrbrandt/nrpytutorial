@@ -23,7 +23,7 @@
 #          zachetie **at** gmail **dot* com
 #          Kevin Lituchy
 
-import io, os, shlex, subprocess, sys, time, multiprocessing, getpass, platform
+import io, os, shlex, subprocess, sys, time, multiprocessing, getpass, platform, glob
 
 # check_executable_exists(): Check to see whether an executable exists.
 #                            Error out or return False if not exists;
@@ -104,6 +104,40 @@ def C_compile(main_C_output_path, main_C_output_file, compile_mode="optimized", 
         sys.exit(1)
 
     print("Finished compilation.")
+
+from outputC import construct_Makefile_from_outC_function_dict
+def new_C_compile(Ccodesrootdir, exec_name, uses_free_parameters_h=False,
+                  compiler_opt_option="fast", addl_CFLAGS=None,
+                  addl_libraries=None, mkdir_Ccodesrootdir=True, attempt=1):
+    check_executable_exists("gcc")
+    use_make = check_executable_exists("make", error_if_not_found=False)
+
+    construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_free_parameters_h,
+                                               compiler_opt_option, addl_CFLAGS,
+                                               addl_libraries, mkdir_Ccodesrootdir, use_make)
+    compile_succeeded = True
+    os.chdir(Ccodesrootdir)
+    if use_make:
+        Execute_input_string("make -j" + str(int(multiprocessing.cpu_count()) + 2), os.devnull)
+    else:
+        Execute_input_string(os.path.join("./", "backup_script_nomake.sh"))
+    os.chdir(os.path.join(".."))
+
+    if not os.path.isfile(os.path.join(Ccodesrootdir, exec_name)) and attempt == 1:
+        print("Optimized compilation FAILED. Removing optimizations (including OpenMP) and retrying with debug enabled...")
+        # First clean up object files.
+        filelist = glob.glob(os.path.join(Ccodesrootdir, "*.o"))
+        for file in filelist:
+            os.remove(file)
+        # Then retry compilation (recursion)
+        new_C_compile(Ccodesrootdir, exec_name, uses_free_parameters_h,
+                      compiler_opt_option="debug", addl_CFLAGS=addl_CFLAGS,
+                      addl_libraries=addl_libraries, mkdir_Ccodesrootdir=mkdir_Ccodesrootdir, attempt=2)
+    if not os.path.isfile(os.path.join(Ccodesrootdir, exec_name)) and attempt == 2:
+        print("Sorry, compilation failed")
+        sys.exit(1)
+    print("Finished compilation.")
+
 
 # Execute(): Execute generated executable file, using taskset
 #            if available. Calls Execute_input_string() to

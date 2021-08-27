@@ -588,7 +588,7 @@ def add_FD_func_to_outC_function_dict(list_of_deriv_vars,
                                   replace("dD", "first derivative: ").replace("dKOD", "Kreiss-Oliger derivative: ").
                                   replace("dupD", "upwinded derivative: ").replace("ddnD", "downwinded derivative: ") + " direction. In Cartesian coordinates, directions 0,1,2 correspond to x,y,z directions, respectively.",
                                   type="static " + Ctype + " _NOINLINE _UNUSED",
-                                  name=func_prefix+"f_" + str(op), opts="DisableCparameters",
+                                  name=func_prefix+"f_" + str(op), enableCparameters=False,
                                   params=outfunc_params, preloop="", body=outFDstr)
     return FDfunccall_list
 

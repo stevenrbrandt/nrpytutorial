@@ -159,11 +159,11 @@ def Convert_Spherical_or_Cartesian_ADM_to_BSSN_curvilinear(CoordType_in, ADM_inp
     name = "ID_BSSN_lambdas"
     params = "const paramstruct *restrict params,REAL *restrict xx[3],REAL *restrict in_gfs"
     preloop = ""
-    opts = ""
+    enableCparameters=True
     idx4replace = "IDX4S"
     if "oldloops" in loopopts:
         params = "const int Nxx[3],const int Nxx_plus_2NGHOSTS[3],REAL *xx[3],const REAL dxx[3],REAL *in_gfs"
-        opts = "DisableCparameters"
+        enableCparameters=False
         idx4replace = "IDX4"
         preloop = """
 const REAL invdx0 = 1.0/dxx[0];
@@ -174,7 +174,7 @@ const REAL invdx2 = 1.0/dxx[2];
         outfile=os.path.join(Ccodesdir, name + ".h"), desc=desc, name=name, params=params,
         preloop=preloop,
         body=fin.FD_outputC("returnstring", lambdaU_expressions, outCparams).replace("IDX4",idx4replace),
-        loopopts="InteriorPoints,Read_xxs"+loopopts, opts=opts)
+        loopopts="InteriorPoints,Read_xxs"+loopopts, enableCparameters=enableCparameters)
 
     # Step 5: Output all ADM-to-BSSN expressions to a C function. This function
     #         must first call the ID_ADM_SphorCart() defined above. Using these
@@ -187,10 +187,10 @@ const REAL invdx2 = 1.0/dxx[2];
 
     desc = "Write BSSN variables in terms of ADM variables at a given point xx0,xx1,xx2"
     name = "ID_ADM_xx0xx1xx2_to_BSSN_xx0xx1xx2__ALL_BUT_LAMBDAs"
-    opts = ""
+    enableCparameters=True
     params = "const paramstruct *restrict params, "
     if "oldloops" in loopopts:
-        opts = "DisableCparameters"
+        enableCparameters=False
         params = ""
     params += "const REAL xx0xx1xx2[3]," + ID_inputs_param + """
                     REAL *hDD00,REAL *hDD01,REAL *hDD02,REAL *hDD11,REAL *hDD12,REAL *hDD22,
@@ -231,7 +231,7 @@ const REAL invdx2 = 1.0/dxx[2];
                       "*aDD00", "*aDD01", "*aDD02", "*aDD11", "*aDD12", "*aDD22",
                       "*trK", "*vetU0", "*vetU1", "*vetU2", "*betU0", "*betU1", "*betU2",
                       "*alpha", "*cf"], "returnstring", params=outCparams),
-        opts = opts)
+        enableCparameters=enableCparameters)
 
     # Step 5.a: Output the driver function for the above
     #           function ID_ADM_xx0xx1xx2_to_BSSN_xx0xx1xx2__ALL_BUT_LAMBDAs()
@@ -240,13 +240,13 @@ const REAL invdx2 = 1.0/dxx[2];
 which writes BSSN variables in terms of ADM variables at a given point xx0,xx1,xx2"""
     name = "ID_BSSN__ALL_BUT_LAMBDAs"
     params = "const paramstruct *restrict params,REAL *restrict xx[3]," + ID_inputs_param + "REAL *in_gfs"
-    opts = ""
+    enableCparameters = True
     funccallparams = "params, "
     idx3replace   = "IDX3S"
     idx4ptreplace = "IDX4ptS"
     if "oldloops" in loopopts:
         params = "const int Nxx_plus_2NGHOSTS[3],REAL *xx[3]," + ID_inputs_param + "REAL *in_gfs"
-        opts = "DisableCparameters"
+        enableCparameters = False
         funccallparams = ""
         idx3replace   = "IDX3"
         idx4ptreplace = "IDX4pt"
@@ -265,4 +265,4 @@ ID_ADM_xx0xx1xx2_to_BSSN_xx0xx1xx2__ALL_BUT_LAMBDAs(""".replace("IDX3",idx3repla
                     &in_gfs[IDX4pt(BETU0GF,idx)],&in_gfs[IDX4pt(BETU1GF,idx)],&in_gfs[IDX4pt(BETU2GF,idx)],
                     &in_gfs[IDX4pt(ALPHAGF,idx)],&in_gfs[IDX4pt(CFGF,idx)]);
 """.replace("IDX4pt",idx4ptreplace),
-        loopopts="AllPoints,Read_xxs"+loopopts, opts=opts)
+        loopopts="AllPoints,Read_xxs"+loopopts, enableCparameters=enableCparameters)

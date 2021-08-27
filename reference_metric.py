@@ -951,102 +951,6 @@ def get_EigenCoord():
     print("Error: Could not find EigenCoord for reference_metric::CoordSystem == "+CoordSystem_orig)
     sys.exit(1)
 
-def add_to_Cfunc_dict__set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=os.path.join("./"), NGHOSTS_is_a_param=False):
-    gridsuffix = ""  # Disable for now.
-
-    def set_xxmin_xxmax():
-        outstr = ""
-        for dirn in range(3):
-            outstr += "        xxmin[" + str(dirn) + "] = " + str(xxmin[dirn]) + ";\n"
-            outstr += "        xxmax[" + str(dirn) + "] = " + str(xxmax[dirn]) + ";\n"
-        return outstr
-    body = """
-    // Override parameter defaults with values based on command line arguments and NGHOSTS.
-    params->Nxx0""" + gridsuffix + r""" = Nxx[0];
-    params->Nxx1""" + gridsuffix + r""" = Nxx[1];
-    params->Nxx2""" + gridsuffix + r""" = Nxx[2];
-"""
-    NGHOSTS_prefix=""
-    if NGHOSTS_is_a_param:
-        NGHOSTS_prefix="params->"
-    body += """
-    params->Nxx_plus_2NGHOSTS0""" + gridsuffix + """ = Nxx[0] + 2*"""+NGHOSTS_prefix+"""NGHOSTS;
-    params->Nxx_plus_2NGHOSTS1""" + gridsuffix + """ = Nxx[1] + 2*"""+NGHOSTS_prefix+"""NGHOSTS;
-    params->Nxx_plus_2NGHOSTS2""" + gridsuffix + """ = Nxx[2] + 2*"""+NGHOSTS_prefix+"""NGHOSTS;
-    // Now that params->Nxx_plus_2NGHOSTS* has been set, and below we need e.g., Nxx_plus_2NGHOSTS*, we include set_Cparameters.h here:
-#include \"""" + os.path.join(rel_path_to_Cparams, "set_Cparameters.h") + """\"
-    // Step 0d: Set up space and time coordinates
-    // Step 0d.i: Declare Delta x^i=dxx{0,1,2} and invdxx{0,1,2}, as well as xxmin[3] and xxmax[3]:
-    REAL xxmin[3],xxmax[3];
-    if(EigenCoord == 0) {
-"""
-    body += set_xxmin_xxmax() + """    } else if (EigenCoord == 1) {
-"""
-    CoordSystem_orig = par.parval_from_str("reference_metric::CoordSystem")
-    # If we are using a "holey" Spherical-like coordinate, for certain grids xx0min>0 is
-    #    such that xx[0][0] is negative, which causes "Cartesian disagreement" errors.
-    if "Spherical" not in CoordSystem_orig:
-        par.set_parval_from_str("reference_metric::CoordSystem", get_EigenCoord())
-        reference_metric()
-        body += set_xxmin_xxmax()
-        par.set_parval_from_str("reference_metric::CoordSystem", CoordSystem_orig)
-        reference_metric()
-    else:
-        body += set_xxmin_xxmax()
-
-    # Now set grid spacing dxx, invdx = 1/dxx, and xx[]
-    body += """    }
-    // Step 0d.iii: Set params.dxx{0,1,2}, params.invdx{0,1,2}, and uniform coordinate grids xx[3][]
-"""
-    for dirn in ["0", "1", "2"]:
-        body += "    params->dxx"+dirn+gridsuffix+" = (xxmax["+dirn+"] - xxmin["+dirn+"]) / ((REAL)Nxx["+dirn+"]);\n"
-        body += "    params->invdx"+dirn+gridsuffix+" = 1.0/params->dxx"+dirn+gridsuffix+";\n"
-        body += """    xx["""+dirn+"""] = (REAL *)malloc(sizeof(REAL)*Nxx_plus_2NGHOSTS"""+dirn+gridsuffix + """);
-    for(int j=0;j<Nxx_plus_2NGHOSTS"""+dirn+gridsuffix+""";j++)
-        xx["""+dirn+"""][j] = xxmin["""+dirn+"""] + ((REAL)(j-NGHOSTS) + (1.0/2.0))*params->dxx"""+dirn+gridsuffix+"""; // Cell-centered grid.\n"""
-        if dirn != "2":
-            body += "\n"
-
-    add_to_Cfunction_dict(
-        includes=["stdio.h", "math.h", "stdlib.h",
-                  os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h"),
-                  os.path.join(rel_path_to_Cparams, "declare_Cparameters_struct.h")],
-        desc  ="Override default values for Nxx{0,1,2}, Nxx_plus_2NGHOSTS{0,1,2}, dxx{0,1,2}, and invdx{0,1,2}; and set xx[3][]",
-        type  ="void",
-        name  ="set_Nxx_dxx_invdx_params__and__xx"+gridsuffix,
-        params="const int EigenCoord, const int Nxx[3],paramstruct *restrict params, REAL *restrict xx[3]",
-        body  =body,
-        opts  ="DisableCparameters")  # Cparameters here must be #include'd in body, not at top of function as usual.
-
-def add_to_Cfunc_dict__xx_to_Cart(rel_path_to_Cparams=os.path.join("./")):
-    gridsuffix = ""  # Disable for now
-    # Arbitrary-coordinate NRPy+ file output, Part 1: output the conversion from (x0,x1,x2) to Cartesian (x,y,z)
-    #    Suppose grid origin is at 1,1,1. Then the Cartesian gridpoint at 1,2,3 will be 2,3,4; hence
-    #    the xx_to_Cart[i]+gri.Cart_origin[i] below:
-    body = """
-    REAL xx0 = xx[0][i0];
-    REAL xx1 = xx[1][i1];
-    REAL xx2 = xx[2][i2];
-    """ + outputC([xx_to_Cart[0]+gri.Cart_origin[0],
-                   xx_to_Cart[1]+gri.Cart_origin[1],
-                   xx_to_Cart[2]+gri.Cart_origin[2]],
-                  ["xCart[0]", "xCart[1]", "xCart[2]"],
-                  "returnstring", params="preindent=1"). \
-        replace("Cart_originx", "Cart_originx" + gridsuffix).\
-        replace("Cart_originy", "Cart_originy" + gridsuffix).\
-        replace("Cart_originz", "Cart_originz" + gridsuffix)
-
-    add_to_Cfunction_dict(
-        includes=["stdio.h", "math.h",
-                  os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h"),
-                  os.path.join(rel_path_to_Cparams, "declare_Cparameters_struct.h")],
-        desc    ="Compute Cartesian coordinates given local grid coordinate (xx0,xx1,xx2), "
-                 "  accounting for the origin of this grid being possibly offcenter.",
-        type    ="void",
-        name    ="xx_to_Cart"+gridsuffix,
-        params  ="const paramstruct *restrict params, REAL *restrict xx[3],const int i0,const int i1,const int i2, REAL xCart[3]",
-        body    =body,
-        rel_path_to_Cparams=rel_path_to_Cparams)
 
 
 # Compute proper distance in all 3 directions. Used to find the appropriate timestep for the CFL condition.
@@ -1192,79 +1096,7 @@ def add_to_Cfunc_dict__find_dsmin(rel_path_to_Cparams=os.path.join("./")):
 
 
 
-# Step 8.a.iv: Generate Cart_to_xx.h, which contains Cart_to_xx_grid*()
-#              for mapping from Cartesian->xx for the chosen CoordSystem.
-def add_to_Cfunc_dict__Cart_to_xx_and_nearest_i0i1i2(rel_path_to_Cparams=os.path.join("./"), relative_to="local_grid_center"):
-    gridsuffix = ""  # Disable for now
-    CoordSystem = par.parval_from_str("reference_metric::CoordSystem")
 
-    prefunc = ""
-    desc = """Given Cartesian point (x,y,z), this function outputs the corresponding
-  (xx0,xx1,xx2) and the "closest" (i0,i1,i2) for the given grid"""
-    namesuffix = ""
-    if relative_to == "global_grid_center":
-        namesuffix = "_" + relative_to
-    name = "Cart_to_xx_and_nearest_i0i1i2" + namesuffix + gridsuffix
-    params = "const paramstruct *restrict params, const REAL xCart[3], REAL xx[3], int Cart_to_i0i1i2[3]"
-
-    preloop = ""
-    if relative_to == "local_grid_center":
-        preloop = """
-    // First compute the closest (xx0,xx1,xx2) to the given Cartesian gridpoint (x,y,z),
-    //   *relative* to the center of the local grid.
-    //   So for example,
-    //   1) if global xCart[012] = (1,1,1), and the
-    //      origin of the grid is at global xCart (x,y,z) = (1,1,1), then
-    //      (Cartx,Carty,Cartz) = (0,0,0)
-    //   2) if global xCart[012] = (0,0,0), and the
-    //      origin of the grid is at global xCart (x,y,z) = (1,1,1), then
-    //      (Cartx,Carty,Cartz) = (-1,-1,-1)
-    // Therefore, (Cartx,Carty,Cartz) = (xCart[0]-originx, xCart[1]-originy, xCart[2]-originz)
-    const REAL Cartx = xCart[0] - Cart_originx_GRIDSFX_;
-    const REAL Carty = xCart[1] - Cart_originy_GRIDSFX_;
-    const REAL Cartz = xCart[2] - Cart_originz_GRIDSFX_;
-""".replace("_GRIDSFX_", gridsuffix)
-    elif relative_to == "global_grid_center":
-        preloop = """
-    const REAL Cartx = xCart[0];
-    const REAL Carty = xCart[1];
-    const REAL Cartz = xCart[2];
-"""
-    else:
-        print("Error: relative_to must be set to either local_grid_center or global_grid_center. " + relative_to + " was chosen.")
-        sys.exit(1)
-
-    if "theta_adj" in CoordSystem:
-        body = outputC([Cart_to_xx[0], Cart_to_xx[1], Cart_to_xx[2]],
-                       ["xx[0]", "const REAL target_th", "xx[2]"], "returnstring", params="includebraces=False,preindent=1")
-        body += "       xx[1] = NewtonRaphson_get_xx1_from_th(params, target_th);\n"
-    else:
-        body = outputC([Cart_to_xx[0], Cart_to_xx[1], Cart_to_xx[2]],
-                       ["xx[0]", "xx[1]", "xx[2]"], "returnstring", params="includebraces=False,preindent=1")
-
-    body += """
-    // Then find the nearest index (i0,i1,i2) on underlying grid to (x,y,z)
-    // Recall that:
-    // xx[0][j] = xxmin[0] + ((REAL)(j-NGHOSTS) + (1.0/2.0))*params->dxx0"""+gridsuffix+"""; // Cell-centered grid.
-    //   --> j = (int) ( (xx[0][j] - xxmin[0]) / params->dxx0"""+gridsuffix+""" + (1.0/2.0) + NGHOSTS )
-    Cart_to_i0i1i2[0] = (int)( ( xx[0] - ("""+str(xxmin[0])+""") ) / params->dxx0"""+gridsuffix+""" + (1.0/2.0) + NGHOSTS - 0.5 ); // Account for (int) typecast rounding down
-    Cart_to_i0i1i2[1] = (int)( ( xx[1] - ("""+str(xxmin[1])+""") ) / params->dxx1"""+gridsuffix+""" + (1.0/2.0) + NGHOSTS - 0.5 ); // Account for (int) typecast rounding down
-    Cart_to_i0i1i2[2] = (int)( ( xx[2] - ("""+str(xxmin[2])+""") ) / params->dxx2"""+gridsuffix+""" + (1.0/2.0) + NGHOSTS - 0.5 ); // Account for (int) typecast rounding down
-"""
-    add_to_Cfunction_dict(
-        includes=["stdio.h", "math.h", "stdlib.h",
-                  os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h"),
-                  os.path.join(rel_path_to_Cparams, "declare_Cparameters_struct.h")],
-        prefunc=prefunc,
-        desc   =desc,
-        type   ="void",
-        name   =name,
-        params =params,
-        preloop=preloop,
-        body   =body,
-        rel_path_to_Cparams=rel_path_to_Cparams)
-
-    
 def out_default_free_parameters_for_rfm(free_parameters_file,
                                         domain_size=1.0,sinh_width=0.4,sinhv2_const_dr=0.05,SymTP_bScale=0.5):
     CoordSystem = par.parval_from_str("reference_metric::CoordSystem")
@@ -1408,8 +1240,181 @@ static inline void """+funcname+"""(const paramstruct *restrict params, REAL *re
     REAL xx1 = xx[1][i1];
     REAL xx2 = xx[2][i2];\n"""+Cout+"}\n")
 
+#######################
+## C FUNCTIONS RELATED TO REFERENCE METRIC
+
+# Construct Cart_to_xx_and_nearest_i0i1i2() C function for
+#   mapping from Cartesian->xx for the chosen CoordSystem.
+def add_to_Cfunc_dict__Cart_to_xx_and_nearest_i0i1i2(rel_path_to_Cparams=os.path.join("./"), relative_to="local_grid_center"):
+    gridsuffix = ""  # Disable for now
+    CoordSystem = par.parval_from_str("reference_metric::CoordSystem")
+
+    prefunc = ""
+    desc = """Given Cartesian point (x,y,z), this function outputs the corresponding
+  (xx0,xx1,xx2) and the "closest" (i0,i1,i2) for the given grid"""
+    namesuffix = ""
+    if relative_to == "global_grid_center":
+        namesuffix = "_" + relative_to
+    name = "Cart_to_xx_and_nearest_i0i1i2" + namesuffix + gridsuffix
+    params = "const paramstruct *restrict params, const REAL xCart[3], REAL xx[3], int Cart_to_i0i1i2[3]"
+
+    preloop = ""
+    if relative_to == "local_grid_center":
+        preloop = """
+    // First compute the closest (xx0,xx1,xx2) to the given Cartesian gridpoint (x,y,z),
+    //   *relative* to the center of the local grid.
+    //   So for example,
+    //   1) if global xCart[012] = (1,1,1), and the
+    //      origin of the grid is at global xCart (x,y,z) = (1,1,1), then
+    //      (Cartx,Carty,Cartz) = (0,0,0)
+    //   2) if global xCart[012] = (0,0,0), and the
+    //      origin of the grid is at global xCart (x,y,z) = (1,1,1), then
+    //      (Cartx,Carty,Cartz) = (-1,-1,-1)
+    // Therefore, (Cartx,Carty,Cartz) = (xCart[0]-originx, xCart[1]-originy, xCart[2]-originz)
+    const REAL Cartx = xCart[0] - Cart_originx_GRIDSFX_;
+    const REAL Carty = xCart[1] - Cart_originy_GRIDSFX_;
+    const REAL Cartz = xCart[2] - Cart_originz_GRIDSFX_;
+""".replace("_GRIDSFX_", gridsuffix)
+    elif relative_to == "global_grid_center":
+        preloop = """
+    const REAL Cartx = xCart[0];
+    const REAL Carty = xCart[1];
+    const REAL Cartz = xCart[2];
+"""
+    else:
+        print("Error: relative_to must be set to either local_grid_center or global_grid_center. " + relative_to + " was chosen.")
+        sys.exit(1)
+
+    if "theta_adj" in CoordSystem:
+        body = outputC([Cart_to_xx[0], Cart_to_xx[1], Cart_to_xx[2]],
+                       ["xx[0]", "const REAL target_th", "xx[2]"], "returnstring", params="includebraces=False,preindent=1")
+        body += "       xx[1] = NewtonRaphson_get_xx1_from_th(params, target_th);\n"
+    else:
+        body = outputC([Cart_to_xx[0], Cart_to_xx[1], Cart_to_xx[2]],
+                       ["xx[0]", "xx[1]", "xx[2]"], "returnstring", params="includebraces=False,preindent=1")
+
+    body += """
+    // Then find the nearest index (i0,i1,i2) on underlying grid to (x,y,z)
+    // Recall that:
+    // xx[0][j] = xxmin[0] + ((REAL)(j-NGHOSTS) + (1.0/2.0))*params->dxx0"""+gridsuffix+"""; // Cell-centered grid.
+    //   --> j = (int) ( (xx[0][j] - xxmin[0]) / params->dxx0"""+gridsuffix+""" + (1.0/2.0) + NGHOSTS )
+    Cart_to_i0i1i2[0] = (int)( ( xx[0] - ("""+str(xxmin[0])+""") ) / params->dxx0"""+gridsuffix+""" + (1.0/2.0) + NGHOSTS - 0.5 ); // Account for (int) typecast rounding down
+    Cart_to_i0i1i2[1] = (int)( ( xx[1] - ("""+str(xxmin[1])+""") ) / params->dxx1"""+gridsuffix+""" + (1.0/2.0) + NGHOSTS - 0.5 ); // Account for (int) typecast rounding down
+    Cart_to_i0i1i2[2] = (int)( ( xx[2] - ("""+str(xxmin[2])+""") ) / params->dxx2"""+gridsuffix+""" + (1.0/2.0) + NGHOSTS - 0.5 ); // Account for (int) typecast rounding down
+"""
+    add_to_Cfunction_dict(
+        includes=["stdio.h", "math.h", "stdlib.h",
+                  os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h"),
+                  os.path.join(rel_path_to_Cparams, "declare_Cparameters_struct.h")],
+        prefunc=prefunc,
+        desc   =desc,
+        type   ="void",
+        name   =name,
+        params =params,
+        preloop=preloop,
+        body   =body,
+        rel_path_to_Cparams=rel_path_to_Cparams)
+
+
+def add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=os.path.join("./"), NGHOSTS_is_a_param=False):
+    gridsuffix = ""  # Disable for now.
+
+    def set_xxmin_xxmax():
+        outstr = ""
+        for dirn in range(3):
+            outstr += "        xxmin[" + str(dirn) + "] = " + str(xxmin[dirn]) + ";\n"
+            outstr += "        xxmax[" + str(dirn) + "] = " + str(xxmax[dirn]) + ";\n"
+        return outstr
+    body = """
+    // Override parameter defaults with values based on command line arguments and NGHOSTS.
+    params->Nxx0""" + gridsuffix + r""" = Nxx[0];
+    params->Nxx1""" + gridsuffix + r""" = Nxx[1];
+    params->Nxx2""" + gridsuffix + r""" = Nxx[2];
+"""
+    NGHOSTS_prefix=""
+    if NGHOSTS_is_a_param:
+        NGHOSTS_prefix="params->"
+    body += """
+    params->Nxx_plus_2NGHOSTS0""" + gridsuffix + """ = Nxx[0] + 2*"""+NGHOSTS_prefix+"""NGHOSTS;
+    params->Nxx_plus_2NGHOSTS1""" + gridsuffix + """ = Nxx[1] + 2*"""+NGHOSTS_prefix+"""NGHOSTS;
+    params->Nxx_plus_2NGHOSTS2""" + gridsuffix + """ = Nxx[2] + 2*"""+NGHOSTS_prefix+"""NGHOSTS;
+    // Now that params->Nxx_plus_2NGHOSTS* has been set, and below we need e.g., Nxx_plus_2NGHOSTS*, we include set_Cparameters.h here:
+#include \"""" + os.path.join(rel_path_to_Cparams, "set_Cparameters.h") + """\"
+    // Step 0d: Set up space and time coordinates
+    // Step 0d.i: Declare Delta x^i=dxx{0,1,2} and invdxx{0,1,2}, as well as xxmin[3] and xxmax[3]:
+    REAL xxmin[3],xxmax[3];
+    if(EigenCoord == 0) {
+"""
+    body += set_xxmin_xxmax() + """    } else if (EigenCoord == 1) {
+"""
+    CoordSystem_orig = par.parval_from_str("reference_metric::CoordSystem")
+    # If we are using a "holey" Spherical-like coordinate, for certain grids xx0min>0 is
+    #    such that xx[0][0] is negative, which causes "Cartesian disagreement" errors.
+    if "Spherical" not in CoordSystem_orig:
+        par.set_parval_from_str("reference_metric::CoordSystem", get_EigenCoord())
+        reference_metric()
+        body += set_xxmin_xxmax()
+        par.set_parval_from_str("reference_metric::CoordSystem", CoordSystem_orig)
+        reference_metric()
+    else:
+        body += set_xxmin_xxmax()
+
+    # Now set grid spacing dxx, invdx = 1/dxx, and xx[]
+    body += """    }
+    // Step 0d.iii: Set params.dxx{0,1,2}, params.invdx{0,1,2}, and uniform coordinate grids xx[3][]
+"""
+    for dirn in ["0", "1", "2"]:
+        body += "    params->dxx"+dirn+gridsuffix+" = (xxmax["+dirn+"] - xxmin["+dirn+"]) / ((REAL)Nxx["+dirn+"]);\n"
+        body += "    params->invdx"+dirn+gridsuffix+" = 1.0/params->dxx"+dirn+gridsuffix+";\n"
+        body += """    xx["""+dirn+"""] = (REAL *)malloc(sizeof(REAL)*Nxx_plus_2NGHOSTS"""+dirn+gridsuffix + """);
+    for(int j=0;j<Nxx_plus_2NGHOSTS"""+dirn+gridsuffix+""";j++)
+        xx["""+dirn+"""][j] = xxmin["""+dirn+"""] + ((REAL)(j-NGHOSTS) + (1.0/2.0))*params->dxx"""+dirn+gridsuffix+"""; // Cell-centered grid.\n"""
+        if dirn != "2":
+            body += "\n"
+
+    add_to_Cfunction_dict(
+        includes=["stdio.h", "math.h", "stdlib.h",
+                  os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
+        desc  ="Override default values for Nxx{0,1,2}, Nxx_plus_2NGHOSTS{0,1,2}, dxx{0,1,2}, and invdx{0,1,2}; and set xx[3][]",
+        type  ="void",
+        name  ="set_Nxx_dxx_invdx_params__and__xx"+gridsuffix,
+        params="const int EigenCoord, const int Nxx[3],paramstruct *restrict params, REAL *restrict xx[3]",
+        body  =body,
+        enableCparameters=False, rfm_enable=True)  # Cparameters here must be #include'd in body, not at top of function as usual.
+
+def add_to_Cfunc_dict_xx_to_Cart(rel_path_to_Cparams=os.path.join("./")):
+    gridsuffix = ""  # Disable for now
+    # Arbitrary-coordinate NRPy+ file output, Part 1: output the conversion from (x0,x1,x2) to Cartesian (x,y,z)
+    #    Suppose grid origin is at 1,1,1. Then the Cartesian gridpoint at 1,2,3 will be 2,3,4; hence
+    #    the xx_to_Cart[i]+gri.Cart_origin[i] below:
+    body = """
+    REAL xx0 = xx[0][i0];
+    REAL xx1 = xx[1][i1];
+    REAL xx2 = xx[2][i2];
+    """ + outputC([xx_to_Cart[0]+gri.Cart_origin[0],
+                   xx_to_Cart[1]+gri.Cart_origin[1],
+                   xx_to_Cart[2]+gri.Cart_origin[2]],
+                  ["xCart[0]", "xCart[1]", "xCart[2]"],
+                  "returnstring", params="preindent=1"). \
+        replace("Cart_originx", "Cart_originx" + gridsuffix).\
+        replace("Cart_originy", "Cart_originy" + gridsuffix).\
+        replace("Cart_originz", "Cart_originz" + gridsuffix)
+
+    add_to_Cfunction_dict(
+        includes=["stdio.h", "math.h",
+                  os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h"),
+                  os.path.join(rel_path_to_Cparams, "declare_Cparameters_struct.h")],
+        desc    ="Compute Cartesian coordinates given local grid coordinate (xx0,xx1,xx2), "
+                 "  accounting for the origin of this grid being possibly offcenter.",
+        type    ="void",
+        name    ="xx_to_Cart"+gridsuffix,
+        params  ="const paramstruct *restrict params, REAL *restrict xx[3],const int i0,const int i1,const int i2, REAL xCart[3]",
+        body    =body,
+        rel_path_to_Cparams=rel_path_to_Cparams)
+
+
 # Find the appropriate timestep for the CFL condition.
-def add_find_timestep_func_to_dict():
+def add_to_Cfunction_dict_find_timestep():
     # Compute proper distance in all 3 directions.
     delxx = ixp.declarerank1("dxx", DIM=3)
     ds_drn = ds_dirn(delxx)
@@ -1433,7 +1438,8 @@ def add_find_timestep_func_to_dict():
         loopopts ="InteriorPoints,Read_xxs,DisableOpenMP",
         postloop ="return dsmin*CFL_FACTOR/wavespeed;\n")
 
+
 def out_timestep_func_to_file(outfile):
-    add_find_timestep_func_to_dict()
+    add_to_Cfunction_dict_find_timestep()
     with open(outfile, "w") as file:
         file.write(outC_function_dict["find_timestep"])

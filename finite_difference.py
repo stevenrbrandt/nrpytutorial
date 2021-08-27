@@ -9,7 +9,7 @@
 # Author: Zachariah B. Etienne
 #         zachetie **at** gmail **dot* com
 
-from outputC import parse_outCparams_string, outC_function_dict  # NRPy+: Core C code output module
+from outputC import parse_outCparams_string, outC_function_dict, outC_NRPy_basic_defines_h_dict  # NRPy+: Core C code output module
 import NRPy_param_funcs as par   # NRPy+: parameter interface
 import sympy as sp               # SymPy: The Python computer algebra package upon which NRPy+ depends
 import grid as gri               # NRPy+: Functions having to do with numerical grids
@@ -156,6 +156,8 @@ def FD_outputC(filename,sympyexpr_list, params="", upwindcontrolvec=""):
             successstr = "Wrote "
         print(successstr + "to file \"" + filename + "\"")
 
+################
+# TO BE DEPRECATED:
 def output_finite_difference_functions_h(path=os.path.join(".")):
     with open(os.path.join(path, "finite_difference_functions.h"), "w") as file:
         file.write("""
@@ -179,6 +181,23 @@ def output_finite_difference_functions_h(path=os.path.join(".")):
                                         "const REAL_SIMD_ARRAY "+UNUSED+" _NegativeOne_ =")) # Many of the NegativeOne's get optimized away in the SIMD postprocessing step. No need for all the warnings
 
         file.write("#endif // #ifndef __FD_FUNCTIONS_H__\n")
+################
+
+
+def register_C_functions_and_NRPy_basic_defines(NGHOSTS_account_for_onezone_upwind=False):
+    # First register C functions needed by finite_difference
+
+    # Then set up the dictionary entry for finite_difference in NRPy_basic_defines
+    NGHOSTS = int(par.parval_from_str("finite_difference::FD_CENTDERIVS_ORDER")/2)
+    if NGHOSTS_account_for_onezone_upwind:
+        NGHOSTS += 1
+    Nbd_str  = """
+// Set the number of ghost zones
+// Note that upwinding in BSSN requires that NGHOSTS = FD_CENTDERIVS_ORDER/2 + 1 <- Notice the +1.
+"""
+    Nbd_str  = "#define NGHOSTS " + str(NGHOSTS)+"\n"
+    outC_NRPy_basic_defines_h_dict["finite_difference"] = Nbd_str
+
 
 #######################################################
 #  FINITE-DIFFERENCE COEFFICIENT ALGORITHM
