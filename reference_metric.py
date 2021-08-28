@@ -1380,7 +1380,7 @@ def add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=os.p
         name  ="set_Nxx_dxx_invdx_params__and__xx"+gridsuffix,
         params="const int EigenCoord, const int Nxx[3],paramstruct *restrict params, REAL *restrict xx[3]",
         body  =body,
-        enableCparameters=False, rfm_enable=True)  # Cparameters here must be #include'd in body, not at top of function as usual.
+        enableCparameters=False, uses_rfm=True)  # Cparameters here must be #include'd in body, not at top of function as usual.
 
 def add_to_Cfunc_dict_xx_to_Cart(rel_path_to_Cparams=os.path.join("./")):
     gridsuffix = ""  # Disable for now

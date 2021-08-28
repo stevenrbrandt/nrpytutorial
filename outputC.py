@@ -431,7 +431,7 @@ outC_function_dict           = {}
 outC_function_outdir_dict    = {}
 
 def Cfunction(includes=None, prefunc="", desc="", type="void", name=None, params=None, preloop="", body=None,
-              loopopts="", postloop="", enableCparameters=True, rel_path_to_Cparams=os.path.join("./"), rfm_enable=False):
+              loopopts="", postloop="", enableCparameters=True, rel_path_to_Cparams=os.path.join("./"), uses_rfm=False):
     if name is None or params is None or body is None: # use "is None" instead of "==None", as the former is more correct.
         print("Cfunction() error: strings must be provided for function name, parameters, and body")
         sys.exit(1)
@@ -474,17 +474,17 @@ def Cfunction(includes=None, prefunc="", desc="", type="void", name=None, params
 def add_to_Cfunction_dict(includes=None, prefunc="", desc="", type="void", name=None, params=None,
                           preloop="", body=None, loopopts="", postloop="",
                           path_from_rootsrcdir_to_this_Cfunc="default", enableCparameters=True,
-                          rel_path_to_Cparams=os.path.join("./"), rfm_enable=False):
+                          rel_path_to_Cparams=os.path.join("./"), uses_rfm=False):
     outC_function_outdir_dict[name] = path_from_rootsrcdir_to_this_Cfunc
     outC_function_prototype_dict[name], outC_function_dict[name] = \
         Cfunction(includes, prefunc, desc, type, name, params, preloop, body, loopopts, postloop,
-                  enableCparameters, rel_path_to_Cparams, rfm_enable)
+                  enableCparameters, rel_path_to_Cparams, uses_rfm)
 
 def outCfunction(outfile="", includes=None, prefunc="", desc="",
                  type="void", name=None, params=None, preloop="", body=None, loopopts="", postloop="",
-                 enableCparameters=True, rel_path_to_Cparams=os.path.join("./"), rfm_enable=False):
+                 enableCparameters=True, rel_path_to_Cparams=os.path.join("./"), uses_rfm=False):
     _ignoreprototype,Cfunc = Cfunction(includes, prefunc, desc, type, name, params, preloop, body,
-                                       loopopts, postloop, enableCparameters, rel_path_to_Cparams, rfm_enable)
+                                       loopopts, postloop, enableCparameters, rel_path_to_Cparams, uses_rfm)
     if outfile == "returnstring":
         return Cfunc
     with open(outfile, "w") as file:
