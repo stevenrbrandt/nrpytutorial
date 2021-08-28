@@ -1,0 +1,8 @@
+extraction:
+  python:
+    python_setup:
+      setup_py: false
+      version: 3
+ 
+queries:
+- exclude: py/clear-text-logging-sensitive-data
