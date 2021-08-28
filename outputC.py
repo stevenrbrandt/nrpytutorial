@@ -238,7 +238,7 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
         print("Error: Provided a list of output variable names, but only one SymPy expression.")
         sys.exit(1)
     if isinstance(sympyexpr, list):
-        if not isinistance(output_varname_str, list):
+        if not isinstance(output_varname_str, list):
             print("Error: Provided a list of SymPy expressions, but no corresponding list of output variable names")
             sys.exit(1)
         elif len(output_varname_str) != len(sympyexpr):
