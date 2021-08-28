@@ -32,7 +32,7 @@ def GiRaFFE_NRPy_Afield_flux(Ccodesdir):
             file.write(Ccode_kernel)
 
     with open(os.path.join(Ccodesdir,"calculate_E_field_flat_all_in_one.h"),"w") as file:
-        file.write("""void find_cmax_cmin(const REAL gammaDD00, const REAL gammaDD01, const REAL gammaDD02,
+        file.write(r"""void find_cmax_cmin(const REAL gammaDD00, const REAL gammaDD01, const REAL gammaDD02,
                     const REAL gammaDD11, const REAL gammaDD12, const REAL gammaDD22,
                     const REAL betaUi, const REAL alpha, const int flux_dirn,
                     REAL *cmax, REAL *cmin) {
@@ -158,7 +158,7 @@ void calculate_E_field_flat_all_in_one(const paramstruct *params,
 
                 // DEBUGGING:
 //                 if(flux_dirn==0 && SIGN>0 && i1==Nxx_plus_2NGHOSTS1/2 && i2==Nxx_plus_2NGHOSTS2/2) {
-//                     printf("index=%d & indexp1=%d\\n",index,indexp1);
+//                     printf("index=%d & indexp1=%d\n",index,indexp1);
 //                 }
 
                 // Since we are computing A_z, the relevant equation here is:
