@@ -15,12 +15,12 @@ def create_test(module, module_name, function_and_global_dict, logging_level='IN
         initialization_string_dict = {}
 
     # Making sure all arguments have the correct type
-    assert type(module_name) == str, "module_name is " + str(type(module_name)) + " -- it should be type str. Please check input for module_name."
-    assert type(module) == str, "module is " + str(type(module)) + " -- it should be type str. Please check input for module in " + module_name
-    assert type(function_and_global_dict) == dict, "function_and_global_dict is " + str(type(function_and_global_dict)) + " -- it should be type dict. Please check input for function_and_global_dict in " + module_name
+    assert isinstance(module_name, str), "module_name is " + str(type(module_name)) + " -- it should be type str. Please check input for module_name."
+    assert isinstance(module, str), "module is " + str(type(module)) + " -- it should be type str. Please check input for module in " + module_name
+    assert isinstance(function_and_global_dict, dict), "function_and_global_dict is " + str(type(function_and_global_dict)) + " -- it should be type dict. Please check input for function_and_global_dict in " + module_name
     assert len(function_and_global_dict) != 0, "function_and_global_dict is empty -- it must contain at least one entry to be tested. Please check input for function_and_global_dict in " + module_name
-    assert type(logging_level) == str, "logging_level is " + str(type(logging_level)) + " -- it should be type str. Please check input for logging_level in " + module_name
-    assert type(initialization_string_dict) == dict, "initialization_string is " + str(type(initialization_string_dict)) + " -- it should be type dict. Please check input for initialization_string_dict in " + module_name
+    assert isinstance(logging_level, str), "logging_level is " + str(type(logging_level)) + " -- it should be type str. Please check input for logging_level in " + module_name
+    assert isinstance(initialization_string_dict, dict), "initialization_string is " + str(type(initialization_string_dict)) + " -- it should be type dict. Please check input for initialization_string_dict in " + module_name
     assert all(name in function_and_global_dict for name in initialization_string_dict), "initialization_string_dict contains key not in function_and_global_dict. Please check input for initialization_string_dict in " + module_name
 
     logging.basicConfig(level=logging_level)
@@ -34,8 +34,8 @@ def create_test(module, module_name, function_and_global_dict, logging_level='IN
         initialization_string = initialization_string_dict.get(function, '')
 
         # Making sure all arguments for this function have the correct type
-        assert type(function) == str, "function in function_and_global_dict is" + str(type(function)) + " -- it should be type str. Please check input for function_and_global_dict in " + module_name
-        assert type(global_list) == list, "global_list for function " + function + 'is ' + str(type(global_list)) + " -- it should be type list. Please check input for function_and_global_dict in " + module_name
+        assert isinstance(function, str), "function in function_and_global_dict is" + str(type(function)) + " -- it should be type str. Please check input for function_and_global_dict in " + module_name
+        assert isinstance(global_list, list), "global_list for function " + function + 'is ' + str(type(global_list)) + " -- it should be type list. Please check input for function_and_global_dict in " + module_name
         assert len(global_list) != 0, "global_list for function " + function + "is empty -- it must contain at least one entry to be tested. Please check input for function " +function + " in " + module_name
         assert all(isinstance(glob, str) for glob in global_list), "global_list in function_and_global_dict contains at least one entry that's not a str. Please check input for function " + function + " in " + module_name
 

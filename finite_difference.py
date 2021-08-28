@@ -33,7 +33,7 @@ def FD_outputC(filename,sympyexpr_list, params="", upwindcontrolvec=""):
     #     convert it to a list with just one element.
     #     This enables the rest of the routine to assume
     #     sympyexpr_list is indeed a list.
-    if type(sympyexpr_list) is not list:
+    if not isinstance(sympyexpr_list, list):
         sympyexpr_list = [sympyexpr_list]
 
     # Step 0.b:
