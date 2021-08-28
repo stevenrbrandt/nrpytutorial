@@ -115,7 +115,6 @@ def new_C_compile(Ccodesrootdir, exec_name, uses_free_parameters_h=False,
     construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_free_parameters_h,
                                                compiler_opt_option, addl_CFLAGS,
                                                addl_libraries, mkdir_Ccodesrootdir, use_make)
-    compile_succeeded = True
     os.chdir(Ccodesrootdir)
     if use_make:
         Execute_input_string("make -j" + str(int(multiprocessing.cpu_count()) + 2), os.devnull)
