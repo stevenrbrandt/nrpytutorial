@@ -156,7 +156,7 @@ def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3):
         sys.exit(1)
 
     # Step 1: convert gf_names to a list if it's not already a list
-    if type(gf_names) is not list:
+    if not isinstance(gf_names, list):
         gf_namestmp = [gf_names]
         gf_names = gf_namestmp
 

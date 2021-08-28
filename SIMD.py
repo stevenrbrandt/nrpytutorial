@@ -178,7 +178,7 @@ def expr_convert_to_SIMD_intrins(expr, map_sym_to_rat=None, prefix="", SIMD_find
 
     def IntegerPowSIMD(a, n):
         # Recursive Helper Function: Construct Integer Powers
-        if   n == 2:
+        if n == 2:
             return MulSIMD(a, a)
         if n > 2:
             return MulSIMD(IntegerPowSIMD(a, n - 1), a)

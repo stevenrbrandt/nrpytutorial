@@ -59,12 +59,12 @@ def nrpycosh(x):
 
 have_already_called_reference_metric_function = False
 
-def reference_metric(SymPySimplifyExpressions=True, enable_compute_hatted_quantities=True):
+def reference_metric(SymPySimplifyExpressions=True): #, enable_compute_hatted_quantities=True):
     global f0_of_xx0_funcform, f1_of_xx1_funcform, f2_of_xx0_xx1_funcform, f3_of_xx0_funcform, f4_of_xx2_funcform
     global f0_of_xx0, f1_of_xx1, f2_of_xx1, f2_of_xx0_xx1, f3_of_xx0, f4_of_xx2
     f0_of_xx0_funcform     = sp.Function('f0_of_xx0_funcform')(xx[0])
     f1_of_xx1_funcform     = sp.Function('f1_of_xx1_funcform')(xx[1])
-    f2_of_xx1_funcform     = sp.Function('f2_of_xx1_funcform')(xx[1])
+    # f2_of_xx1_funcform     = sp.Function('f2_of_xx1_funcform')(xx[1])
     f2_of_xx0_xx1_funcform = sp.Function('f2_of_xx0_xx1_funcform')(xx[0], xx[1])
     f3_of_xx0_funcform     = sp.Function('f3_of_xx0_funcform')(xx[0])
     f4_of_xx2_funcform     = sp.Function('f4_of_xx2_funcform')(xx[2])
