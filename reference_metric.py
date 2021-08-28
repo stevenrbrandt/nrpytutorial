@@ -981,7 +981,7 @@ def add_to_Cfunc_dict__find_timestep(rel_path_to_Cparams=os.path.join("./"), ena
     desc = "Find the CFL-constrained timestep"
     ##############################
     # Step 2: Function return type
-    type = "REAL"
+    c_type = "REAL"
     ##############################
     # Step 3: Function name
     name = "find_timestep" + gridsuffix
@@ -1044,7 +1044,7 @@ def add_to_Cfunc_dict__find_timestep(rel_path_to_Cparams=os.path.join("./"), ena
                   os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h"),
                   os.path.join(rel_path_to_Cparams, "declare_Cparameters_struct.h")],
         desc    =desc,
-        type    =type,
+        c_type  =c_type,
         name    =name,
         params  =params,
         preloop =preloop,
@@ -1058,7 +1058,7 @@ def add_to_Cfunc_dict__find_timestep(rel_path_to_Cparams=os.path.join("./"), ena
 def add_to_Cfunc_dict__find_dsmin(rel_path_to_Cparams=os.path.join("./")):
     gridsuffix = ""  # Disable for now
     desc = "Find dsmin = min_i sqrt(ghat_{ii} dx^i dx^i)"
-    type = "REAL"
+    c_type = "REAL"
     name = "find_dsmin" + gridsuffix
     params = "const paramstruct *restrict params, const int i0i1i2[3], const REAL *restrict xx[3]"
     body = """
@@ -1087,7 +1087,7 @@ def add_to_Cfunc_dict__find_dsmin(rel_path_to_Cparams=os.path.join("./")):
                   os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h"),
                   os.path.join(rel_path_to_Cparams, "declare_Cparameters_struct.h")],
         desc    =desc,
-        type    =type,
+        c_type  =c_type,
         name    =name,
         params  =params,
         body    =body,
@@ -1308,7 +1308,7 @@ def add_to_Cfunc_dict__Cart_to_xx_and_nearest_i0i1i2(rel_path_to_Cparams=os.path
                   os.path.join(rel_path_to_Cparams, "declare_Cparameters_struct.h")],
         prefunc=prefunc,
         desc   =desc,
-        type   ="void",
+        c_type ="void",
         name   =name,
         params =params,
         preloop=preloop,
@@ -1376,7 +1376,7 @@ def add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=os.p
         includes=["stdio.h", "math.h", "stdlib.h",
                   os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
         desc  ="Override default values for Nxx{0,1,2}, Nxx_plus_2NGHOSTS{0,1,2}, dxx{0,1,2}, and invdx{0,1,2}; and set xx[3][]",
-        type  ="void",
+        c_type="void",
         name  ="set_Nxx_dxx_invdx_params__and__xx"+gridsuffix,
         params="const int EigenCoord, const int Nxx[3],paramstruct *restrict params, REAL *restrict xx[3]",
         body  =body,
@@ -1406,7 +1406,7 @@ def add_to_Cfunc_dict_xx_to_Cart(rel_path_to_Cparams=os.path.join("./")):
                   os.path.join(rel_path_to_Cparams, "declare_Cparameters_struct.h")],
         desc    ="Compute Cartesian coordinates given local grid coordinate (xx0,xx1,xx2), "
                  "  accounting for the origin of this grid being possibly offcenter.",
-        type    ="void",
+        c_type  ="void",
         name    ="xx_to_Cart"+gridsuffix,
         params  ="const paramstruct *restrict params, REAL *restrict xx[3],const int i0,const int i1,const int i2, REAL xCart[3]",
         body    =body,
@@ -1424,7 +1424,7 @@ def add_to_Cfunction_dict_find_timestep():
     desc="Find the CFL-constrained timestep"
     add_to_Cfunction_dict(
         desc     =desc,
-        type     ="REAL",
+        c_type   ="REAL",
         name     ="find_timestep",
         params   ="const paramstruct *restrict params, REAL *restrict xx[3]",
         preloop  ="REAL dsmin = 1e38; // Start with a crazy high value... close to the largest number in single precision.",

@@ -512,12 +512,12 @@ def add_FD_func_to_outC_function_dict(list_of_deriv_vars,
                                       fdcoeffs, fdstencl):
     # Step 5.a.ii.A: First construct a list of all the unique finite difference functions
     list_of_uniq_deriv_operators = superfast_uniq(list_of_deriv_operators)
-    Ctype = "REAL"
+    c_type = "REAL"
     if par.parval_from_str("grid::GridFuncMemAccess") == "ETK":
-        Ctype = "CCTK_REAL"
+        c_type = "CCTK_REAL"
     func_prefix = "order_"+str(FDparams.FD_CD_order)+"_"
     if FDparams.SIMD_enable == "True":
-        Ctype = "REAL_SIMD_ARRAY"
+        c_type = "REAL_SIMD_ARRAY"
         func_prefix = "SIMD_"+func_prefix
 
     # Stores the needed calls to the functions we're adding to outC_function_dict:
@@ -556,11 +556,11 @@ def add_FD_func_to_outC_function_dict(list_of_deriv_vars,
         outfunc_params = ""
         for d in range(FDparams.DIM):
             if used_invdx[d]:
-                outfunc_params += "const " + Ctype + " invdx" + str(d) + ","
+                outfunc_params += "const " + c_type + " invdx" + str(d) + ","
 
         for j in range(len(fdcoeffs[which_op_idx])):
             var = sp.sympify("f" + varsuffix(fdstencl[which_op_idx][j], FDparams))
-            outfunc_params += "const " + Ctype + " " + str(var)
+            outfunc_params += "const " + c_type + " " + str(var)
             if j != len(fdcoeffs[which_op_idx])-1:
                 outfunc_params += ","
 
@@ -587,7 +587,7 @@ def add_FD_func_to_outC_function_dict(list_of_deriv_vars,
             add_to_Cfunction_dict(desc=" * (__FD_OPERATOR_FUNC__) Finite difference operator for "+str(op).replace("dDD", "second derivative: ").
                                   replace("dD", "first derivative: ").replace("dKOD", "Kreiss-Oliger derivative: ").
                                   replace("dupD", "upwinded derivative: ").replace("ddnD", "downwinded derivative: ") + " direction. In Cartesian coordinates, directions 0,1,2 correspond to x,y,z directions, respectively.",
-                                  type="static " + Ctype + " _NOINLINE _UNUSED",
+                                  c_type="static " + c_type + " _NOINLINE _UNUSED",
                                   name=func_prefix+"f_" + str(op), enableCparameters=False,
                                   params=outfunc_params, preloop="", body=outFDstr)
     return FDfunccall_list
