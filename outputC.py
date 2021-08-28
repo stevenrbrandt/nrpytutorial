@@ -570,8 +570,8 @@ CFLAGS = """ + CHOSEN_CFLAGS + """
             Makefile.write("\nclean:\n\trm -f *.o */*.o *~ */*~ ./#* *.txt *.dat *.avi *.png " + exec_name + "\n")
     else:
         with open(os.path.join(Ccodesrootdir, "backup_script_nomake.sh"), "w") as backup:
-            for compile in compile_list:
-                backup.write(compile.replace("$(CC)", CC).replace("$(CFLAGS)", CFLAGS).replace("\t", "") + "\n")
+            for compile_line in compile_list:
+                backup.write(compile_line.replace("$(CC)", CC).replace("$(CFLAGS)", CFLAGS).replace("\t", "") + "\n")
             backup.write(CC + " " + CFLAGS + " main.c " + all_str.replace(exec_name, "").replace("main.o", "") + " -o " + exec_name + linked_libraries + "\n")
         os.chmod(os.path.join(Ccodesrootdir, "backup_script_nomake.sh"), stat.S_IRWXU)
 
