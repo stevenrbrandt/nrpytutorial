@@ -222,7 +222,7 @@ def flatten(l, fl=None):
         fl = []
 
     for i in l:
-        if type(i) == list:
+        if isinstance(i, list):
             flatten(i, fl)
         else:
             fl.append(i)
