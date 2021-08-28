@@ -234,11 +234,11 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
 
     # Step 2a: Apply sanity checks when either sympyexpr or
     #          output_varname_str is a list.
-    if type(output_varname_str) is list and type(sympyexpr) is not list:
+    if isinstance(output_varname_str, list) and not isinstance(sympyexpr, list):
         print("Error: Provided a list of output variable names, but only one SymPy expression.")
         sys.exit(1)
-    if type(sympyexpr) is list:
-        if type(output_varname_str) is not list:
+    if isinstance(sympyexpr, list):
+        if not isinistance(output_varname_str, list):
             print("Error: Provided a list of SymPy expressions, but no corresponding list of output variable names")
             sys.exit(1)
         elif len(output_varname_str) != len(sympyexpr):
@@ -248,7 +248,7 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
     # Step 2b: If sympyexpr and output_varname_str are not lists,
     #          convert them to lists of one element each, to
     #          simplify proceeding code.
-    if type(output_varname_str) is not list and type(sympyexpr) is not list:
+    if not isinstance(output_varname_str, list) and not isinstance(sympyexpr, list):
         output_varname_strtmp = [output_varname_str]
         output_varname_str = output_varname_strtmp
         sympyexprtmp = [sympyexpr]
