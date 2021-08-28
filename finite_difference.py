@@ -191,7 +191,7 @@ def register_C_functions_and_NRPy_basic_defines(NGHOSTS_account_for_onezone_upwi
     NGHOSTS = int(par.parval_from_str("finite_difference::FD_CENTDERIVS_ORDER")/2)
     if NGHOSTS_account_for_onezone_upwind:
         NGHOSTS += 1
-        Nbd_str = """
+    Nbd_str = """
 // Set the number of ghost zones
 // Note that upwinding in e.g., BSSN requires that NGHOSTS = FD_CENTDERIVS_ORDER/2 + 1 <- Notice the +1.
 """
