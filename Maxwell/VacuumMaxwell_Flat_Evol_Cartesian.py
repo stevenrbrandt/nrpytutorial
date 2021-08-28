@@ -29,11 +29,11 @@ def VacuumMaxwellRHSs():
     EU = ixp.register_gridfunctions_for_single_rank1("EVOL", "EU")
 
     # A^i, _AU is unused
-    _AU = ixp.register_gridfunctions_for_single_rank1("EVOL", "AU")
+    _AU = ixp.register_gridfunctions_for_single_rank1("EVOL", "AU") # lgtm [py/unused-local-variable]
 
     # \psi is a scalar function that is time evolved
     # _psi is unused
-    _psi = gri.register_gridfunctions("EVOL", ["psi"])
+    _psi = gri.register_gridfunctions("EVOL", ["psi"]) # lgtm [py/unused-local-variable]
 
     # \partial_i \psi
     psi_dD = ixp.declarerank1("psi_dD")

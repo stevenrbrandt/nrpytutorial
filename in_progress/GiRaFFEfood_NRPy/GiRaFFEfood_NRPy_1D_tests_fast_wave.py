@@ -57,7 +57,6 @@ def GiRaFFEfood_NRPy_1D_tests_fast_wave(stagger = False):
     # B^z(0,x) = 0
 
     x = rfm.xx_to_Cart[0]
-    y = rfm.xx_to_Cart[1]
 
     Byleft = sp.sympify(1)
     Bycenter = sp.sympify(1) - sp.Rational(15,10)*(x+sp.Rational(1,10))

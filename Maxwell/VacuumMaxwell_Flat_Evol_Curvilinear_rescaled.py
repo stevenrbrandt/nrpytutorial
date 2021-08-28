@@ -43,7 +43,7 @@ def VacuumMaxwellRHSs_rescaled():
 
     # \psi is a scalar function that is time evolved
     # psi is unused here
-    _psi = gri.register_gridfunctions("EVOL", ["psi"])
+    _psi = gri.register_gridfunctions("EVOL", ["psi"]) # lgtm [py/unused-local-variable]
 
     # \Gamma is a scalar function that is time evolved
     Gamma = gri.register_gridfunctions("EVOL", ["Gamma"])

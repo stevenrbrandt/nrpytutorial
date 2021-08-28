@@ -8,7 +8,6 @@ if nrpy_dir_path not in sys.path:
 import NRPy_param_funcs as par   # NRPy+: Parameter interface
 import indexedexp as ixp         # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
 import reference_metric as rfm   # NRPy+: Reference metric support
-import sympy as sp                # SymPy: The Python computer algebra package upon which NRPy+ depends
 
 #Step 0: Set the spatial dimension parameter to 3.
 par.set_parval_from_str("grid::DIM", 3)

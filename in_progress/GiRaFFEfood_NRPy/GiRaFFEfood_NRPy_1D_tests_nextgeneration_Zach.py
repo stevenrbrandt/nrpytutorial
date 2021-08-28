@@ -171,8 +171,8 @@ def ValenciavU_DAW(**params):
     mu_AW   = params["mu_DAW"]
 
     x = rfm.xx_to_Cart[0]
-    y = rfm.xx_to_Cart[1]
-    z = rfm.xx_to_Cart[2]
+    # y = rfm.xx_to_Cart[1]
+    # z = rfm.xx_to_Cart[2]
 
     # ### Set the vectors $B^i$ and $E^i$ for the velocity
     #
