@@ -131,7 +131,7 @@ if __name__ == "__main__":
         # Step 3.d.iii: Define master function for parallelization.
         #           Note that lambdifying this doesn't work in Python 3
         def master_func(i):
-            import BaikalETK.BaikalETK_C_kernels_codegen as BCk
+            import BaikalETK.BaikalETK_C_kernels_codegen as BCk  # lgtm [py/repeated-import]
             return BCk.BaikalETK_C_kernels_codegen_onepart(params=paramslist[i])
 
         # Step 3.d.iv: Evaluate list of functions in parallel if possible;
@@ -149,7 +149,7 @@ if __name__ == "__main__":
         print("***************************************")
         # Steps 3.d.ii-iv, alternate: As fallback, evaluate functions in serial.
         #       This will happen on Android and Windows systems
-        import BaikalETK.BaikalETK_C_kernels_codegen as BCk
+        import BaikalETK.BaikalETK_C_kernels_codegen as BCk  # lgtm [py/repeated-import]
         # No need to pickle if doing serial codegen.
         for param in paramslist:
             BCk.BaikalETK_C_kernels_codegen_onepart(params=param)
