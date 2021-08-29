@@ -180,11 +180,11 @@ void ID_scalar_field_ADM_quantities(
 
       // Update alpha
       *alpha = alpha_star;
-      // \gamma_{rr} = psi^4
+      // gamma_{rr} = psi^4
       *gammaDD00 = psi4_star;
-      // \gamma_{thth} = psi^4 r^2
+      // gamma_{thth} = psi^4 r^2
       *gammaDD11 = psi4_star*r*r;
-      // \gamma_{phph} = psi^4 r^2 sin^2(th)
+      // gamma_{phph} = psi^4 r^2 sin^2(th)
       *gammaDD22 = psi4_star*r*r*sin(th)*sin(th);
 
       // All other quantities ARE ZERO:
@@ -247,7 +247,7 @@ void ID_scalar_field_ADM_quantities(
         r_th_ph_or_Cart_xyz_oID_xx = rfm.xxSph
     else:
         print("Error: Can only convert scalar field Spherical initial data to BSSN Curvilinear coords.")
-        exit(1)
+        sys.exit(1)
 
     with open(os.path.join(Ccodesdir,"ID_scalarfield_xx0xx1xx2_to_BSSN_xx0xx1xx2.h"), "w") as file:
         file.write("void ID_scalarfield_xx0xx1xx2_to_BSSN_xx0xx1xx2(const paramstruct *restrict params,const REAL xx0xx1xx2[3],")
