@@ -134,7 +134,7 @@ def verify_gridfunction_basename_is_valid(gf_basename):
 
     # https://stackoverflow.com/questions/1303243/how-to-find-out-if-a-python-object-is-a-string
     if sys.version_info[0] < 3:
-        if not isinstance(gf_basename,basestring):
+        if not isinstance(gf_basename, basestring):
             print("ERROR: gf_names must be strings")
             sys.exit(1)
     else:

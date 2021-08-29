@@ -60,7 +60,7 @@ def superfast_uniq(seq): # Author: Dave Kirby
     seen = set()
     return [x for x in seq if x not in seen and not seen.add(x)]
 
-def check_if_string__error_if_not(allegedstring,stringdesc):
+def check_if_string__error_if_not(allegedstring, stringdesc):
     if sys.version_info[0] == 3:
         string_types = str
     else:
@@ -550,6 +550,11 @@ def construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_fr
         dep_list.append(object_file + ": " + c_file + addl_headers)
         compile_list.append("\t$(CC) $(CFLAGS)  -c " + c_file + " -o " + object_file)
 
+    linked_libraries = " -lm"
+    if addl_libraries is not None:
+        for lib in addl_libraries:
+            linked_libraries += " " + lib
+
     if use_make:
         with open(os.path.join(Ccodesrootdir, "Makefile"), "w") as Makefile:
             Makefile.write("""CC     = """ + CC + """
@@ -562,10 +567,6 @@ CFLAGS = """ + CHOSEN_CFLAGS + """
                 Makefile.write(dep + "\n")
                 Makefile.write(compile_list[idx] + "\n\n")
             Makefile.write(exec_name + ": " + all_str.replace(exec_name, "") + "\n")
-            linked_libraries = " -lm"
-            if addl_libraries is not None:
-                for lib in addl_libraries:
-                    linked_libraries += " " + lib
             Makefile.write("\t$(CC) $(CFLAGS) main.c " + all_str.replace(exec_name, "").replace("main.o", "") + " -o " + exec_name + linked_libraries + "\n")
             Makefile.write("\nclean:\n\trm -f *.o */*.o *~ */*~ ./#* *.txt *.dat *.avi *.png " + exec_name + "\n")
     else:
