@@ -23,7 +23,7 @@ Please copy the following code between the ##### and paste it into your trusted_
 trusted_values_dict['{}'] = {}
 
 #####
-'''.format(self.module_name, date.today(), self.trusted_values_dict_name, create_dict_string(self.calculated_dict)))
+'''.format(self.module_name, date.today(), self.trusted_values_dict_name, create_dict_string(self.calculated_dict))) # lgtm [py/clear-text-storage-sensitive-data]
 
     # If [write] is [True], write to [trusted_values_dict]
     if write:
