@@ -12,5 +12,5 @@ if [ ! -f $1 ]; then
     exit
 fi
 
-jupyter nbconvert --to python $1 --stdout |grep -v "^\#" > $1.py # ignore lines that start with #.
+jupyter nbconvert --to python $1 --stdout |grep -v "^\# " > $1.py # ignore lines that start with #.
 pylint --disable=trailing-newlines,reimported,ungrouped-imports $1.py
