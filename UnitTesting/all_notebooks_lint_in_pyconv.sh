@@ -6,9 +6,10 @@ mkdir pyconv
 rm -f /tmp/joblist.txt /tmp/joblist2.txt
 for i in *.ipynb; do
     # FIXME: Don't know why Tutorial-TOV-Piecewise_Polytrope_EOSs.ipynb.py causes pylint to choke...
-    if [ $i != "Tutorial-BaikalETK.ipynb" ] && [ $i != "NRPyPlus_Tutorial.ipynb" ] && [ $i != "Tutorial-How_NRPy_Computes_Finite_Difference_Coeffs.ipynb" ] && [ $i != "Tutorial-TOV-Piecewise_Polytrope_EOSs.ipynb" ] ; then
+    # FIXME: Don't know why Tutorial-ETK_thorn-MaxwellVacuum.ipynb.py causes pylint to choke...
+    if [ $i != "Tutorial-BaikalETK.ipynb" ] && [ $i != "NRPyPlus_Tutorial.ipynb" ] && [ $i != "Tutorial-How_NRPy_Computes_Finite_Difference_Coeffs.ipynb" ] && [ $i != "Tutorial-TOV-Piecewise_Polytrope_EOSs.ipynb" ] && [ $i != "Tutorial-ETK_thorn-MaxwellVacuum.ipynb" ] ; then
        echo "jupyter nbconvert --to python $i --stdout |grep -v \"^\# \" > pyconv/$i.py" >> /tmp/joblist.txt  # ignore lines that start with #.
-       echo "echo \"Just finished linting $i.\" ; pylint --disable=trailing-newlines,reimported,ungrouped-imports --output=pyconv/$i.py.txt pyconv/$i.py" >> /tmp/joblist2.txt
+       echo "echo \"Linting complete: $i\" ; pylint --disable=trailing-newlines,reimported,ungrouped-imports --output=pyconv/$i.py.txt pyconv/$i.py" >> /tmp/joblist2.txt
     fi
 done
 
