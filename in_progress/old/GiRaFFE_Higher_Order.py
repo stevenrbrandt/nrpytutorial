@@ -424,7 +424,6 @@ def GiRaFFE_Higher_Order():
 
     # We already have a handy function to define the Levi-Civita symbol in indexedexp.py
     # Initialize the Levi-Civita tensor by setting it equal to the Levi-Civita symbol
-    LeviCivitaSymbolDDD = ixp.LeviCivitaSymbol_dim3_rank3()
     LeviCivitaTensorDDD = ixp.LeviCivitaTensorDDD_dim3_rank3(sp.sqrt(gammadet))
     LeviCivitaTensorUUU = ixp.LeviCivitaTensorUUU_dim3_rank3(sp.sqrt(gammadet))
 
