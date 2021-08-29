@@ -140,7 +140,7 @@ if __name__ == '__main__':
 
         # Otherwise, the path is correct -- open it and write file_string to it
         with open(full_path, 'w') as file:
-            logging.info(' Creating file ' + full_path + '...') # lgtm [py/clear-text-storage-sensitive-data]
+            logging.info(' Creating file ' + full_path + '...')  # lgtm [py/clear-text-storage-sensitive-data]
             file.write(file_string)
             logging.info(' ...Success: File created.\n')
 
