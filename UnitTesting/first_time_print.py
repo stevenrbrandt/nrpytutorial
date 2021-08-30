@@ -32,6 +32,6 @@ trusted_values_dict['{}'] = {}
         fw.write('''
 # Generated on: {}
 trusted_values_dict['{}'] = {}
-'''.format(date.today(), self.trusted_values_dict_name, self.calculated_dict))
+'''.format(date.today(), self.trusted_values_dict_name, self.calculated_dict))  # lgtm [py/clear-text-storage-sensitive-data]
         fw.close()
         logging.debug(' ...Success: entry written to trusted_values_dict.py\n')
