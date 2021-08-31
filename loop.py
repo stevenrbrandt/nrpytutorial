@@ -154,8 +154,8 @@ def simple_loop(options, interior):
             i2i1i0_maxs = ["Nxx_plus_2NGHOSTS[2]", "Nxx_plus_2NGHOSTS[1]", "Nxx_plus_2NGHOSTS[0]"]
     # 'InteriorPoints': loop over the interior of a numerical grid, i.e. exclude ghost zones
     elif "InteriorPoints" in options:
-        i2i1i0_mins = ["NGHOSTS","NGHOSTS","NGHOSTS"]
-        i2i1i0_maxs = ["NGHOSTS+Nxx2","NGHOSTS+Nxx1","NGHOSTS+Nxx0"]
+        i2i1i0_mins = ["NGHOSTS", "NGHOSTS", "NGHOSTS"]
+        i2i1i0_maxs = ["NGHOSTS+Nxx2", "NGHOSTS+Nxx1", "NGHOSTS+Nxx0"]
         if "oldloops" in options:
             i2i1i0_maxs = ["NGHOSTS+Nxx[2]", "NGHOSTS+Nxx[1]", "NGHOSTS+Nxx[0]"]
     else: raise ValueError('no interation space was specified.')
@@ -188,10 +188,10 @@ def simple_loop(options, interior):
         pragma = re.search(r'OMP_custom_pragma=[\'\"](.+)[\'\"]', options).group(1)
     else:
         pragma = "#pragma omp parallel for"
-    increment = ["1", "1", "SIMD_width"] if "EnableSIMD" in options else ["1","1","1"]
+    increment = ["1", "1", "SIMD_width"] if "EnableSIMD" in options else ["1", "1", "1"]
 
-    return loop(["i2","i1","i0"], i2i1i0_mins, i2i1i0_maxs, increment, [pragma, Read_1Darrays[2], Read_1Darrays[1]], \
-        padding='    ', interior=Read_1Darrays[0] + ("\n" if Read_1Darrays[0] else "") + interior)
+    return loop(["i2", "i1", "i0"], i2i1i0_mins, i2i1i0_maxs, increment, [pragma, Read_1Darrays[2], Read_1Darrays[1]],
+                padding='    ', interior=Read_1Darrays[0] + ("\n" if Read_1Darrays[0] else "") + interior)
 
 if __name__ == "__main__":
     import doctest
