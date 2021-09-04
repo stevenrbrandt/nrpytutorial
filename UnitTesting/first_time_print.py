@@ -29,6 +29,9 @@ trusted_values_dict['{}'] = {}
     if write:
         logging.debug(' Writing trusted_values_dict entry to trusted_values_dict.py...')
         fw = open(os.path.join(self.path, 'trusted_values_dict.py'), 'a')
-        fw.write("\n# Generated on: {}\ntrusted_values_dict['{}'] = {}\n".format(date.today(), self.trusted_values_dict_name, self.calculated_dict))  # lgtm [py/clear-text-storage-sensitive-data]
+        fw.write('''
+# Generated on: {}
+trusted_values_dict['{}'] = {}
+'''.format(date.today(), self.trusted_values_dict_name, self.calculated_dict))
         fw.close()
         logging.debug(' ...Success: entry written to trusted_values_dict.py\n')
