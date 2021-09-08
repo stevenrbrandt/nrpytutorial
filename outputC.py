@@ -533,7 +533,9 @@ def construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_fr
     DEBUGCFLAGS = " -O2 -g"
     OPTCFLAGS   = " -march=native -Ofast -fopenmp"
     if CC == "gcc":
-        CFLAGS += " -std=gnu99"
+        CFLAGS      += " -std=gnu99"
+        DEBUGCFLAGS += " -std=gnu99"
+        OPTCFLAGS   += " -std=gnu99"
     CHOSEN_CFLAGS = CFLAGS
     if compiler_opt_option == "debug":
         CHOSEN_CFLAGS = DEBUGCFLAGS
