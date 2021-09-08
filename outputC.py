@@ -452,7 +452,10 @@ def Cfunction(includes=None, prefunc="", desc="", c_type="void", name=None, para
             print("Found includes = " + str(includes))
             sys.exit(1)
         for inc in includes:
-            complete_func += "#include \"" + inc + "\"\n"
+            if "<" in inc:  # for C++ style code e.g., #include <cstdio>
+                complete_func += "#include " + inc + "\n"
+            else:
+                complete_func += "#include \"" + inc + "\"\n"
         complete_func += "\n"
 
     if prefunc != "":
@@ -493,7 +496,7 @@ def outCfunction(outfile="", includes=None, prefunc="", desc="",
 
 def construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_free_parameters_h=False,
                                                compiler_opt_option="fastdebug", addl_CFLAGS=None,
-                                               addl_libraries=None, mkdir_Ccodesrootdir=True, use_make=True):
+                                               addl_libraries=None, mkdir_Ccodesrootdir=True, use_make=True, CC="gcc"):
     if "main" not in outC_function_dict:
         print("construct_Makefile_from_outC_function_dict() error: C codes will not compile if main() function not defined!")
         print("    Make sure that the main() function registered to outC_function_dict has name \"main\".")
@@ -525,16 +528,21 @@ def construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_fr
         else:
             with open(add_to_Makefile(Ccodesrootdir, os.path.join(key+".c")), "w") as file:
                 file.write(item)
-    CC = "gcc"
-    CFLAGS      = " -march=native -O2 -g -fopenmp -std=gnu99"
-    DEBUGCFLAGS = " -O2 -g -std=gnu99"
-    OPTCFLAGS   = " -march=native -Ofast -fopenmp -std=gnu99"
+    CC = CC
+    CFLAGS      = " -march=native -O2 -g -fopenmp"
+    DEBUGCFLAGS = " -O2 -g"
+    OPTCFLAGS   = " -march=native -Ofast -fopenmp"
+    if CC == "gcc":
+        CFLAGS += " -std=gnu99"
     CHOSEN_CFLAGS = CFLAGS
     if compiler_opt_option == "debug":
         CHOSEN_CFLAGS = DEBUGCFLAGS
     elif compiler_opt_option == "fast":
         CHOSEN_CFLAGS = OPTCFLAGS
     if addl_CFLAGS is not None:
+        if not isinstance(addl_CFLAGS, list):
+            print("Error: construct_Makefile_from_outC_function_dict(): addl_CFLAGS must be a list!")
+            sys.exit(1)
         for FLAG in addl_CFLAGS:
             CHOSEN_CFLAGS += " "+FLAG
     all_str = exec_name + " "
@@ -552,6 +560,9 @@ def construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_fr
 
     linked_libraries = " -lm"
     if addl_libraries is not None:
+        if not isinstance(addl_libraries, list):
+            print("Error: construct_Makefile_from_outC_function_dict(): addl_libraries must be a list!")
+            sys.exit(1)
         for lib in addl_libraries:
             linked_libraries += " " + lib
 

@@ -28,7 +28,7 @@ import io, os, shlex, subprocess, sys, time, multiprocessing, getpass, platform,
 # check_executable_exists(): Check to see whether an executable exists.
 #                            Error out or return False if not exists;
 #                            return True if executable exists in PATH.
-def check_executable_exists(exec_name,error_if_not_found=True):
+def check_executable_exists(exec_name, error_if_not_found=True):
     cmd = "where" if os.name == "nt" else "which"
     try:
         subprocess.check_output([cmd, exec_name])
@@ -108,19 +108,20 @@ def C_compile(main_C_output_path, main_C_output_file, compile_mode="optimized", 
 from outputC import construct_Makefile_from_outC_function_dict
 def new_C_compile(Ccodesrootdir, exec_name, uses_free_parameters_h=False,
                   compiler_opt_option="fast", addl_CFLAGS=None,
-                  addl_libraries=None, mkdir_Ccodesrootdir=True, attempt=1):
+                  addl_libraries=None, mkdir_Ccodesrootdir=True, CC="gcc", attempt=1):
     check_executable_exists("gcc")
     use_make = check_executable_exists("make", error_if_not_found=False)
 
     construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_free_parameters_h,
                                                compiler_opt_option, addl_CFLAGS,
-                                               addl_libraries, mkdir_Ccodesrootdir, use_make)
+                                               addl_libraries, mkdir_Ccodesrootdir, use_make, CC=CC)
+    orig_working_directory = os.getcwd()
     os.chdir(Ccodesrootdir)
     if use_make:
         Execute_input_string("make -j" + str(int(multiprocessing.cpu_count()) + 2), os.devnull)
     else:
         Execute_input_string(os.path.join("./", "backup_script_nomake.sh"))
-    os.chdir(os.path.join(".."))
+    os.chdir(orig_working_directory)
 
     if not os.path.isfile(os.path.join(Ccodesrootdir, exec_name)) and attempt == 1:
         print("Optimized compilation FAILED. Removing optimizations (including OpenMP) and retrying with debug enabled...")
@@ -131,7 +132,7 @@ def new_C_compile(Ccodesrootdir, exec_name, uses_free_parameters_h=False,
         # Then retry compilation (recursion)
         new_C_compile(Ccodesrootdir, exec_name, uses_free_parameters_h,
                       compiler_opt_option="debug", addl_CFLAGS=addl_CFLAGS,
-                      addl_libraries=addl_libraries, mkdir_Ccodesrootdir=mkdir_Ccodesrootdir, attempt=2)
+                      addl_libraries=addl_libraries, mkdir_Ccodesrootdir=mkdir_Ccodesrootdir, CC=CC, attempt=2)
     if not os.path.isfile(os.path.join(Ccodesrootdir, exec_name)) and attempt == 2:
         print("Sorry, compilation failed")
         sys.exit(1)
@@ -142,7 +143,7 @@ def new_C_compile(Ccodesrootdir, exec_name, uses_free_parameters_h=False,
 #            if available. Calls Execute_input_string() to
 #            redirect output from stdout & stderr to desired
 #            destinations.
-def Execute(executable, executable_output_arguments="", file_to_redirect_stdout=os.devnull,verbose=True):
+def Execute(executable, executable_output_arguments="", file_to_redirect_stdout=os.devnull, verbose=True):
     # Step 1: Delete old version of executable file
     if file_to_redirect_stdout != os.devnull:
         delete_existing_files(file_to_redirect_stdout)
@@ -178,7 +179,7 @@ def Execute(executable, executable_output_arguments="", file_to_redirect_stdout=
     execute_string += execute_prefix+executable+" "+executable_output_arguments
 
     # Step 3: Execute the desired executable
-    Execute_input_string(execute_string, file_to_redirect_stdout,verbose)
+    Execute_input_string(execute_string, file_to_redirect_stdout, verbose)
 
 # Execute_input_string(): Executes an input string and redirects
 #            output from stdout & stderr to desired destinations.
@@ -224,7 +225,7 @@ def mkdir(newpath):
     if not os.path.exists(os.path.join(newpath)):
         os.makedirs(os.path.join(newpath))
 
-def output_Jupyter_notebook_to_LaTeXed_PDF(notebookname,location_of_template_file=os.path.join("."),verbose=True):
+def output_Jupyter_notebook_to_LaTeXed_PDF(notebookname, location_of_template_file=os.path.join("."), verbose=True):
     Execute_input_string(r"jupyter nbconvert --to latex --template-file "
                          +os.path.join(location_of_template_file,"latex_nrpy_style.tplx")
                          +r" --log-level='WARN' "+notebookname+".ipynb",verbose=False)
