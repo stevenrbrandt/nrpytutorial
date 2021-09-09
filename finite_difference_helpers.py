@@ -8,12 +8,12 @@
 
 # Author: Zachariah B. Etienne
 #         zachetie **at** gmail **dot* com
-from outputC import superfast_uniq, outputC, outC_function_dict, add_to_Cfunction_dict # NRPy+: Core C code output module
-import NRPy_param_funcs as par   # NRPy+: parameter interface
-import sympy as sp                 # SymPy: The Python computer algebra package upon which NRPy+ depends
-import grid as gri                 # NRPy+: Functions having to do with numerical grids
-import sys                         # Standard Python module for multiplatform OS-level functions
-from collections import namedtuple # Standard Python: Enable namedtuple data type
+from outputC import superfast_uniq, outputC, outC_function_dict, add_to_Cfunction_dict  # NRPy+: Core C code output module
+import NRPy_param_funcs as par      # NRPy+: parameter interface
+import sympy as sp                  # SymPy: The Python computer algebra package upon which NRPy+ depends
+import grid as gri                  # NRPy+: Functions having to do with numerical grids
+import sys                          # Standard Python module for multiplatform OS-level functions
+from collections import namedtuple  # Standard Python: Enable namedtuple data type
 
 FDparams = namedtuple('FDparams', 'PRECISION FD_CD_order FD_functions_enable SIMD_enable DIM MemAllocStyle upwindcontrolvec fullindent outCparams')
 
@@ -89,13 +89,13 @@ def generate_list_of_deriv_vars_from_lhrh_sympyexpr_list(sympyexpr_list,FDparams
     if FDparams.upwindcontrolvec != "":
         for var in list_of_deriv_vars:
             if "_dupD" in str(var):
-                list_of_deriv_vars.append(sp.sympify(str(var).replace("_dupD","_ddnD")))
+                list_of_deriv_vars.append(sp.sympify(str(var).replace("_dupD", "_ddnD")))
 
     # Finally, sort the list_of_deriv_vars. This ensures
     #     consistency in the C code output, and might even be
     #     tuned to reduce cache misses.
     #     Thanks to Aaron Meurer for this nice one-liner!
-    return sorted(list_of_deriv_vars,key=sp.default_sort_key)
+    return sorted(list_of_deriv_vars, key=sp.default_sort_key)
 ########################################
 
 ########################################
@@ -206,11 +206,11 @@ def type__var(in_var,FDparams, AddPrefix_for_UpDownWindVars=True):
             #                    into the upwinding algorithm. The output
             #                    will be the original _dupD variable.
             varname = "UpwindAlgInput"+varname
-        if "_ddnD" in varname: # For consistency with _dupD
+        if "_ddnD" in varname:  # For consistency with _dupD
             varname = "UpwindAlgInput"+varname
     if FDparams.SIMD_enable == "True":
         return "const REAL_SIMD_ARRAY " + varname
-    return "const "+ FDparams.PRECISION + " " + varname
+    return "const " + FDparams.PRECISION + " " + varname
 
 def read_from_memory_Ccode_onept(gfname,idx, FDparams):
     """
@@ -233,9 +233,9 @@ def read_from_memory_Ccode_onept(gfname,idx, FDparams):
     gf_array_name = "in_gfs" # Default array name.
     gfaccess_str = gri.gfaccess(gf_array_name,gfname,ijkl_string(idx4, FDparams))
     if FDparams.SIMD_enable == "True":
-        retstring = type__var(gfname,FDparams) + varsuffix(idx4, FDparams) +" = ReadSIMD(&" + gfaccess_str + ");"
+        retstring = type__var(gfname, FDparams) + varsuffix(idx4, FDparams) + " = ReadSIMD(&" + gfaccess_str + ");"
     else:
-        retstring = type__var(gfname,FDparams) + varsuffix(idx4, FDparams) +" = " + gfaccess_str + ";"
+        retstring = type__var(gfname, FDparams) + varsuffix(idx4, FDparams) + " = " + gfaccess_str + ";"
     return retstring+"\n"
 
 def ijkl_string(idx4, FDparams):
