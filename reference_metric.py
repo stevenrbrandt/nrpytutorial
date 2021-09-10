@@ -1402,8 +1402,7 @@ def add_to_Cfunc_dict_xx_to_Cart(rel_path_to_Cparams=os.path.join("./")):
 
     add_to_Cfunction_dict(
         includes=["stdio.h", "math.h",
-                  os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h"),
-                  os.path.join(rel_path_to_Cparams, "declare_Cparameters_struct.h")],
+                  os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
         desc    ="Compute Cartesian coordinates given local grid coordinate (xx0,xx1,xx2), "
                  "  accounting for the origin of this grid being possibly offcenter.",
         c_type  ="void",
