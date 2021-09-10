@@ -631,6 +631,10 @@ def register_C_functions_and_NRPy_basic_defines():
 #ifndef M_SQRT1_2
 #define M_SQRT1_2 0.707106781186547524400844362104849039L
 #endif
+
+#ifdef __cplusplus
+#define restrict __restrict__
+#endif
 """
     Nbd_str += "#define REAL " + par.parval_from_str("outputC::PRECISION") + "\n"
 
