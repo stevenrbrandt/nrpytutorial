@@ -6,11 +6,7 @@
 // Author: Leonardo R. Werneck
 //         wernecklr **at** gmail **dot** com
 
-int output_central_values( const REAL t,
-                           const paramstruct *restrict params,
-                           REAL *restrict in_gfs,
-                           REAL *restrict auxevol_gfs,
-                           REAL *restrict rho_max) {
+int output_central_values( const REAL t, const paramstruct *restrict params, REAL *restrict in_gfs ) {
 #include "set_Cparameters.h"
       
   /* Set indices */
@@ -25,18 +21,9 @@ int output_central_values( const REAL t,
   const REAL alpha_i0p1  = in_gfs[IDX4S(ALPHAGF, i0,i1,i2)];
   const REAL alpha_i0p2  = in_gfs[IDX4S(ALPHAGF, i0+1,i1,i2)];
   const REAL alpha_i0p3  = in_gfs[IDX4S(ALPHAGF, i0+2,i1,i2)];
-  /* Set needed values of T^{\mu\nu} */
-  const REAL T4UU00_i0p1 = auxevol_gfs[IDX4S(T4UU00GF, i0,i1,i2)];
-  const REAL T4UU00_i0p2 = auxevol_gfs[IDX4S(T4UU00GF, i0+1,i1,i2)];
-  const REAL T4UU00_i0p3 = auxevol_gfs[IDX4S(T4UU00GF, i0+2,i1,i2)];
-  /* Compute needed values of rho, the energy density */
-  const REAL rho_i0p1    = pow(alpha_i0p1,2) * T4UU00_i0p1;
-  const REAL rho_i0p2    = pow(alpha_i0p2,2) * T4UU00_i0p2;
-  const REAL rho_i0p3    = pow(alpha_i0p3,2) * T4UU00_i0p3;
   /* Compute the central values of the scalar field, alpha, and rho */
   const REAL sf_c    = 3.0*sf_i0p1    - 3.0*sf_i0p2    + sf_i0p3;
   const REAL alpha_c = 3.0*alpha_i0p1 - 3.0*alpha_i0p2 + alpha_i0p3;
-  const REAL rho_c   = 3.0*rho_i0p1   - 3.0*rho_i0p2   + rho_i0p3;
 
   /* Set the output file */
   FILE *outfile;
@@ -47,10 +34,8 @@ int output_central_values( const REAL t,
     outfile = fopen("out_central_values.dat","w");
   }
 
-  if(rho_c > *rho_max) *rho_max = rho_c;
-
-  /* Output the central values of the scalar field, alpha, and rho */
-  fprintf(outfile,"%.15e %.15e %.15e %.15e\n",t,sf_c,alpha_c,rho_c);
+  /* Output the central values of the scalar field and alpha */
+  fprintf(outfile,"%.15e %.15e %.15e\n",t,alpha_c,sf_c);
 
   /* Close the file */
   fclose(outfile);
