@@ -11,7 +11,7 @@
 import sympy as sp  # Import SymPy, a computer algebra system written entirely in Python
 import os, sys      # Standard Python modules for multiplatform OS-level functions
 from MoLtimestepping.RK_Butcher_Table_Dictionary import Butcher_dict
-from outputC import add_to_Cfunction_dict, indent_Ccode  # NRPy+: Basic C code output functionality
+from outputC import add_to_Cfunction_dict, indent_Ccode, outC_NRPy_basic_defines_h_dict  # NRPy+: Basic C code output functionality
 
 
 # Check if Butcher Table is diagonal
@@ -113,41 +113,6 @@ def add_to_Cfunction_dict_MoL_malloc(MoL_method, which_gfs):
         body=indent_Ccode(body, "  "),
         rel_path_to_Cparams=os.path.join("."))
 
-# add_to_Cfunction_dict_MoL_free_memory() registers
-#           MoL_free_memory_y_n_gfs() and
-#           MoL_free_memory_non_y_n_gfs(), which free memory for
-#           the indicated sets of gridfunctions
-def add_to_Cfunction_dict_MoL_free_memory(MoL_method, which_gfs):
-        includes = ["NRPy_basic_defines.h", "NRPy_function_prototypes.h"]
-        desc = "Method of Lines (MoL) for \"" + MoL_method + "\" method: Free memory for \"" + which_gfs + "\" gridfunctions\n"
-        desc += "   - y_n_gfs are used to store data for the vector of gridfunctions y_i at t_n, at the start of each MoL timestep\n"
-        desc += "   - non_y_n_gfs are needed for intermediate (e.g., k_i) storage in chosen MoL method\n"
-        c_type = "void"
-
-        y_n_gridfunctions, non_y_n_gridfunctions_list, diagnostic_gridfunctions_point_to = \
-            generate_gridfunction_names(MoL_method=MoL_method)
-
-        gridfunctions_list = []
-        if which_gfs == "y_n_gfs":
-            gridfunctions_list = [y_n_gridfunctions]
-        elif which_gfs == "non_y_n_gfs":
-            gridfunctions_list = non_y_n_gridfunctions_list
-        else:
-            print("ERROR: which_gfs = \"" + which_gfs + "\" unrecognized.")
-            sys.exit(1)
-        name = "MoL_free_memory_" + which_gfs
-        params = "const paramstruct *restrict params, MoL_gridfunctions_struct *restrict gridfuncs"
-        body = ""
-        for gridfunctions in gridfunctions_list:
-            body += "    free(gridfuncs." + gridfunctions + ");\n"
-        add_to_Cfunction_dict(
-            includes=includes,
-            desc=desc,
-            c_type=c_type, name=name, params=params,
-            body=indent_Ccode(body, "  "),
-            rel_path_to_Cparams=os.path.join("."))
-
-
 # single_RK_substep() performs necessary replacements to
 #   define C code for a single RK substep
 #   (e.g., computing k_1 and then updating the outer boundaries)
@@ -207,11 +172,11 @@ def single_RK_substep(commentblock, RHS_str, RHS_input_str, RHS_output_str, RK_l
 # k_even    = dt*f(t_n + dt, y_n + k_odd)
 # y_nplus1 += 1/3*k_even
 ########################################################################################################################
-def add_to_Cfunction_dict_MoL_step_forward_one_timestep(MoL_method, RHS_string = "", post_RHS_string = ""):
+def add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string = "", post_RHS_string = ""):
     includes = ["NRPy_basic_defines.h", "NRPy_function_prototypes.h"]
     desc  = "Method of Lines (MoL) for \"" + MoL_method + "\" method: Step forward one full timestep.\n"
     c_type = "void"
-    name = "MoL_step_forward_one_timestep"
+    name = "MoL_step_forward_in_time"
     params = "const paramstruct *restrict params, MoL_gridfunctions_struct *restrict gridfuncs"
 
     indent = ""  # We don't bother with an indent here.
@@ -397,7 +362,42 @@ def add_to_Cfunction_dict_MoL_step_forward_one_timestep(MoL_method, RHS_string =
         rel_path_to_Cparams=os.path.join("."))
 
 
-# Set NRPy_basic_defines
+# add_to_Cfunction_dict_MoL_free_memory() registers
+#           MoL_free_memory_y_n_gfs() and
+#           MoL_free_memory_non_y_n_gfs(), which free memory for
+#           the indicated sets of gridfunctions
+def add_to_Cfunction_dict_MoL_free_memory(MoL_method, which_gfs):
+        includes = ["NRPy_basic_defines.h", "NRPy_function_prototypes.h"]
+        desc = "Method of Lines (MoL) for \"" + MoL_method + "\" method: Free memory for \"" + which_gfs + "\" gridfunctions\n"
+        desc += "   - y_n_gfs are used to store data for the vector of gridfunctions y_i at t_n, at the start of each MoL timestep\n"
+        desc += "   - non_y_n_gfs are needed for intermediate (e.g., k_i) storage in chosen MoL method\n"
+        c_type = "void"
+
+        y_n_gridfunctions, non_y_n_gridfunctions_list, diagnostic_gridfunctions_point_to = \
+            generate_gridfunction_names(MoL_method=MoL_method)
+
+        gridfunctions_list = []
+        if which_gfs == "y_n_gfs":
+            gridfunctions_list = [y_n_gridfunctions]
+        elif which_gfs == "non_y_n_gfs":
+            gridfunctions_list = non_y_n_gridfunctions_list
+        else:
+            print("ERROR: which_gfs = \"" + which_gfs + "\" unrecognized.")
+            sys.exit(1)
+        name = "MoL_free_memory_" + which_gfs
+        params = "const paramstruct *restrict params, MoL_gridfunctions_struct *restrict gridfuncs"
+        body = ""
+        for gridfunctions in gridfunctions_list:
+            body += "    free(gridfuncs." + gridfunctions + ");\n"
+        add_to_Cfunction_dict(
+            includes=includes,
+            desc=desc,
+            c_type=c_type, name=name, params=params,
+            body=indent_Ccode(body, "  "),
+            rel_path_to_Cparams=os.path.join("."))
+
+
+# Register MoL_gridfunctions_struct in NRPy_basic_defines
 def NRPy_basic_defines_MoL_timestepping_struct(MoL_method="RK4"):
     y_n_gridfunctions, non_y_n_gridfunctions_list, diagnostic_gridfunctions_point_to = \
         generate_gridfunction_names(MoL_method=MoL_method)
@@ -410,15 +410,15 @@ def NRPy_basic_defines_MoL_timestepping_struct(MoL_method="RK4"):
     Nbd += indent + "REAL *restrict diagnostic_output_gfs;\n"
     Nbd += "} MoL_gridfunctions_struct;\n"
 
-    return Nbd
+    outC_NRPy_basic_defines_h_dict["MoL"] = Nbd
 
 
 # Finally declare the master registration function
-def MoL_register_C_functions_and_NRPy_basic_defines(MoL_method = "RK4",
+def register_C_functions_and_NRPy_basic_defines(MoL_method = "RK4",
             RHS_string =  "rhs_eval(Nxx,Nxx_plus_2NGHOSTS,dxx, RK_INPUT_GFS, RK_OUTPUT_GFS);",
        post_RHS_string = "apply_bcs(Nxx,Nxx_plus_2NGHOSTS, RK_OUTPUT_GFS);"):
-    NRPy_basic_defines_MoL_timestepping_struct(MoL_method = MoL_method)
     for which_gfs in ["y_n_gfs", "non_y_n_gfs"]:
         add_to_Cfunction_dict_MoL_malloc(MoL_method, which_gfs)
         add_to_Cfunction_dict_MoL_free_memory(MoL_method, which_gfs)
-    add_to_Cfunction_dict_MoL_step_forward_one_timestep(MoL_method, RHS_string, post_RHS_string)
+    add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string, post_RHS_string)
+    NRPy_basic_defines_MoL_timestepping_struct(MoL_method = MoL_method)
