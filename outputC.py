@@ -60,6 +60,15 @@ def superfast_uniq(seq): # Author: Dave Kirby
     seen = set()
     return [x for x in seq if x not in seen and not seen.add(x)]
 
+
+def indent_Ccode(Ccode, indent="  "):
+    Ccodesplit = Ccode.splitlines()
+    outstring = ""
+    for i in range(len(Ccodesplit)):
+        outstring += indent + Ccodesplit[i] + '\n'
+    return outstring
+
+
 def check_if_string__error_if_not(allegedstring, stringdesc):
     if sys.version_info[0] == 3:
         string_types = str
@@ -68,6 +77,7 @@ def check_if_string__error_if_not(allegedstring, stringdesc):
     if not isinstance(allegedstring, string_types):
         print("ERROR: "+str(stringdesc)+" =="+str(allegedstring)+" not a string!")
         sys.exit(1)
+
 
 def ccode_postproc(string):
     PRECISION = par.parval_from_str("PRECISION")
@@ -528,7 +538,6 @@ def construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_fr
         else:
             with open(add_to_Makefile(Ccodesrootdir, os.path.join(key+".c")), "w") as file:
                 file.write(item)
-    CC = CC
     CFLAGS      = " -march=native -O2 -g -fopenmp"
     DEBUGCFLAGS = " -O2 -g"
     OPTCFLAGS   = " -march=native -Ofast -fopenmp"
