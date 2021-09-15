@@ -160,13 +160,13 @@ def GiRaFFE_NRPy_Main_Driver_generate_all(out_dir):
 
     C2P_P2C.GiRaFFE_NRPy_C2P(StildeD,BU,gammaDD,betaU,alpha)
 
-    values_to_print = [\
-                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD0"),rhs=C2P_P2C.outStildeD[0]),\
-                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD1"),rhs=C2P_P2C.outStildeD[1]),\
-                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD2"),rhs=C2P_P2C.outStildeD[2]),\
-                       lhrh(lhs=gri.gfaccess("auxevol_gfs","ValenciavU0"),rhs=C2P_P2C.ValenciavU[0]),\
-                       lhrh(lhs=gri.gfaccess("auxevol_gfs","ValenciavU1"),rhs=C2P_P2C.ValenciavU[1]),\
-                       lhrh(lhs=gri.gfaccess("auxevol_gfs","ValenciavU2"),rhs=C2P_P2C.ValenciavU[2])\
+    values_to_print = [
+                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD0"),rhs=C2P_P2C.outStildeD[0]),
+                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD1"),rhs=C2P_P2C.outStildeD[1]),
+                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD2"),rhs=C2P_P2C.outStildeD[2]),
+                       lhrh(lhs=gri.gfaccess("auxevol_gfs","ValenciavU0"),rhs=C2P_P2C.ValenciavU[0]),
+                       lhrh(lhs=gri.gfaccess("auxevol_gfs","ValenciavU1"),rhs=C2P_P2C.ValenciavU[1]),
+                       lhrh(lhs=gri.gfaccess("auxevol_gfs","ValenciavU2"),rhs=C2P_P2C.ValenciavU[2])
                       ]
 
     subdir = "C2P"
@@ -182,10 +182,10 @@ def GiRaFFE_NRPy_Main_Driver_generate_all(out_dir):
 
     C2P_P2C.GiRaFFE_NRPy_P2C(gammaDD,betaU,alpha,  ValenciavU,BU, sqrt4pi)
 
-    values_to_print = [\
-                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD0"),rhs=C2P_P2C.StildeD[0]),\
-                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD1"),rhs=C2P_P2C.StildeD[1]),\
-                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD2"),rhs=C2P_P2C.StildeD[2]),\
+    values_to_print = [
+                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD0"),rhs=C2P_P2C.StildeD[0]),
+                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD1"),rhs=C2P_P2C.StildeD[1]),
+                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD2"),rhs=C2P_P2C.StildeD[2]),
                       ]
 
     desc = "Recompute StildeD after current sheet fix to Valencia 3-velocity to ensure consistency between conservative & primitive variables."
@@ -220,6 +220,7 @@ const int NUM_RECONSTRUCT_GFS = 6;
 #include "RHSs/calculate_Stilde_flux_D0.h"
 #include "RHSs/calculate_Stilde_flux_D1.h"
 #include "RHSs/calculate_Stilde_flux_D2.h"
+#include "RHSs/calculate_Stilde_rhsD.h"
 #include "boundary_conditions/GiRaFFE_boundary_conditions.h"
 #include "A2B/driver_AtoB.h"
 #include "C2P/GiRaFFE_NRPy_cons_to_prims.h"
@@ -322,6 +323,7 @@ void GiRaFFE_NRPy_RHSs(const paramstruct *restrict params,REAL *restrict auxevol
             //calculate_E_field_D2_left(params,auxevol_gfs,rhs_gfs);
             calculate_Stilde_flux_D2(params,auxevol_gfs,rhs_gfs);
         }
+        calculate_Stilde_rhsD(flux_dirn+1,params,auxevol_gfs,rhs_gfs);
         for(int count=0;count<=1;count++) {
             // This function is written to be general, using notation that matches the forward permutation added to AD2,
             // i.e., [F_HLL^x(B^y)]_z corresponding to flux_dirn=0, count=1.
