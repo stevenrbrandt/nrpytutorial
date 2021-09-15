@@ -25,7 +25,7 @@ par.initialize_param(par.glb_param("int",  modulename, "FD_CENTDERIVS_ORDER",   
 par.initialize_param(par.glb_param("bool", modulename, "FD_functions_enable",      False))
 par.initialize_param(par.glb_param("int",  modulename, "FD_KO_ORDER__CENTDERIVS_PLUS", 2))
 
-def FD_outputC(filename,sympyexpr_list, params="", upwindcontrolvec=""):
+def FD_outputC(filename, sympyexpr_list, params="", upwindcontrolvec=""):
     outCparams = parse_outCparams_string(params)
 
     # Step 0.a:
@@ -100,7 +100,7 @@ def FD_outputC(filename,sympyexpr_list, params="", upwindcontrolvec=""):
     #     supported. If not, error out.
     for i in range(len(list_of_deriv_operators)):
         found_derivID = False
-        for derivID in ["dD","dupD","ddnD","dKOD"]:
+        for derivID in ["dD", "dupD", "ddnD", "dKOD"]:
             if derivID in list_of_deriv_operators[i]:
                 found_derivID = True
         if not found_derivID:
