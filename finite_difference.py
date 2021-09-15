@@ -9,7 +9,7 @@
 # Author: Zachariah B. Etienne
 #         zachetie **at** gmail **dot* com
 
-from outputC import parse_outCparams_string, outC_function_dict, outC_NRPy_basic_defines_h_dict  # NRPy+: Core C code output module
+from outputC import parse_outCparams_string, outC_function_dict, outC_function_prototype_dict, outC_NRPy_basic_defines_h_dict  # NRPy+: Core C code output module
 import NRPy_param_funcs as par   # NRPy+: parameter interface
 import sympy as sp               # SymPy: The Python computer algebra package upon which NRPy+ depends
 import grid as gri               # NRPy+: Functions having to do with numerical grids
@@ -179,6 +179,18 @@ def output_finite_difference_functions_h(path=os.path.join(".")):
             if "__FD_OPERATOR_FUNC__" in item:
                 file.write(item.replace("const REAL_SIMD_ARRAY _NegativeOne_ =",
                                         "const REAL_SIMD_ARRAY "+UNUSED+" _NegativeOne_ =")) # Many of the NegativeOne's get optimized away in the SIMD postprocessing step. No need for all the warnings
+
+        # Clear all FD functions from outC_function_dict after outputting to finite_difference_functions.h.
+        #   Otherwise outputC will be outputting these as separate individual C codes & attempting to build them in Makefile.
+        key_list_del = []
+        for key, item in outC_function_dict.items():
+            if "__FD_OPERATOR_FUNC__" in item:
+                key_list_del += [key]
+        for key in key_list_del:
+            print(key)
+            outC_function_dict.pop(key)
+            if key in outC_function_prototype_dict:
+                outC_function_prototype_dict.pop(key)
 
         file.write("#endif // #ifndef __FD_FUNCTIONS_H__\n")
 ################

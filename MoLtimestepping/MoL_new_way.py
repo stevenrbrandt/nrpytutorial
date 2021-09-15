@@ -105,7 +105,7 @@ def add_to_Cfunction_dict_MoL_malloc(MoL_method, which_gfs):
         num_gfs = "NUM_EVOL_GFS"
         if gridfunctions == "auxevol_gfs":
             num_gfs = "NUM_AUXEVOL_GFS"
-        body += "gridfuncs." + gridfunctions + " = (REAL *restrict)malloc(sizeof(REAL) * " + num_gfs + " * Nxx_plus_2NGHOSTS_tot);\n"
+        body += "gridfuncs->" + gridfunctions + " = (REAL *restrict)malloc(sizeof(REAL) * " + num_gfs + " * Nxx_plus_2NGHOSTS_tot);\n"
     add_to_Cfunction_dict(
         includes=includes,
         desc=desc,
@@ -177,7 +177,7 @@ def add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string = "", 
     desc  = "Method of Lines (MoL) for \"" + MoL_method + "\" method: Step forward one full timestep.\n"
     c_type = "void"
     name = "MoL_step_forward_in_time"
-    params = "const paramstruct *restrict params, MoL_gridfunctions_struct *restrict gridfuncs"
+    params = "const paramstruct *restrict params, MoL_gridfunctions_struct *restrict gridfuncs, const REAL dt"
 
     indent = ""  # We don't bother with an indent here.
 
@@ -186,11 +186,11 @@ def add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string = "", 
     y_n_gridfunctions, non_y_n_gridfunctions_list, _throwaway = generate_gridfunction_names(MoL_method)
     body += "// First set gridfunction aliases from gridfuncs struct\n\n"
     body += "// y_n gridfunctions:\n"
-    body += "REAL restrict *" + y_n_gridfunctions + " = gridfuncs." + y_n_gridfunctions + ";\n"
+    body += "REAL *restrict " + y_n_gridfunctions + " = gridfuncs->" + y_n_gridfunctions + ";\n"
     body += "\n"
     body += "// Temporary timelevel & AUXEVOL gridfunctions:\n"
     for gf in non_y_n_gridfunctions_list:
-        body += "REAL restrict *" + gf + " = gridfuncs." + gf + ";\n"
+        body += "REAL *restrict " + gf + " = gridfuncs->" + gf + ";\n"
     body += "\n"
     body += "// Next perform a full step forward in time\n"
 
@@ -388,7 +388,7 @@ def add_to_Cfunction_dict_MoL_free_memory(MoL_method, which_gfs):
         params = "const paramstruct *restrict params, MoL_gridfunctions_struct *restrict gridfuncs"
         body = ""
         for gridfunctions in gridfunctions_list:
-            body += "    free(gridfuncs." + gridfunctions + ");\n"
+            body += "    free(gridfuncs->" + gridfunctions + ");\n"
         add_to_Cfunction_dict(
             includes=includes,
             desc=desc,
@@ -409,6 +409,8 @@ def NRPy_basic_defines_MoL_timestepping_struct(MoL_method="RK4"):
         Nbd += indent + "REAL *restrict " + gfs + ";\n"
     Nbd += indent + "REAL *restrict diagnostic_output_gfs;\n"
     Nbd += "} MoL_gridfunctions_struct;\n"
+    Nbd += """#define LOOP_ALL_GFS_GPS(ii) _Pragma("omp parallel for") \\
+  for(int (ii)=0;(ii)<Nxx_plus_2NGHOSTS0*Nxx_plus_2NGHOSTS1*Nxx_plus_2NGHOSTS2*NUM_EVOL_GFS;(ii)++)\n"""
 
     outC_NRPy_basic_defines_h_dict["MoL"] = Nbd
 
