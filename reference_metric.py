@@ -991,7 +991,7 @@ def add_to_Cfunction_dict__find_timestep(rel_path_to_Cparams=os.path.join("./"),
     preloop = "    REAL dsmin = 1e38; // Start with a crazy high value... close to the largest number in single precision."
     ##############################
     # Step 5: Loop options
-    loopopts = "AllPoints,Read_xxs,DisableOpenMP"
+    loopopts = "InteriorPoints,Read_xxs,DisableOpenMP"
     if gridsuffix != "":
         loopopts += ","+gridsuffix
     ##############################
@@ -1412,7 +1412,6 @@ def add_to_Cfunction_dict_find_timestep():
 
     desc="Find the CFL-constrained timestep"
     add_to_Cfunction_dict(
-        includes ="NRPy_basic_defines.h",
         desc     =desc,
         c_type   ="REAL",
         name     ="find_timestep",
