@@ -540,7 +540,7 @@ def construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_fr
                 file.write(item)
     CFLAGS      = " -march=native -O2 -g -fopenmp"
     DEBUGCFLAGS = " -O2 -g"
-    OPTCFLAGS   = " -march=native -Ofast -fopenmp"
+    OPTCFLAGS   = " -march=native -Ofast -fopenmp -funroll-loops"
     if CC == "gcc":
         CFLAGS      += " -std=gnu99"
         DEBUGCFLAGS += " -std=gnu99"
