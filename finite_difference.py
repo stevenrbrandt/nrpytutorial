@@ -187,7 +187,6 @@ def output_finite_difference_functions_h(path=os.path.join(".")):
             if "__FD_OPERATOR_FUNC__" in item:
                 key_list_del += [key]
         for key in key_list_del:
-            print(key)
             outC_function_dict.pop(key)
             if key in outC_function_prototype_dict:
                 outC_function_prototype_dict.pop(key)
