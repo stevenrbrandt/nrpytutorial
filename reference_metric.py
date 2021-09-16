@@ -28,6 +28,7 @@ from outputC import outputC,superfast_uniq,add_to_Cfunction_dict # NRPy+: Core C
 ## TO BE DEPRECATED
 from outputC import outC_function_dict
 # ^^^^^^^^^^^^^^^^^
+from outputC import outC_NRPy_basic_defines_h_dict
 import NRPy_param_funcs as par      # NRPy+: Parameter interface
 import grid as gri                  # NRPy+: Functions having to do with numerical grids
 import indexedexp as ixp            # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
@@ -973,8 +974,8 @@ def ds_dirn(delxx, append_gridsuffix_to_xx=False):
 
 
 # Find the appropriate timestep for the CFL condition.
-def add_to_Cfunc_dict__find_timestep(rel_path_to_Cparams=os.path.join("./"), enable_mask=False,
-                                     output_dt_local_h_only=False):
+def add_to_Cfunction_dict__find_timestep(rel_path_to_Cparams=os.path.join("./"), enable_mask=False,
+                                         output_dt_local_h_only=False):
     gridsuffix = ""  # Disable for now
     ##############################
     # Step 1: Function description
@@ -995,7 +996,7 @@ def add_to_Cfunc_dict__find_timestep(rel_path_to_Cparams=os.path.join("./"), ena
         loopopts += ","+gridsuffix
     ##############################
     # Step 6: function input parameters
-    params = "const paramstruct *restrict params, REAL *restrict xx[3]"
+    params = "const paramstruct *restrict params, REAL *restrict xx[3], const REAL CFL_FACTOR"
     if enable_mask:
         params += ", int8_t *restrict mask"
     ##############################
@@ -1040,9 +1041,7 @@ def add_to_Cfunc_dict__find_timestep(rel_path_to_Cparams=os.path.join("./"), ena
     ##############################
     # Step 9: add to Cfunction dictionary
     add_to_Cfunction_dict(
-        includes=["stdio.h", "math.h",
-                  os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h"),
-                  os.path.join(rel_path_to_Cparams, "declare_Cparameters_struct.h")],
+        includes=[os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
         desc    =desc,
         c_type  =c_type,
         name    =name,
@@ -1083,18 +1082,13 @@ def add_to_Cfunc_dict__find_dsmin(rel_path_to_Cparams=os.path.join("./")):
     body += indent + "  // Set dsmin = MIN(dsmin, ds_dirn0, ds_dirn1, ds_dirn2):\n"
     body += indent + "  return MIN(dsmin, MIN(ds_dirn0, MIN(ds_dirn1, ds_dirn2)));\n"
     add_to_Cfunction_dict(
-        includes=["stdio.h", "math.h",
-                  os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h"),
-                  os.path.join(rel_path_to_Cparams, "declare_Cparameters_struct.h")],
+        includes=[os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
         desc    =desc,
         c_type  =c_type,
         name    =name,
         params  =params,
         body    =body,
         rel_path_to_Cparams=rel_path_to_Cparams)
-
-
-
 
 
 def out_default_free_parameters_for_rfm(free_parameters_file,
@@ -1303,9 +1297,7 @@ def add_to_Cfunc_dict__Cart_to_xx_and_nearest_i0i1i2(rel_path_to_Cparams=os.path
     Cart_to_i0i1i2[2] = (int)( ( xx[2] - ("""+str(xxmin[2])+""") ) / params->dxx2"""+gridsuffix+""" + (1.0/2.0) + NGHOSTS - 0.5 ); // Account for (int) typecast rounding down
 """
     add_to_Cfunction_dict(
-        includes=["stdio.h", "math.h", "stdlib.h",
-                  os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h"),
-                  os.path.join(rel_path_to_Cparams, "declare_Cparameters_struct.h")],
+        includes=[os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
         prefunc=prefunc,
         desc   =desc,
         c_type ="void",
@@ -1373,8 +1365,7 @@ def add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=os.p
             body += "\n"
 
     add_to_Cfunction_dict(
-        includes=["stdio.h", "math.h", "stdlib.h",
-                  os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
+        includes=[os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
         desc  ="Override default values for Nxx{0,1,2}, Nxx_plus_2NGHOSTS{0,1,2}, dxx{0,1,2}, and invdx{0,1,2}; and set xx[3][]",
         c_type="void",
         name  ="set_Nxx_dxx_invdx_params__and__xx"+gridsuffix,
@@ -1401,8 +1392,7 @@ def add_to_Cfunc_dict_xx_to_Cart(rel_path_to_Cparams=os.path.join("./")):
         replace("Cart_originz", "Cart_originz" + gridsuffix)
 
     add_to_Cfunction_dict(
-        includes=["stdio.h", "math.h",
-                  os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
+        includes=[os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
         desc    ="Compute Cartesian coordinates given local grid coordinate (xx0,xx1,xx2), "
                  "  accounting for the origin of this grid being possibly offcenter.",
         c_type  ="void",
@@ -1422,6 +1412,7 @@ def add_to_Cfunction_dict_find_timestep():
 
     desc="Find the CFL-constrained timestep"
     add_to_Cfunction_dict(
+        includes ="NRPy_basic_defines.h",
         desc     =desc,
         c_type   ="REAL",
         name     ="find_timestep",
@@ -1442,3 +1433,14 @@ def out_timestep_func_to_file(outfile):
     add_to_Cfunction_dict_find_timestep()
     with open(outfile, "w") as file:
         file.write(outC_function_dict["find_timestep"])
+
+
+def register_C_functions_and_NRPy_basic_defines(rel_path_to_Cparams=os.path.join("./")):
+    add_to_Cfunction_dict__find_timestep(rel_path_to_Cparams=rel_path_to_Cparams, enable_mask=False,
+                                         output_dt_local_h_only=False)
+    add_to_Cfunc_dict_xx_to_Cart(rel_path_to_Cparams=rel_path_to_Cparams)
+    add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=rel_path_to_Cparams)
+    add_to_Cfunc_dict__Cart_to_xx_and_nearest_i0i1i2(rel_path_to_Cparams=rel_path_to_Cparams,
+                                                     relative_to="local_grid_center")
+
+    outC_NRPy_basic_defines_h_dict["reference_metric"] = """#include "rfm_files/rfm_struct__declare.h"\n"""

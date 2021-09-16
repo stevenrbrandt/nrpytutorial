@@ -172,12 +172,18 @@ def single_RK_substep(commentblock, RHS_str, RHS_input_str, RHS_output_str, RK_l
 # k_even    = dt*f(t_n + dt, y_n + k_odd)
 # y_nplus1 += 1/3*k_even
 ########################################################################################################################
-def add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string = "", post_RHS_string = ""):
+def add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string = "", post_RHS_string = "",
+                                                  enable_rfm=False, enable_curviBCs=False):
     includes = ["NRPy_basic_defines.h", "NRPy_function_prototypes.h"]
     desc  = "Method of Lines (MoL) for \"" + MoL_method + "\" method: Step forward one full timestep.\n"
     c_type = "void"
     name = "MoL_step_forward_in_time"
-    params = "const paramstruct *restrict params, MoL_gridfunctions_struct *restrict gridfuncs, const REAL dt"
+    params  = "const paramstruct *restrict params, "
+    if enable_rfm:
+        params += "const rfm_struct *restrict rfmstruct, "
+    if enable_curviBCs:
+        params += "const bc_struct *restrict bcstruct, "
+    params += "MoL_gridfunctions_struct *restrict gridfuncs, const REAL dt"
 
     indent = ""  # We don't bother with an indent here.
 
@@ -418,9 +424,11 @@ def NRPy_basic_defines_MoL_timestepping_struct(MoL_method="RK4"):
 # Finally declare the master registration function
 def register_C_functions_and_NRPy_basic_defines(MoL_method = "RK4",
             RHS_string =  "rhs_eval(Nxx,Nxx_plus_2NGHOSTS,dxx, RK_INPUT_GFS, RK_OUTPUT_GFS);",
-       post_RHS_string = "apply_bcs(Nxx,Nxx_plus_2NGHOSTS, RK_OUTPUT_GFS);"):
+       post_RHS_string = "apply_bcs(Nxx,Nxx_plus_2NGHOSTS, RK_OUTPUT_GFS);",
+       enable_rfm=False, enable_curviBCs=False):
     for which_gfs in ["y_n_gfs", "non_y_n_gfs"]:
         add_to_Cfunction_dict_MoL_malloc(MoL_method, which_gfs)
         add_to_Cfunction_dict_MoL_free_memory(MoL_method, which_gfs)
-    add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string, post_RHS_string)
+    add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string, post_RHS_string,
+                                                   enable_rfm=enable_rfm, enable_curviBCs=enable_curviBCs)
     NRPy_basic_defines_MoL_timestepping_struct(MoL_method = MoL_method)

@@ -610,7 +610,7 @@ def construct_NRPy_basic_defines_h(Ccodesrootdir, SIMD_enable=False):
         if SIMD_enable:
             file.write("// construct_NRPy_basic_defines_h(...,SIMD_enable=True) was called so we #include SIMD intrinsics:\n")
             file.write("""#include "SIMD/SIMD_intrinsics.h"\n""")
-        for key in ["outputC", "NRPy_param_funcs", "grid", "reference_metric", "finite_difference", "CurviBoundaryConditions", "MoL"]:
+        for key in ["outputC", "NRPy_param_funcs", "grid", "finite_difference", "reference_metric", "CurviBoundaryConditions", "MoL"]:
             if key in outC_NRPy_basic_defines_h_dict:
                 file.write("\n\n//********************************************\n")
                 file.write("// Basic definitions for module " + key + ":\n" + outC_NRPy_basic_defines_h_dict[key])
