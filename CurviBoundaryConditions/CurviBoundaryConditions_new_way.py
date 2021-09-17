@@ -307,7 +307,7 @@ def EigenCoord_Cart_to_xx():
 #         (x,y,z).
 # Step 3. If and only if we are on an outer boundary ghost zone or in the grid interior,
 #         i0_inbounds==i0, i1_inbounds==i1, and i2_inbounds==i2, and inner boundary
-#         conditions do not apply: set bc_gz_map to  (−1,−1,−1) , and for all 10
+#         conditions do not apply: set bc_gz_map to  (-1,-1,-1) , and for all 10
 #         gridfunction parities, set parity=1.
 # Step 4. If i0_inbounds==i0, i1_inbounds==i1, and i2_inbounds==i2, does not hold true,
 #         then (i0,i1,i2) is an inner boundary point: set bc_gz_map to
