@@ -277,7 +277,8 @@ def generate_Cparameters_Ccodes(directory="./", output_declare_Cparameters_struc
                 pointer = "."
 
             if not ((c_type == "REAL" and glb_Cparams_list[i].defaultval == 1e300) or c_type == "#define"):
-                Coutput = "const "+c_type+" "+glb_Cparams_list[i].parname+" = "+"params"+pointer+glb_Cparams_list[i].parname + ";\n"
+                comment = "  // " + glb_Cparams_list[i].module + "::" + glb_Cparams_list[i].parname
+                Coutput = "const "+c_type+" "+glb_Cparams_list[i].parname+" = "+"params"+pointer+glb_Cparams_list[i].parname + ";" + comment + "\n"
                 returnstring += Coutput
         return returnstring
 
