@@ -19,6 +19,8 @@ rfm.reference_metric()
 # We import all ID modules ahead of time so that options can be changed *before* generating the functions.
 import GiRaFFEfood_NRPy_Exact_Wald as gfew
 import GiRaFFEfood_NRPy_Split_Monopole as gfsm
+import GiRaFFEfood_NRPy_1D_tests as gfaw
+import GiRaFFEfood_NRPy_1D_tests_fast_wave as gffw
 
 # Step 1a: Set commonly used parameters.
 thismodule = __name__
@@ -39,3 +41,9 @@ def GiRaFFEfood_NRPy_generate_initial_data(ID_type = "DegenAlfvenWave", stagger_
     elif ID_type == "SplitMonopole":
         AD = gfcf.Axyz_func_spherical(gfsm.Ar_SM,gfsm.Ath_SM,gfsm.Aph_SM,stagger_enable,**params)
         ValenciavU = gfsm.ValenciavU_func_SM(**params)
+    elif ID_type == "AlfvenWave":
+        AD = gfcf.Axyz_func_Cartesian(gfaw.Ax_AW,gfaw.Ay_AW,gfaw.Az_AW, stagger_enable, **params)
+        ValenciavU = gfaw.ValenciavU_func_AW(**params)
+    elif ID_type == "FastWave":
+        AD = gfcf.Axyz_func_Cartesian(gffw.Ax_FW,gffw.Ay_FW,gffw.Az_FW, stagger_enable, **params)
+        ValenciavU = gffw.ValenciavU_func_FW(**params)
