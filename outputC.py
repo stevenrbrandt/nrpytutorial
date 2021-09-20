@@ -599,10 +599,15 @@ CFLAGS = """ + CHOSEN_CFLAGS + """
         os.chmod(os.path.join(Ccodesrootdir, "backup_script_nomake.sh"), stat.S_IRWXU)
 
 
-def construct_NRPy_basic_defines_h(Ccodesrootdir, SIMD_enable=False):
+def construct_NRPy_basic_defines_h(Ccodesrootdir, SIMD_enable=False, supplemental_dict={}):
     if not os.path.isdir(Ccodesrootdir):
         print("Error (in construct_NRPy_basic_defines_h): Directory \"" + Ccodesrootdir + "\" does not exist.")
         sys.exit(1)
+
+    def output_key(filestream, key, item):
+        filestream.write("\n\n//********************************************\n")
+        filestream.write("// Basic definitions for module " + key + ":\n" + item)
+        filestream.write("\n\n//********************************************\n")
 
     with open(os.path.join(Ccodesrootdir, "NRPy_basic_defines.h"), "w") as file:
         file.write("""// NRPy+ basic definitions, automatically generated from outC_NRPy_basic_defines_h_dict within outputC,
@@ -612,9 +617,11 @@ def construct_NRPy_basic_defines_h(Ccodesrootdir, SIMD_enable=False):
             file.write("""#include "SIMD/SIMD_intrinsics.h"\n""")
         for key in ["outputC", "NRPy_param_funcs", "grid", "finite_difference", "reference_metric", "CurviBoundaryConditions", "MoL"]:
             if key in outC_NRPy_basic_defines_h_dict:
-                file.write("\n\n//********************************************\n")
-                file.write("// Basic definitions for module " + key + ":\n" + outC_NRPy_basic_defines_h_dict[key])
-                file.write("\n\n//********************************************\n")
+                output_key(file, key, outC_NRPy_basic_defines_h_dict[key])
+
+        for key in supplemental_dict:
+            output_key(file, key, supplemental_dict[key])
+
         file.write("\n")
 
 def construct_NRPy_function_prototypes_h(Ccodesrootdir):
