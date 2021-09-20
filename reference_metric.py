@@ -53,7 +53,6 @@ Cart = [Cartx, Carty, Cartz]
 
 scalefactor_orthog_funcform = ixp.zerorank1(DIM=4) # Must be set in terms of generic functions of xx[]s
 
-
 # The following are necessary since SymPy has trouble with its native sinh and cosh functions.
 def nrpysinh(x):
     return (sp.exp(x) - sp.exp(-x)) * sp.Rational(1, 2)
@@ -890,6 +889,10 @@ for(int i1=0;i1<Nxx_plus_2NGHOSTS1;i1++) for(int i0=0;i0<Nxx_plus_2NGHOSTS0;i0++
             file.write(define_str)
         with open(os.path.join(outdir, "rfm_struct__freemem.h"), "w") as file:
             file.write(freemm_str)
+    else:
+        global NRPy_basic_defines_str
+        NRPy_basic_defines_str = struct_str
+        ### TODO: register C funcs
     for i in range(3):
         with open(os.path.join(outdir, "rfm_struct__read" + str(i) + ".h"), "w") as file:
             file.write(readvr_str[i])
