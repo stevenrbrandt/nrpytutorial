@@ -334,7 +334,8 @@ def symm_matrix_inverter3x3(a):
     outDET = -a[0][2]**2*a[1][1] + 2*a[0][1]*a[0][2]*a[1][2] - \
                 a[0][0]*a[1][2]**2 - a[0][1]**2*a[2][2] + \
                 a[0][0]*a[1][1]*a[2][2]
-    if outDET == 0: raise NonInvertibleMatrixError('matrix has determinant zero')
+    if outDET == 0:
+        raise NonInvertibleMatrixError('matrix has determinant zero')
 
     outINV = [[sp.sympify(0) for i in range(3)] for j in range(3)]
 

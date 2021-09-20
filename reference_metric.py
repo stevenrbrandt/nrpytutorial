@@ -53,6 +53,7 @@ Cart = [Cartx, Carty, Cartz]
 
 scalefactor_orthog_funcform = ixp.zerorank1(DIM=4) # Must be set in terms of generic functions of xx[]s
 
+
 # The following are necessary since SymPy has trouble with its native sinh and cosh functions.
 def nrpysinh(x):
     return (sp.exp(x) - sp.exp(-x)) * sp.Rational(1, 2)
@@ -495,7 +496,7 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
     # Step 0: Set dimension DIM
     DIM = par.parval_from_str("grid::DIM")
 
-    global ReU,ReDD,ghatDD,ghatUU,detgammahat
+    global ReU, ReDD, ghatDD
     ReU    = ixp.zerorank1()
     ReDD   = ixp.zerorank2()
     ghatDD = ixp.zerorank2()
@@ -518,7 +519,10 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
             for j in range(DIM):
                 ReDD[i][j] = scalefactor_orthog_funcform[i]*scalefactor_orthog_funcform[j]
 
-    # Step 1b: Compute ghatUU
+    # Step 1b: Compute ghatUU and detgammahat
+    global ghatUU
+    global detgammahat
+    ghatUU = ixp.zerorank2()
     ghatUU, detgammahat = ixp.symm_matrix_inverter3x3(ghatDD)
 
     # Step 1c: Sanity check: verify that ReDD, ghatDD,
@@ -536,7 +540,7 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
                 sys.exit(1)
 
     # Step 2: Compute det(ghat) and its 1st & 2nd derivatives
-    global detgammahatdD,detgammahatdDD
+    global detgammahatdD, detgammahatdDD
     detgammahatdD  = ixp.zerorank1(DIM)
     detgammahatdDD = ixp.zerorank2(DIM)
     for i in range(DIM):
@@ -546,7 +550,7 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
 
     # Step 3a: Compute 1st & 2nd derivatives of rescaling vector.
     #          (E.g., needed in BSSN for betaUdDD computation)
-    global ReUdD,ReUdDD
+    global ReUdD, ReUdDD
     ReUdD  = ixp.zerorank2(DIM)
     ReUdDD = ixp.zerorank3(DIM)
     for i in range(DIM):
@@ -556,31 +560,31 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
                 ReUdDD[i][j][k] = sp.diff(ReUdD[i][j], xx[k])
 
     # Step 3b: Compute 1st & 2nd derivatives of rescaling matrix.
-    global ReDDdD,ReDDdDD
+    global ReDDdD, ReDDdDD
     ReDDdD = ixp.zerorank3(DIM)
     ReDDdDD = ixp.zerorank4(DIM)
     for i in range(DIM):
         for j in range(DIM):
             for k in range(DIM):
-                ReDDdD[i][j][k] = (sp.diff(ReDD[i][j],xx[k]))
+                ReDDdD[i][j][k] = (sp.diff(ReDD[i][j], xx[k]))
                 for l in range(DIM):
                     # Simplifying this doesn't appear to help overall NRPy run time.
-                    ReDDdDD[i][j][k][l] = sp.diff(ReDDdD[i][j][k],xx[l])
+                    ReDDdDD[i][j][k][l] = sp.diff(ReDDdD[i][j][k], xx[l])
 
     # Step 3c: Compute 1st & 2nd derivatives of reference metric.
-    global ghatDDdD,ghatDDdDD
+    global ghatDDdD, ghatDDdDD
     ghatDDdD = ixp.zerorank3(DIM)
     ghatDDdDD = ixp.zerorank4(DIM)
     for i in range(DIM):
         for j in range(DIM):
             for k in range(DIM):
                 if SymPySimplifyExpressions==True:
-#                    ghatDDdD[i][j][k] = sp.trigsimp(sp.diff(ghatDD[i][j],xx[k])) # FIXME: BAD: MUST BE SIMPLIFIED OR ANSWER IS INCORRECT! Must be some bug in sympy...
-                    ghatDDdD[i][j][k] = sp.simplify(sp.diff(ghatDD[i][j],xx[k])) # FIXME: BAD: MUST BE SIMPLIFIED OR ANSWER IS INCORRECT! Must be some bug in sympy...
+#                    ghatDDdD[i][j][k] = sp.trigsimp(sp.diff(ghatDD[i][j], xx[k])) # FIXME: BAD: MUST BE SIMPLIFIED OR ANSWER IS INCORRECT! Must be some bug in sympy...
+                    ghatDDdD[i][j][k] = sp.simplify(sp.diff(ghatDD[i][j], xx[k])) # FIXME: BAD: MUST BE SIMPLIFIED OR ANSWER IS INCORRECT! Must be some bug in sympy...
                 else:
-                    ghatDDdD[i][j][k] = (sp.diff(ghatDD[i][j],xx[k])) # FIXME: BAD: MUST BE SIMPLIFIED OR ANSWER IS INCORRECT! Must be some bug in sympy...
+                    ghatDDdD[i][j][k] = (sp.diff(ghatDD[i][j], xx[k])) # FIXME: BAD: MUST BE SIMPLIFIED OR ANSWER IS INCORRECT! Must be some bug in sympy...
                 for l in range(DIM):
-                    ghatDDdDD[i][j][k][l] = (sp.diff(ghatDDdD[i][j][k],xx[l]))
+                    ghatDDdDD[i][j][k][l] = (sp.diff(ghatDDdD[i][j][k], xx[l]))
 
     # Step 4a: Compute Christoffel symbols of reference metric.
     global GammahatUDD
@@ -590,7 +594,7 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
             for l in range(DIM):
                 for m in range(DIM):
 #                    GammahatUDD[i][k][l] += sp.trigsimp((sp.Rational(1,2))*ghatUU[i][m]*\
-                    GammahatUDD[i][k][l] += (sp.Rational(1,2))*ghatUU[i][m]*\
+                    GammahatUDD[i][k][l] += (sp.Rational(1, 2))*ghatUU[i][m]*\
                                             (ghatDDdD[m][k][l] + ghatDDdD[m][l][k] - ghatDDdD[k][l][m])
 
     # Step 4b: Compute derivs of Christoffel symbols of reference metric.
@@ -607,31 +611,14 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
     if not enable_rfm_precompute:
         return
 
-    # enable_rfm_precompute: precompute and store in memory possibly
-    #     complex expressions related to the reference metric (a.k.a.,
-    #      "hatted quantities")
-
-    # The precomputed "hatted quantity" expressions will be stored in
-    #    a C struct called rfmstruct. As these expressions generally
-    #    involve computationally expensive transcendental functions
-    #    of xx0,xx1,or xx2, and xx0,xx1, and xx2 remain fixed across
-    #    most (if not all) of a given simulation, setting up the
-    #    rfmstruct can greatly improve performance.
-
-    # The core challenge in setting up the rfmstruct is collecting
-    #    all the information needed to automatically generate it.
-    # Step 5 and onwards implements this algorithm, using the
-    #    *generic functional form* of the hatted quantities (as
-    #    opposed to the exact closed-form expressions of the
-    #    hatted quantities) computed above.
 
     # Step 5: Now that all hatted quantities are written in terms of generic SymPy functions,
     #         we will now replace SymPy functions with simple variables using rigid NRPy+ syntax,
     #         and store these variables to globals defined above.
     def make_replacements(expr):
         sympy_version = sp.__version__.replace("rc", "...").replace("b", "...")  # Ignore the rc's and b's
-                                                                                 # (release candidates & betas).
-        sympy_version_decimal = float(int(sympy_version.split(".")[0]) + int(sympy_version.split(".")[1])/10.0)
+        # (release candidates & betas).
+        sympy_version_decimal = float(int(sympy_version.split(".")[0]) + int(sympy_version.split(".")[1]) / 10.0)
         is_old_sympy_version = sympy_version_decimal < 1.2
         # The derivative representation changed with SymPy 1.2, forcing version-dependent behavior.
 
@@ -649,10 +636,11 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
                     var, order = str(item.args[1][0])[2:], item.args[1][1]
                 # build derivative operator with format: __DD...D(var)(var)...(var) where
                 # D and (var) are repeated for every derivative order
-                oper = '__D' + 'D'*(order - 1) + var*order
+                oper = '__D' + 'D' * (order - 1) + var * order
                 # add replacement rule to dictionary
                 rule[item] = sp.sympify(strfunc + oper)
-        expr = expr.xreplace(rule); rule = {}
+        expr = expr.xreplace(rule)
+        rule = {}
 
         # Example: f0_of_xx0_funcform(xx0)(xx0) >> f0_of_xx0
         for item in sp.preorder_traversal(expr):
@@ -662,6 +650,30 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
                 # add replacement rule to dictionary
                 rule[item] = sp.sympify(strfunc)
         return expr.xreplace(rule)
+
+
+# def func_enable_rfm_precompute():
+    # enable_rfm_precompute: precompute and store in memory possibly
+    #     complex expressions related to the reference metric (a.k.a.,
+    #      "hatted quantities")
+
+    # The precomputed "hatted quantity" expressions will be stored in
+    #    a C struct called rfmstruct. As these expressions generally
+    #    involve computationally expensive transcendental functions
+    #    of xx0,xx1,or xx2, and xx0,xx1, and xx2 remain fixed across
+    #    most (if not all) of a given simulation, setting up the
+    #    rfmstruct can greatly improve performance.
+
+    # The core challenge in setting up the rfmstruct is collecting
+    #    all the information needed to automatically generate it.
+    # Step 5 and onwards implements this algorithm, using the
+    #    *generic functional form* of the hatted quantities (as
+    #    opposed to the exact closed-form expressions of the
+    #    hatted quantities) computed above.
+    #
+    #
+    # # Step 0: Set dimension DIM
+    # DIM = par.parval_from_str("grid::DIM")
 
     detgammahat = make_replacements(detgammahat)
     for i in range(DIM):
