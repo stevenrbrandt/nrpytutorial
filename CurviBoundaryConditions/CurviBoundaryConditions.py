@@ -16,7 +16,8 @@ import cmdline_helper as cmd     # NRPy+: Multi-platform Python command-line int
 import shutil, os, sys           # Standard Python modules for multiplatform OS-level functions
 
 def Set_up_CurviBoundaryConditions(Ccodesdir,verbose=True,Cparamspath=os.path.join("../"),
-                                   enable_copy_of_static_Ccodes=True, BoundaryCondition="QuadraticExtrapolation"):
+                                   enable_copy_of_static_Ccodes=True, BoundaryCondition="QuadraticExtrapolation",
+                                   path_prefix=""):
     # Step P0: Check that Ccodesdir is not the same as CurviBoundaryConditions/boundary_conditions,
     #          to prevent trusted versions of these C codes from becoming contaminated.
     if os.path.join(Ccodesdir) == os.path.join("CurviBoundaryConditions", "boundary_conditions"):
@@ -35,7 +36,7 @@ def Set_up_CurviBoundaryConditions(Ccodesdir,verbose=True,Cparamspath=os.path.jo
         if   str(BoundaryCondition) == "QuadraticExtrapolation":
             for file in ["apply_bcs_curvilinear.h", "BCs_data_structs.h", "bcstruct_freemem.h", "CurviBC_include_Cfunctions.h",
                          "driver_bcstruct.h", "set_bcstruct.h", "set_up__bc_gz_map_and_parity_condns.h"]:
-                shutil.copy(os.path.join("CurviBoundaryConditions", "boundary_conditions", file),
+                shutil.copy(os.path.join(path_prefix,"CurviBoundaryConditions", "boundary_conditions", file),
                             os.path.join(Ccodesdir))
 
             with open(os.path.join(Ccodesdir,"CurviBC_include_Cfunctions.h"),"a") as file:
@@ -45,7 +46,7 @@ def Set_up_CurviBoundaryConditions(Ccodesdir,verbose=True,Cparamspath=os.path.jo
         elif str(BoundaryCondition) == "Sommerfeld":
             for file in ["BCs_data_structs.h", "bcstruct_freemem.h", "CurviBC_include_Cfunctions.h",
                          "driver_bcstruct.h", "set_bcstruct.h", "set_up__bc_gz_map_and_parity_condns.h"]:
-                shutil.copy(os.path.join("CurviBoundaryConditions", "boundary_conditions", file),
+                shutil.copy(os.path.join(path_prefix,"CurviBoundaryConditions", "boundary_conditions", file),
                             os.path.join(Ccodesdir))
 
             with open(os.path.join(Ccodesdir,"CurviBC_include_Cfunctions.h"),"a") as file:
@@ -55,7 +56,7 @@ def Set_up_CurviBoundaryConditions(Ccodesdir,verbose=True,Cparamspath=os.path.jo
         elif str(BoundaryCondition) == "QuadraticExtrapolation&Sommerfeld":
             for file in ["apply_bcs_curvilinear.h", "BCs_data_structs.h", "bcstruct_freemem.h", "CurviBC_include_Cfunctions.h",
                          "driver_bcstruct.h", "set_bcstruct.h", "set_up__bc_gz_map_and_parity_condns.h"]:
-                shutil.copy(os.path.join("CurviBoundaryConditions", "boundary_conditions", file),
+                shutil.copy(os.path.join(path_prefix,"CurviBoundaryConditions", "boundary_conditions", file),
                             os.path.join(Ccodesdir))
 
             with open(os.path.join(Ccodesdir,"CurviBC_include_Cfunctions.h"),"a") as file:

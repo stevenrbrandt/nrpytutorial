@@ -1,4 +1,5 @@
 *.pyc
 out*.txt
 htmlcov/
+.ipynb_checkpoints
 .coverage

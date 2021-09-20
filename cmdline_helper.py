@@ -99,6 +99,15 @@ def C_compile(main_C_output_path, main_C_output_file, compile_mode="optimized", 
         if not os.path.isfile(main_C_output_file):
             print("Sorry, compilation failed")
             sys.exit(1)
+    elif compile_mode=="emscripten":
+        compile_string = "emcc -std=gnu99 -s -O3 -march=native -funroll-loops -s ALLOW_MEMORY_GROWTH=1 "\
+            +str(main_C_output_path)+" -o "+str(main_C_output_file)+" -lm "+additional_libraries
+        Execute_input_string(compile_string, os.devnull)
+        # Check if executable exists (i.e., compile was successful), if not, try with more conservative compile flags.
+        # If there are still missing components within the compiler, say compilation failed
+        if not os.path.isfile(main_C_output_file):
+            print("Sorry, compilation failed.")
+            sys.exit(1)
     else:
         print("Sorry, compile_mode = \""+compile_mode+"\" unsupported.")
         sys.exit(1)
