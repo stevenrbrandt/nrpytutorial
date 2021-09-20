@@ -804,7 +804,9 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
     struct_str = "typedef struct __rfmstruct__ {\n"
     define_str = ""
     # rfmstruct stores pointers to (so far) 1D arrays. The malloc_str string allocates space for the arrays.
-    malloc_str = "rfm_struct rfmstruct;\n"
+    malloc_str = ""
+    if par.parval_from_str("reference_metric::rfm_precompute_to_Cfunctions_and_NRPy_basic_defines") == "False":
+        malloc_str = "rfm_struct rfmstruct;\n"
     freemm_str = ""
 
     # readvr_str reads the arrays from memory as needed
@@ -892,7 +894,11 @@ for(int i1=0;i1<Nxx_plus_2NGHOSTS1;i1++) for(int i0=0;i0<Nxx_plus_2NGHOSTS0;i0++
     else:
         global NRPy_basic_defines_str
         NRPy_basic_defines_str = struct_str
-        ### TODO: register C funcs
+        global rfm_struct__malloc, rfm_struct__define, rfm_struct__freemem
+        rfm_struct__malloc = malloc_str
+        rfm_struct__define = define_str
+        rfm_struct__freemem = freemm_str
+
     for i in range(3):
         with open(os.path.join(outdir, "rfm_struct__read" + str(i) + ".h"), "w") as file:
             file.write(readvr_str[i])
@@ -1449,7 +1455,7 @@ def out_timestep_func_to_file(outfile):
         file.write(outC_function_dict["find_timestep"])
 
 
-def register_C_functions_and_NRPy_basic_defines(rel_path_to_Cparams=os.path.join("./")):
+def register_C_functions_and_NRPy_basic_defines(rel_path_to_Cparams=os.path.join("./"), enable_rfm_precompute=False):
     add_to_Cfunction_dict__find_timestep(rel_path_to_Cparams=rel_path_to_Cparams, enable_mask=False,
                                          output_dt_local_h_only=False)
     add_to_Cfunc_dict_xx_to_Cart(rel_path_to_Cparams=rel_path_to_Cparams)
@@ -1457,4 +1463,33 @@ def register_C_functions_and_NRPy_basic_defines(rel_path_to_Cparams=os.path.join
     add_to_Cfunc_dict__Cart_to_xx_and_nearest_i0i1i2(rel_path_to_Cparams=rel_path_to_Cparams,
                                                      relative_to="local_grid_center")
 
-    outC_NRPy_basic_defines_h_dict["reference_metric"] = """#include "rfm_files/rfm_struct__declare.h"\n"""
+    if enable_rfm_precompute:
+        if par.parval_from_str(thismodule+"::rfm_precompute_to_Cfunctions_and_NRPy_basic_defines") == "True":
+            # global rfm_struct__malloc, rfm_struct__define, rfm_struct__freemem
+            add_to_Cfunction_dict(
+                includes=[os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
+                desc="Reference Metric Precomputation infrastructure: Allocate memory for rfmstruct",
+                c_type="void",
+                name="rfm_precompute_rfmstruct_malloc",
+                params="const paramstruct *restrict params, rfm_struct *restrict rfmstruct",
+                body=rfm_struct__malloc.replace("rfmstruct.", "rfmstruct->"),
+                rel_path_to_Cparams=rel_path_to_Cparams)
+            add_to_Cfunction_dict(
+                includes=[os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
+                desc="Reference Metric Precomputation infrastructure: Define rfmstruct",
+                c_type="void",
+                name="rfm_precompute_rfmstruct_define",
+                params="const paramstruct *restrict params, REAL *restrict xx[3], rfm_struct *restrict rfmstruct",
+                body=rfm_struct__define.replace("rfmstruct.", "rfmstruct->"),
+                rel_path_to_Cparams=rel_path_to_Cparams)
+            add_to_Cfunction_dict(
+                includes=[os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
+                desc="Reference Metric Precomputation infrastructure: Free rfmstruct memory",
+                c_type="void",
+                name="rfm_precompute_rfmstruct_freemem",
+                params="const paramstruct *restrict params, rfm_struct *restrict rfmstruct",
+                body=rfm_struct__freemem.replace("rfmstruct.", "rfmstruct->"),
+                rel_path_to_Cparams=rel_path_to_Cparams)
+            outC_NRPy_basic_defines_h_dict["reference_metric"] = NRPy_basic_defines_str
+        else:
+            outC_NRPy_basic_defines_h_dict["reference_metric"] = """#include "rfm_files/rfm_struct__declare.h"\n"""
