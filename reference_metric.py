@@ -651,11 +651,12 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
                 rule[item] = sp.sympify(strfunc)
         return expr.xreplace(rule)
 
-
-# def func_enable_rfm_precompute():
-    # enable_rfm_precompute: precompute and store in memory possibly
-    #     complex expressions related to the reference metric (a.k.a.,
-    #      "hatted quantities")
+    # Step 6: enable_rfm_precompute: precompute and store in memory
+    #    expressions related to the reference metric (a.k.a.,
+    #    "hatted quantities"). These expressions may involve
+    #    transcendental functions, which are expensive to compute
+    #    within nested loops in C. Hence we precompute them and
+    #    store the result.
 
     # The precomputed "hatted quantity" expressions will be stored in
     #    a C struct called rfmstruct. As these expressions generally
@@ -670,10 +671,6 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
     #    *generic functional form* of the hatted quantities (as
     #    opposed to the exact closed-form expressions of the
     #    hatted quantities) computed above.
-    #
-    #
-    # # Step 0: Set dimension DIM
-    # DIM = par.parval_from_str("grid::DIM")
 
     detgammahat = make_replacements(detgammahat)
     for i in range(DIM):
