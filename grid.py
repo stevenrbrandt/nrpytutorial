@@ -18,6 +18,9 @@ par.initialize_param(par.glb_param("char", thismodule, "GridFuncMemAccess", "SEN
 par.initialize_param(par.glb_param("char", thismodule, "MemAllocStyle", "210"))
 par.initialize_param(par.glb_param("int",  thismodule, "DIM", 3))
 
+# This parameter is set as many times as needed.
+par.initialize_param(par.glb_param("char", thismodule, "current_gridsuffix", ""))
+
 # Multiple grid support.
 par.Cparameters("int",  thismodule, "numgrids", 1)
 
