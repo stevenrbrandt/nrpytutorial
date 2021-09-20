@@ -38,6 +38,7 @@ import os, sys                      # Standard Python modules for multiplatform 
 thismodule = __name__
 par.initialize_param(par.glb_param("char", thismodule, "CoordSystem", "Spherical"))
 par.initialize_param(par.glb_param("char", thismodule, "enable_rfm_precompute", "False"))
+par.initialize_param(par.glb_param("char", thismodule, "rfm_precompute_to_Cfunctions_and_NRPy_basic_defines", "False"))
 par.initialize_param(par.glb_param("char", thismodule, "rfm_precompute_Ccode_outdir", "Ccode"))
 
 # Step 0b: Declare global variables
@@ -266,10 +267,10 @@ def reference_metric(SymPySimplifyExpressions=True): #, enable_compute_hatted_qu
         elif CoordSystem == "SinhCylindricalv2":
             xxmin = [sp.sympify(0), -M_PI, sp.sympify(-1)]
             xxmax = [sp.sympify(1),  M_PI, sp.sympify(+1)]
-            AMPLRHO, SINHWRHO, AMPLZ, SINHWZ = par.Cparameters("REAL",thismodule,
-                                                               ["AMPLRHO","SINHWRHO","AMPLZ","SINHWZ"],
-                                                               [     10.0,       0.2,   10.0,    0.2])
-            const_drho, const_dz = par.Cparameters("REAL",thismodule,["const_drho","const_dz"],[0.0625,0.0625])
+            AMPLRHO, SINHWRHO, AMPLZ, SINHWZ = par.Cparameters("REAL", thismodule,
+                                                               ["AMPLRHO", "SINHWRHO", "AMPLZ", "SINHWZ"],
+                                                               [     10.0,        0.2,    10.0,     0.2])
+            const_drho, const_dz = par.Cparameters("REAL", thismodule, ["const_drho", "const_dz"], [0.0625, 0.0625])
 
             RHOCYL = AMPLRHO * ( const_drho*xx[0] + (sp.exp(xx[0] / SINHWRHO) - sp.exp(-xx[0] / SINHWRHO)) / (sp.exp(1 / SINHWRHO) - sp.exp(-1 / SINHWRHO)) )
             PHICYL = xx[1]
@@ -306,17 +307,17 @@ def reference_metric(SymPySimplifyExpressions=True): #, enable_compute_hatted_qu
 
     elif CoordSystem in ('SymTP', 'SinhSymTP'):
         # var1, var2= sp.symbols('var1 var2',real=True)
-        bScale, SINHWAA, AMAX = par.Cparameters("REAL",thismodule,
-                                                ["bScale","SINHWAA","AMAX"],
-                                                [0.5,     0.2,      10.0  ])
+        bScale, SINHWAA, AMAX = par.Cparameters("REAL", thismodule,
+                                                ["bScale", "SINHWAA", "AMAX"],
+                                                [0.5,       0.2,       10.0 ])
 
         # Assuming xx0, xx1, and bScale
         #   are positive makes nice simplifications of
         #   unit vectors possible.
         xx[0],xx[1] = sp.symbols("xx0 xx1", real=True)
 
-        xxmin = [sp.sympify(0), sp.sympify(0),-M_PI]
-        xxmax = [         AMAX,          M_PI, M_PI]
+        xxmin = [sp.sympify(0), sp.sympify(0), -M_PI]
+        xxmax = [         AMAX,          M_PI,  M_PI]
 
         AA = xx[0]
 
@@ -502,7 +503,7 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
     # Step 1: Compute ghatDD (reference metric), ghatUU
     #         (inverse reference metric), as well as
     #         rescaling vector ReU & rescaling matrix ReDD
-    if enable_rfm_precompute == False:
+    if not enable_rfm_precompute:
         for i in range(DIM):
             scalefactor_orthog[i] = sp.sympify(scalefactor_orthog[i])
             ghatDD[i][i] = scalefactor_orthog[i]**2
@@ -599,11 +600,11 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
         for j in range(DIM):
             for k in range(DIM):
                 for l in range(DIM):
-                    GammahatUDDdD[i][j][k][l] = (sp.diff(GammahatUDD[i][j][k],xx[l]))
+                    GammahatUDDdD[i][j][k][l] = (sp.diff(GammahatUDD[i][j][k], xx[l]))
 
     # Step 4c: If rfm_precompute is disabled, then we are finished with this function.
     #          Otherwise continue to Step 5.
-    if enable_rfm_precompute == False:
+    if not enable_rfm_precompute:
         return
 
     # enable_rfm_precompute: precompute and store in memory possibly
@@ -628,13 +629,14 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
     #         we will now replace SymPy functions with simple variables using rigid NRPy+ syntax,
     #         and store these variables to globals defined above.
     def make_replacements(expr):
-        sympy_version = sp.__version__.replace("rc","...").replace("b","...") # Ignore the rc's and b's for release candidates & betas.
+        sympy_version = sp.__version__.replace("rc", "...").replace("b", "...")  # Ignore the rc's and b's
+                                                                                 # (release candidates & betas).
         sympy_version_decimal = float(int(sympy_version.split(".")[0]) + int(sympy_version.split(".")[1])/10.0)
         is_old_sympy_version = sympy_version_decimal < 1.2
         # The derivative representation changed with SymPy 1.2, forcing version-dependent behavior.
 
         # Example: Derivative(f0_of_xx0_funcform(xx0)(xx0), (xx0, 2)) >> f0_of_xx0__DD00
-        rule = {} # replacement dictionary
+        rule = {}  # replacement dictionary
         for item in sp.preorder_traversal(expr):
             if item.func == sp.Derivative:
                 # extract function name before '_funcform'
@@ -842,7 +844,7 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
                                                 " = ReadSIMD(&rfmstruct->" + str(freevars_uniq_xx_indep[which_freevar]) + "[i"+str(dirn)+"]);\n"
                     output_define_and_readvr = True
 
-            if (output_define_and_readvr == False) and (gri.xx[0] in frees_uniq) and (gri.xx[1] in frees_uniq):
+            if (not output_define_and_readvr) and (gri.xx[0] in frees_uniq) and (gri.xx[1] in frees_uniq):
                 define_str += """
 for(int i1=0;i1<Nxx_plus_2NGHOSTS1;i1++) for(int i0=0;i0<Nxx_plus_2NGHOSTS0;i0++) {
     const REAL xx0 = xx[0][i0];
@@ -859,7 +861,7 @@ for(int i1=0;i1<Nxx_plus_2NGHOSTS1;i1++) for(int i0=0;i0<Nxx_plus_2NGHOSTS0;i0++
                                             " = ReadSIMD(&rfmstruct->" + str(freevars_uniq_xx_indep[which_freevar]) + "[i0 + Nxx_plus_2NGHOSTS0*i1]);\n"
                 output_define_and_readvr = True
 
-            if output_define_and_readvr == False:
+            if not output_define_and_readvr:
                 print("ERROR: Could not figure out the (xx0,xx1,xx2) dependency within the expression for "+str(freevars_uniq_xx_indep[which_freevar])+":")
                 print(str(freevars_uniq_vals[which_freevar]))
                 sys.exit(1)
@@ -870,12 +872,15 @@ for(int i1=0;i1<Nxx_plus_2NGHOSTS1;i1++) for(int i0=0;i0<Nxx_plus_2NGHOSTS0;i0++
 
     # Step 8: Output needed C code to files
     outdir = par.parval_from_str(thismodule+"::rfm_precompute_Ccode_outdir")
-    with open(os.path.join(outdir, "rfm_struct__declare.h"), "w") as file:
-        file.write(struct_str)
-    with open(os.path.join(outdir, "rfm_struct__malloc.h"), "w") as file:
-        file.write(malloc_str)
-    with open(os.path.join(outdir, "rfm_struct__define.h"), "w") as file:
-        file.write(define_str)
+    if par.parval_from_str(thismodule+"::rfm_precompute_to_Cfunctions_and_NRPy_basic_defines") == "False":
+        with open(os.path.join(outdir, "rfm_struct__declare.h"), "w") as file:
+            file.write(struct_str)
+        with open(os.path.join(outdir, "rfm_struct__malloc.h"), "w") as file:
+            file.write(malloc_str)
+        with open(os.path.join(outdir, "rfm_struct__define.h"), "w") as file:
+            file.write(define_str)
+        with open(os.path.join(outdir, "rfm_struct__freemem.h"), "w") as file:
+            file.write(freemm_str)
     for i in range(3):
         with open(os.path.join(outdir, "rfm_struct__read" + str(i) + ".h"), "w") as file:
             file.write(readvr_str[i])
@@ -883,8 +888,7 @@ for(int i1=0;i1<Nxx_plus_2NGHOSTS1;i1++) for(int i0=0;i0<Nxx_plus_2NGHOSTS0;i0++
             file.write(readvr_SIMD_outer_str[i])
         with open(os.path.join(outdir, "rfm_struct__SIMD_inner_read" + str(i) + ".h"), "w") as file:
             file.write(readvr_SIMD_inner_str[i])
-    with open(os.path.join(outdir, "rfm_struct__freemem.h"), "w") as file:
-        file.write(freemm_str)
+
 
 ####################################################
 # Core Jacobian (basis) transformation functions,
@@ -901,7 +905,6 @@ for(int i1=0;i1<Nxx_plus_2NGHOSTS1;i1++) for(int i0=0;i0<Nxx_plus_2NGHOSTS0;i0++
 #  Jac_dUrfm_dDCartUD[i][j] = dx^i_rfm / dx^j_Cart
 #
 # using NRPy+'s generic_matrix_inverter3x3() function
-
 def compute_Jacobian_and_inverseJacobian_tofrom_Cartesian():
     # Step 2.a: First construct Jacobian matrix:
     Jac_dUCart_dDrfmUD = ixp.zerorank2()
