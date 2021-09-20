@@ -23,7 +23,7 @@
 #         zachetie **at** gmail **dot* com
 
 import sympy as sp                  # SymPy: The Python computer algebra package upon which NRPy+ depends
-from outputC import outputC,superfast_uniq,add_to_Cfunction_dict # NRPy+: Core C code output module
+from outputC import outputC, superfast_uniq, add_to_Cfunction_dict, indent_Ccode  # NRPy+: Core C code output module
 # VVVVVVVVVVVVVVVVV
 ## TO BE DEPRECATED
 from outputC import outC_function_dict
@@ -841,8 +841,8 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
             for dirn in range(3):
                 if (gri.xx[dirn] in frees_uniq) and not (gri.xx[(dirn+1)%3] in frees_uniq) and not (gri.xx[(dirn+2)%3] in frees_uniq):
                     define_str += "for(int i"+str(dirn)+"=0;i"+str(dirn)+"<Nxx_plus_2NGHOSTS"+str(dirn)+";i"+str(dirn)+"++) {\n"
-                    define_str += "    const REAL xx"+str(dirn)+" = xx["+str(dirn)+"][i"+str(dirn)+"];\n"
-                    define_str += "    rfmstruct." + str(freevars_uniq_xx_indep[which_freevar]) + "[i"+str(dirn)+"] = " + str(sp.ccode(freevars_uniq_vals[which_freevar])) + ";\n"
+                    define_str += "  const REAL xx"+str(dirn)+" = xx["+str(dirn)+"][i"+str(dirn)+"];\n"
+                    define_str += "  rfmstruct." + str(freevars_uniq_xx_indep[which_freevar]) + "[i"+str(dirn)+"] = " + str(sp.ccode(freevars_uniq_vals[which_freevar])) + ";\n"
                     define_str += "}\n\n"
                     readvr_str[dirn] += "const REAL " + str(freevars_uniq_xx_indep[which_freevar]) + " = rfmstruct->" + \
                                      str(freevars_uniq_xx_indep[which_freevar]) + "[i"+str(dirn)+"];\n"
@@ -857,9 +857,9 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
             if (not output_define_and_readvr) and (gri.xx[0] in frees_uniq) and (gri.xx[1] in frees_uniq):
                 define_str += """
 for(int i1=0;i1<Nxx_plus_2NGHOSTS1;i1++) for(int i0=0;i0<Nxx_plus_2NGHOSTS0;i0++) {
-    const REAL xx0 = xx[0][i0];
-    const REAL xx1 = xx[1][i1];
-    rfmstruct.""" + str(freevars_uniq_xx_indep[which_freevar]) + """[i0 + Nxx_plus_2NGHOSTS0*i1] = """ + str(sp.ccode(freevars_uniq_vals[which_freevar])) + """;
+  const REAL xx0 = xx[0][i0];
+  const REAL xx1 = xx[1][i1];
+  rfmstruct.""" + str(freevars_uniq_xx_indep[which_freevar]) + """[i0 + Nxx_plus_2NGHOSTS0*i1] = """ + str(sp.ccode(freevars_uniq_vals[which_freevar])) + """;
 }\n\n"""
                 readvr_str[0] += "const REAL " + str(freevars_uniq_xx_indep[which_freevar]) + " = rfmstruct->" + \
                                  str(freevars_uniq_xx_indep[which_freevar]) + "[i0 + Nxx_plus_2NGHOSTS0*i1];\n"
@@ -1472,7 +1472,7 @@ def register_C_functions_and_NRPy_basic_defines(rel_path_to_Cparams=os.path.join
                 c_type="void",
                 name="rfm_precompute_rfmstruct_malloc",
                 params="const paramstruct *restrict params, rfm_struct *restrict rfmstruct",
-                body=rfm_struct__malloc.replace("rfmstruct.", "rfmstruct->"),
+                body=indent_Ccode(rfm_struct__malloc.replace("rfmstruct.", "rfmstruct->")),
                 rel_path_to_Cparams=rel_path_to_Cparams)
             add_to_Cfunction_dict(
                 includes=[os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
@@ -1480,7 +1480,7 @@ def register_C_functions_and_NRPy_basic_defines(rel_path_to_Cparams=os.path.join
                 c_type="void",
                 name="rfm_precompute_rfmstruct_define",
                 params="const paramstruct *restrict params, REAL *restrict xx[3], rfm_struct *restrict rfmstruct",
-                body=rfm_struct__define.replace("rfmstruct.", "rfmstruct->"),
+                body=indent_Ccode(rfm_struct__define.replace("rfmstruct.", "rfmstruct->")),
                 rel_path_to_Cparams=rel_path_to_Cparams)
             add_to_Cfunction_dict(
                 includes=[os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
@@ -1488,7 +1488,7 @@ def register_C_functions_and_NRPy_basic_defines(rel_path_to_Cparams=os.path.join
                 c_type="void",
                 name="rfm_precompute_rfmstruct_freemem",
                 params="const paramstruct *restrict params, rfm_struct *restrict rfmstruct",
-                body=rfm_struct__freemem.replace("rfmstruct.", "rfmstruct->"),
+                body=indent_Ccode(rfm_struct__freemem.replace("rfmstruct.", "rfmstruct->")),
                 rel_path_to_Cparams=rel_path_to_Cparams)
             outC_NRPy_basic_defines_h_dict["reference_metric"] = NRPy_basic_defines_str
         else:
