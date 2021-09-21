@@ -71,5 +71,5 @@ def output_Enforce_Detgammabar_Constraint_Ccode(outdir="BSSN/", exprs="", Read_x
     outCfunction(
         outfile=os.path.join(outdir, name + ".h"), desc=desc, name=name, params=params,
         body=fin.FD_outputC("returnstring", exprs,
-                            params="outCverbose=False,preindent=1,includebraces=False").replace("IDX4", "IDX4S"),
+                            params="outCverbose=False,preindent=1,includebraces=False"),
         loopopts=loopopts)

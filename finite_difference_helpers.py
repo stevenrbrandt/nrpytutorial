@@ -226,7 +226,7 @@ def read_from_memory_Ccode_onept(gfname,idx, FDparams):
     >>> FDparams.SIMD_enable = "True"
     >>> vetU = ixp.register_gridfunctions_for_single_rank1("EVOL","vetU",FDparams.DIM)
     >>> read_from_memory_Ccode_onept("vetU0","0,1,-2,300",FDparams)
-    \'const REAL_SIMD_ARRAY vetU0_i0_i1p1_i2m2 = ReadSIMD(&in_gfs[IDX4(VETU0GF, i0,i1+1,i2-2)]);\\n\'
+    \'const REAL_SIMD_ARRAY vetU0_i0_i1p1_i2m2 = ReadSIMD(&in_gfs[IDX4S(VETU0GF, i0,i1+1,i2-2)]);\\n\'
     """
     idxsplit = idx.split(',')
     idx4 = [int(idxsplit[0]),int(idxsplit[1]),int(idxsplit[2]),int(idxsplit[3])]
@@ -329,15 +329,15 @@ def read_gfs_from_memory(list_of_base_gridfunction_names_in_derivs, fdstencl, sy
     >>> fdstencl = [[[] for i in range(4)] for j in range(len(list_of_deriv_operators))]
     >>> for i in range(len(list_of_deriv_operators)): fdcoeffs[i], fdstencl[i] = compute_fdcoeffs_fdstencl(list_of_deriv_operators[i])
     >>> print(read_gfs_from_memory(list_of_base_gridfunction_names_in_derivs, fdstencl, exprlist, FDparams))
-    const double hDD01_i0_i1m1_i2 = in_gfs[IDX4(HDD01GF, i0,i1-1,i2)];
-    const double hDD01 = in_gfs[IDX4(HDD01GF, i0,i1,i2)];
-    const double hDD01_i0_i1p1_i2 = in_gfs[IDX4(HDD01GF, i0,i1+1,i2)];
-    const double hDD02_i0_i1m2_i2 = in_gfs[IDX4(HDD02GF, i0,i1-2,i2)];
-    const double hDD02_i0_i1m1_i2 = in_gfs[IDX4(HDD02GF, i0,i1-1,i2)];
-    const double hDD02 = in_gfs[IDX4(HDD02GF, i0,i1,i2)];
-    const double hDD02_i0_i1p1_i2 = in_gfs[IDX4(HDD02GF, i0,i1+1,i2)];
-    const double hDD02_i0_i1p2_i2 = in_gfs[IDX4(HDD02GF, i0,i1+2,i2)];
-    const double vU1 = in_gfs[IDX4(VU1GF, i0,i1,i2)];
+    const double hDD01_i0_i1m1_i2 = in_gfs[IDX4S(HDD01GF, i0,i1-1,i2)];
+    const double hDD01 = in_gfs[IDX4S(HDD01GF, i0,i1,i2)];
+    const double hDD01_i0_i1p1_i2 = in_gfs[IDX4S(HDD01GF, i0,i1+1,i2)];
+    const double hDD02_i0_i1m2_i2 = in_gfs[IDX4S(HDD02GF, i0,i1-2,i2)];
+    const double hDD02_i0_i1m1_i2 = in_gfs[IDX4S(HDD02GF, i0,i1-1,i2)];
+    const double hDD02 = in_gfs[IDX4S(HDD02GF, i0,i1,i2)];
+    const double hDD02_i0_i1p1_i2 = in_gfs[IDX4S(HDD02GF, i0,i1+1,i2)];
+    const double hDD02_i0_i1p2_i2 = in_gfs[IDX4S(HDD02GF, i0,i1+2,i2)];
+    const double vU1 = in_gfs[IDX4S(VU1GF, i0,i1,i2)];
     <BLANKLINE>
     """
 
@@ -652,15 +652,15 @@ def construct_Ccode(sympyexpr_list, list_of_deriv_vars,
     # /*
     #  * NRPy+ Finite Difference Code Generation, Step 1 of 3: Read from main memory and compute finite difference stencils:
     #  */
-    # const double hDD01_i0_i1m1_i2 = in_gfs[IDX4(HDD01GF, i0,i1-1,i2)];
-    # const double hDD01 = in_gfs[IDX4(HDD01GF, i0,i1,i2)];
-    # const double hDD01_i0_i1p1_i2 = in_gfs[IDX4(HDD01GF, i0,i1+1,i2)];
-    # const double hDD02_i0_i1m2_i2 = in_gfs[IDX4(HDD02GF, i0,i1-2,i2)];
-    # const double hDD02_i0_i1m1_i2 = in_gfs[IDX4(HDD02GF, i0,i1-1,i2)];
-    # const double hDD02 = in_gfs[IDX4(HDD02GF, i0,i1,i2)];
-    # const double hDD02_i0_i1p1_i2 = in_gfs[IDX4(HDD02GF, i0,i1+1,i2)];
-    # const double hDD02_i0_i1p2_i2 = in_gfs[IDX4(HDD02GF, i0,i1+2,i2)];
-    # const double vU1 = in_gfs[IDX4(VU1GF, i0,i1,i2)];
+    # const double hDD01_i0_i1m1_i2 = in_gfs[IDX4S(HDD01GF, i0,i1-1,i2)];
+    # const double hDD01 = in_gfs[IDX4S(HDD01GF, i0,i1,i2)];
+    # const double hDD01_i0_i1p1_i2 = in_gfs[IDX4S(HDD01GF, i0,i1+1,i2)];
+    # const double hDD02_i0_i1m2_i2 = in_gfs[IDX4S(HDD02GF, i0,i1-2,i2)];
+    # const double hDD02_i0_i1m1_i2 = in_gfs[IDX4S(HDD02GF, i0,i1-1,i2)];
+    # const double hDD02 = in_gfs[IDX4S(HDD02GF, i0,i1,i2)];
+    # const double hDD02_i0_i1p1_i2 = in_gfs[IDX4S(HDD02GF, i0,i1+1,i2)];
+    # const double hDD02_i0_i1p2_i2 = in_gfs[IDX4S(HDD02GF, i0,i1+2,i2)];
+    # const double vU1 = in_gfs[IDX4S(VU1GF, i0,i1,i2)];
     # const double FDPart1_Rational_1_2 = 1.0/2.0;
     # const double FDPart1_Integer_2 = 2.0;
     # const double FDPart1_Rational_3_2 = 3.0/2.0;
