@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for i in *.ipynb NRPyPN/*.ipynb; do
+for i in *.ipynb NRPyPN/*.ipynb ScalarField/*.ipynb; do
 
     echo $i;
 
