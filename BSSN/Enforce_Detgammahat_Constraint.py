@@ -13,7 +13,7 @@ import sympy as sp                # SymPy: The Python computer algebra package u
 import BSSN.BSSN_quantities as Bq # NRPy+: Computes useful BSSN quantities
 import os                         # Standard Python modules for multiplatform OS-level functions
 
-def Enforce_Detgammabar_Constraint_symb_expressions():
+def Enforce_Detgammahat_Constraint_symb_expressions():
     # Set spatial dimension (must be 3 for BSSN)
     DIM = 3
 
@@ -57,12 +57,12 @@ def Enforce_Detgammabar_Constraint_symb_expressions():
 
     return enforce_detg_constraint_symb_expressions
 
-def output_Enforce_Detgammabar_Constraint_Ccode(outdir="BSSN/", exprs="", Read_xxs=False):
+def output_Enforce_Detgammahat_Constraint_Ccode(outdir="BSSN/", exprs="", Read_xxs=False):
     # Step 0: Check if outdir is string; error out if not.
     check_if_string__error_if_not(outdir,"outdir")
 
     desc = "Enforce det(gammabar) = det(gammahat) constraint."
-    name = "enforce_detgammabar_constraint"
+    name = "enforce_detgammahat_constraint"
     params = "const rfm_struct *restrict rfmstruct,const paramstruct *restrict params, REAL *restrict in_gfs"
     loopopts = "AllPoints,Enable_rfm_precompute"
     if Read_xxs:

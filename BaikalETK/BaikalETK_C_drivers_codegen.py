@@ -618,7 +618,7 @@ void BaikalETK_driver_pt2_BSSN_RHSs(CCTK_ARGUMENTS) {
 
     # Next, the driver for enforcing detgammabar = detgammahat constraint:
     outstr = common_includes + """
-void BaikalETK_enforce_detgammabar_constraint(CCTK_ARGUMENTS) {
+void BaikalETK_enforce_detgammahat_constraint(CCTK_ARGUMENTS) {
     DECLARE_CCTK_ARGUMENTS;
     DECLARE_CCTK_PARAMETERS;
 

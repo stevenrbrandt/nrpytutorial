@@ -996,7 +996,7 @@ def ds_dirn(delxx, append_gridsuffix_to_xx=False):
 
 # Find the appropriate timestep for the CFL condition.
 def add_to_Cfunction_dict__find_timestep(rel_path_to_Cparams=os.path.join("./"), enable_mask=False,
-                                         output_dt_local_h_only=False):
+                                         output_dt_local_h_only=False, use_unit_wavespeed=False):
     gridsuffix = ""  # Disable for now
     ##############################
     # Step 1: Function description
@@ -1047,6 +1047,8 @@ def add_to_Cfunction_dict__find_timestep(rel_path_to_Cparams=os.path.join("./"),
         # output_dt_local_h_only means we seek a minimum over all directions at given gridpoint only
         body += indent + "// Set dt_local["+gridsuffix.replace("_grid", "")+"] = MIN(ds_dirn0, ds_dirn1, ds_dirn2) * CFL_FACTOR/wavespeed :\n"
         body += indent + "dt_local["+gridsuffix.replace("_grid", "")+"] = MIN(ds_dirn0, MIN(ds_dirn1, ds_dirn2)) * CFL_FACTOR/wavespeed;\n"
+        if use_unit_wavespeed:
+            body = body.replace("wavespeed", "1.0")
     if enable_mask:
         body += "}\n"
 
@@ -1059,6 +1061,8 @@ def add_to_Cfunction_dict__find_timestep(rel_path_to_Cparams=os.path.join("./"),
     ##############################
     # Step 8: after the loop
     postloop = "    return dsmin*CFL_FACTOR/wavespeed;\n"
+    if use_unit_wavespeed:
+        postloop = postloop.replace("wavespeed", "1.0")
     ##############################
     # Step 9: add to Cfunction dictionary
     add_to_Cfunction_dict(
@@ -1455,9 +1459,11 @@ def out_timestep_func_to_file(outfile):
         file.write(outC_function_dict["find_timestep"])
 
 
-def register_C_functions_and_NRPy_basic_defines(rel_path_to_Cparams=os.path.join("./"), enable_rfm_precompute=False):
+def register_C_functions_and_NRPy_basic_defines(rel_path_to_Cparams=os.path.join("./"), enable_rfm_precompute=False,
+                                                use_unit_wavespeed_for_find_timestep=False):
     add_to_Cfunction_dict__find_timestep(rel_path_to_Cparams=rel_path_to_Cparams, enable_mask=False,
-                                         output_dt_local_h_only=False)
+                                         output_dt_local_h_only=False,
+                                         use_unit_wavespeed=use_unit_wavespeed_for_find_timestep)
     add_to_Cfunc_dict_xx_to_Cart(rel_path_to_Cparams=rel_path_to_Cparams)
     add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=rel_path_to_Cparams)
     add_to_Cfunc_dict__Cart_to_xx_and_nearest_i0i1i2(rel_path_to_Cparams=rel_path_to_Cparams,

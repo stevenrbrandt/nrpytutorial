@@ -384,8 +384,8 @@ def BaikalETK_C_kernels_codegen_onepart(params=
         par.set_parval_from_str("reference_metric::enable_rfm_precompute","True")
         par.set_parval_from_str("reference_metric::rfm_precompute_Ccode_outdir",os.path.join(outdir,"rfm_files/"))
 
-        import BSSN.Enforce_Detgammabar_Constraint as EGC
-        enforce_detg_constraint_symb_expressions = EGC.Enforce_Detgammabar_Constraint_symb_expressions()
+        import BSSN.Enforce_Detgammahat_Constraint as EGC
+        enforce_detg_constraint_symb_expressions = EGC.Enforce_Detgammahat_Constraint_symb_expressions()
 
         # Now that we are finished with all the rfm hatted
         #           quantities in generic precomputed functional
