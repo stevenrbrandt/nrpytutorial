@@ -21,20 +21,15 @@ import GiRaFFEfood_NRPy_Exact_Wald as gfew
 import GiRaFFEfood_NRPy_Split_Monopole as gfsm
 import GiRaFFEfood_NRPy_1D_tests as gfaw
 import GiRaFFEfood_NRPy_1D_tests_fast_wave as gffw
+import GiRaFFEfood_NRPy_1D_tests_degen_Alfven_wave as gfdaw
+import GiRaFFEfood_NRPy_1D_tests_three_waves as gftw
+import GiRaFFEfood_NRPy_1D_tests_FFE_breakdown as gffb
 
 # Step 1a: Set commonly used parameters.
 thismodule = __name__
 
 def GiRaFFEfood_NRPy_generate_initial_data(ID_type = "DegenAlfvenWave", stagger_enable = False,**params):
     global AD, ValenciavU
-#     if ID_type == "DegenAlfvenWave":
-#         mu_DAW = par.Cparameters("REAL",thismodule,["mu_DAW"], -0.5) # The wave speed
-#         AD = Axyz_func(Ax_DAW, Ay_DAW, Az_DAW, stagger_enable,
-#                        gammamu=sp.sympify(1)/sp.sqrt(sp.sympify(1)-mu_AW**2))
-#         ValenciaVU = ValenciavU_DAW(mu_DAW=mu_DAW, gammamu=gammamu)
-#     elif ID_type == "FastWave":
-#         AD = Axyz_func(Ax_FW, Ay_FW, Az_FW, stagger_enable)
-#         ValenciaVU = ValenciavU_FW()
     if ID_type == "ExactWald":
         AD = gfcf.Axyz_func_spherical(gfew.Ar_EW,gfew.Ath_EW,gfew.Aph_EW,stagger_enable,**params)
         ValenciavU = gfew.ValenciavU_func_EW(**params)
@@ -47,3 +42,12 @@ def GiRaFFEfood_NRPy_generate_initial_data(ID_type = "DegenAlfvenWave", stagger_
     elif ID_type == "FastWave":
         AD = gfcf.Axyz_func_Cartesian(gffw.Ax_FW,gffw.Ay_FW,gffw.Az_FW, stagger_enable, **params)
         ValenciavU = gffw.ValenciavU_func_FW(**params)
+    elif ID_type == "DegenAlfvenWave":
+        AD = gfcf.Axyz_func_Cartesian(gfdaw.Ax_DAW,gfdaw.Ay_DAW,gfdaw.Az_DAW, stagger_enable, **params)
+        ValenciavU = gfdaw.ValenciavU_func_DAW(**params)
+    elif ID_type == "ThreeWaves":
+        AD = gfcf.Axyz_func_Cartesian(gftw.Ax_TW,gftw.Ay_TW,gftw.Az_TW, stagger_enable, **params)
+        ValenciavU = gftw.ValenciavU_func_TW(**params)
+    elif ID_type == "FFE_Breakdown":
+        AD = gfcf.Axyz_func_Cartesian(gffb.Ax_FB,gffb.Ay_FB,gffb.Az_FB, stagger_enable, **params)
+        ValenciavU = gffb.ValenciavU_func_FB(**params)
