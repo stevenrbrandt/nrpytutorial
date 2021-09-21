@@ -176,7 +176,7 @@ def generate_Afield_flux_function_files(out_dir,subdir,alpha_face,gamma_faceDD,b
             outfile  = os.path.join(out_dir,subdir,name+".h"), desc=desc, name=name,
             params   ="const paramstruct *params,const REAL *auxevol_gfs,REAL *rhs_gfs",
             body     =  Memory_Read \
-                       +outputC(E_field_to_print,E_field_names,"returnstring",params="outCverbose=False").replace("IDX4","IDX4S")\
+                       +outputC(E_field_to_print,E_field_names,"returnstring",params="outCverbose=False")\
                        +Memory_Write,
             loopopts ="InteriorPoints",
             rel_path_to_Cparams=os.path.join("../"))
@@ -187,7 +187,7 @@ def generate_Afield_flux_function_files(out_dir,subdir,alpha_face,gamma_faceDD,b
             outfile  = os.path.join(out_dir,subdir,name+".h"), desc=desc, name=name,
             params   ="const paramstruct *params,const REAL *auxevol_gfs,REAL *rhs_gfs",
             body     =  Memory_Read.replace(indices[flux_dirn],indicesp1[flux_dirn]) \
-                       +outputC(E_field_to_print,E_field_names,"returnstring",params="outCverbose=False").replace("IDX4","IDX4S")\
+                       +outputC(E_field_to_print,E_field_names,"returnstring",params="outCverbose=False")\
                        +Memory_Write,
             loopopts ="InteriorPoints",
             rel_path_to_Cparams=os.path.join("../"))

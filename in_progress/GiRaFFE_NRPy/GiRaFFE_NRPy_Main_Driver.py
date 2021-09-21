@@ -72,7 +72,7 @@ def GiRaFFE_NRPy_Main_Driver_generate_all(out_dir):
     outCfunction(
         outfile  = os.path.join(out_dir,subdir,name+".h"), desc=desc, name=name,
         params   ="const paramstruct *restrict params,const REAL *restrict in_gfs,REAL *restrict auxevol_gfs",
-        body     = fin.FD_outputC("returnstring",parens_to_print,params=outCparams).replace("IDX4","IDX4S"),
+        body     = fin.FD_outputC("returnstring",parens_to_print,params=outCparams),
         loopopts ="AllPoints",
         rel_path_to_Cparams=os.path.join("../"))
 
@@ -109,7 +109,7 @@ def GiRaFFE_NRPy_Main_Driver_generate_all(out_dir):
     source_Ccode = outCfunction(
         outfile  = "returnstring", desc=desc, name=name,
         params   ="const paramstruct *params,const REAL *in_gfs,const REAL *auxevol_gfs,REAL *rhs_gfs",
-        body     = fin.FD_outputC("returnstring",RHSs_to_print,params=outCparams).replace("IDX4","IDX4S"),
+        body     = fin.FD_outputC("returnstring",RHSs_to_print,params=outCparams),
         loopopts ="InteriorPoints",
         rel_path_to_Cparams=os.path.join("../")).replace("= NGHOSTS","= NGHOSTS_A2B").replace("NGHOSTS+Nxx0","Nxx_plus_2NGHOSTS0-NGHOSTS_A2B").replace("NGHOSTS+Nxx1","Nxx_plus_2NGHOSTS1-NGHOSTS_A2B").replace("NGHOSTS+Nxx2","Nxx_plus_2NGHOSTS2-NGHOSTS_A2B")
     # Note the above .replace() functions. These serve to expand the loop range into the ghostzones, since
@@ -176,7 +176,7 @@ def GiRaFFE_NRPy_Main_Driver_generate_all(out_dir):
     outCfunction(
         outfile  = os.path.join(out_dir,subdir,name+".h"), desc=desc, name=name,
         params   ="const paramstruct *params,REAL *xx[3],REAL *auxevol_gfs,REAL *in_gfs",
-        body     = fin.FD_outputC("returnstring",values_to_print,params=outCparams).replace("IDX4","IDX4S"),
+        body     = fin.FD_outputC("returnstring",values_to_print,params=outCparams),
         loopopts ="AllPoints,Read_xxs",
         rel_path_to_Cparams=os.path.join("../"))
 
@@ -193,7 +193,7 @@ def GiRaFFE_NRPy_Main_Driver_generate_all(out_dir):
     outCfunction(
         outfile  = os.path.join(out_dir,subdir,name+".h"), desc=desc, name=name,
         params   ="const paramstruct *params,REAL *auxevol_gfs,REAL *in_gfs",
-        body     = fin.FD_outputC("returnstring",values_to_print,params=outCparams).replace("IDX4","IDX4S"),
+        body     = fin.FD_outputC("returnstring",values_to_print,params=outCparams),
         loopopts ="AllPoints",
         rel_path_to_Cparams=os.path.join("../"))
 
