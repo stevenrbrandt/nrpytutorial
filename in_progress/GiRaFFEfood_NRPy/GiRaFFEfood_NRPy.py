@@ -24,6 +24,7 @@ import GiRaFFEfood_NRPy_1D_tests_fast_wave as gffw
 import GiRaFFEfood_NRPy_1D_tests_degen_Alfven_wave as gfdaw
 import GiRaFFEfood_NRPy_1D_tests_three_waves as gftw
 import GiRaFFEfood_NRPy_1D_tests_FFE_breakdown as gffb
+import GiRaFFEfood_NRPy_Aligned_Rotator as gfar
 
 # Step 1a: Set commonly used parameters.
 thismodule = __name__
@@ -51,3 +52,6 @@ def GiRaFFEfood_NRPy_generate_initial_data(ID_type = "DegenAlfvenWave", stagger_
     elif ID_type == "FFE_Breakdown":
         AD = gfcf.Axyz_func_Cartesian(gffb.Ax_FB,gffb.Ay_FB,gffb.Az_FB, stagger_enable, **params)
         ValenciavU = gffb.ValenciavU_func_FB(**params)
+    elif ID_type == "AlignedRotator":
+        AD = gfcf.Axyz_func_spherical(gfar.Ar_AR,gfar.Ath_AR,gfar.Aph_AR, stagger_enable, **params)
+        ValenciavU = gfar.ValenciavU_func_AR(**params)

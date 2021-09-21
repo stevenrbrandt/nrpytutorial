@@ -75,8 +75,11 @@ def change_basis_spherical_to_Cartesian_U(somevector_sphU):
 
 # Generic function for all 1D tests: Compute Ax,Ay,Az
 def Axyz_func_spherical(Ar_func,At_func,Ap_func, stagger_enable, **params):
-    KerrSchild_radial_shift = params["KerrSchild_radial_shift"]
-    r     = rfm.xxSph[0] + KerrSchild_radial_shift # We are setting the data up in Shifted Kerr-Schild coordinates
+    if "KerrSchild_radial_shift" in params:
+        KerrSchild_radial_shift = params["KerrSchild_radial_shift"]
+        r = rfm.xxSph[0] + KerrSchild_radial_shift # We are setting the data up in Shifted Kerr-Schild coordinates
+    else:
+        r = rfm.xxSph[0] # Some other coordinate system
     theta = rfm.xxSph[1]
     phi   = rfm.xxSph[2]
     AsphD = ixp.zerorank1()
