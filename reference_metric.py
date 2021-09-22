@@ -1204,7 +1204,7 @@ void set_Nxx_dxx_invdx_params__and__xx(const int EigenCoord, const int Nxx[3],
             file.write("        xxmin["+str(i)+"] = "+str(xxmin[i])+";\n")
             file.write("        xxmax["+str(i)+"] = "+str(xxmax[i])+";\n")
         file.write("""
-    } else if (EigenCoord == 1) {
+    } else { // if (EigenCoord == 1)
 """)
         CoordSystem_orig = par.parval_from_str("reference_metric::CoordSystem")
         par.set_parval_from_str("reference_metric::CoordSystem",get_EigenCoord())
@@ -1361,8 +1361,7 @@ def add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=os.p
     // Step 0d.i: Declare Delta x^i=dxx{0,1,2} and invdxx{0,1,2}, as well as xxmin[3] and xxmax[3]:
     REAL xxmin[3],xxmax[3];
     if(EigenCoord == 0) {
-"""
-    body += set_xxmin_xxmax() + """    } else if (EigenCoord == 1) {
+""" + set_xxmin_xxmax() + """    } else { // if (EigenCoord == 1)
 """
     CoordSystem_orig = par.parval_from_str("reference_metric::CoordSystem")
     # If we are using a "holey" Spherical-like coordinate, for certain grids xx0min>0 is
