@@ -106,6 +106,7 @@ def add_to_Cfunction_dict_MoL_malloc(MoL_method, which_gfs):
         if gridfunctions == "auxevol_gfs":
             num_gfs = "NUM_AUXEVOL_GFS"
         body += "gridfuncs->" + gridfunctions + " = (REAL *restrict)malloc(sizeof(REAL) * " + num_gfs + " * Nxx_plus_2NGHOSTS_tot);\n"
+    body += "\ngridfuncs->diagnostic_output_gfs = gridfuncs->" + diagnostic_gridfunctions_point_to + ";\n"
     add_to_Cfunction_dict(
         includes=includes,
         desc=desc,
