@@ -22,7 +22,7 @@ from finite_difference_helpers import read_gfs_from_memory, FDparams, construct_
 modulename = __name__
 # Centered finite difference accuracy order
 par.initialize_param(par.glb_param("int",  modulename, "FD_CENTDERIVS_ORDER",          4))
-par.initialize_param(par.glb_param("bool", modulename, "FD_functions_enable",      False))
+par.initialize_param(par.glb_param("bool", modulename, "enable_FD_functions",      False))
 par.initialize_param(par.glb_param("int",  modulename, "FD_KO_ORDER__CENTDERIVS_PLUS", 2))
 
 def FD_outputC(filename, sympyexpr_list, params="", upwindcontrolvec=""):
@@ -59,7 +59,7 @@ def FD_outputC(filename, sympyexpr_list, params="", upwindcontrolvec=""):
     FDparams.enable_SIMD         = outCparams.enable_SIMD
     FDparams.PRECISION           = par.parval_from_str("PRECISION")
     FDparams.FD_CD_order         = par.parval_from_str("FD_CENTDERIVS_ORDER")
-    FDparams.FD_functions_enable = par.parval_from_str("FD_functions_enable")
+    FDparams.enable_FD_functions = par.parval_from_str("enable_FD_functions")
     FDparams.DIM                 = par.parval_from_str("DIM")
     FDparams.MemAllocStyle       = par.parval_from_str("MemAllocStyle")
     FDparams.upwindcontrolvec    = upwindcontrolvec

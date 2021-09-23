@@ -370,7 +370,7 @@ void BaikalETK_ADM_to_BSSN(CCTK_ARGUMENTS) {
     #   does not take long to compile, and we have already output all the
     #   FD functions to file, so if this one contains new FD functions,
     #   the compile will fail.
-    par.set_parval_from_str("finite_difference::FD_functions_enable", False)
+    par.set_parval_from_str("finite_difference::enable_FD_functions", False)
 
     all_but_lambdaU_expressions = [
         lhrh(lhs=gri.gfaccess("in_gfs", "hDD00"), rhs=IDhDD[0][0]),

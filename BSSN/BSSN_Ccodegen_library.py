@@ -194,8 +194,8 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
         includes = []
     if enable_SIMD:
         includes += [os.path.join("SIMD", "SIMD_intrinsics.h")]
-    FD_functions_enable = bool(par.parval_from_str("finite_difference::FD_functions_enable"))
-    if FD_functions_enable:
+    enable_FD_functions = bool(par.parval_from_str("finite_difference::enable_FD_functions"))
+    if enable_FD_functions:
         includes += ["finite_difference_functions.h"]
 
     # Set up the C function for the BSSN RHSs
@@ -305,8 +305,8 @@ def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.
         includes = []
     if enable_SIMD:
         includes += [os.path.join("SIMD", "SIMD_intrinsics.h")]
-    FD_functions_enable = bool(par.parval_from_str("finite_difference::FD_functions_enable"))
-    if FD_functions_enable:
+    enable_FD_functions = bool(par.parval_from_str("finite_difference::enable_FD_functions"))
+    if enable_FD_functions:
         includes += ["finite_difference_functions.h"]
 
     # Set up the C function for the 3-Ricci tensor
@@ -405,8 +405,8 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
         includes = []
     if enable_SIMD:
         includes += [os.path.join("SIMD", "SIMD_intrinsics.h")]
-    FD_functions_enable = bool(par.parval_from_str("finite_difference::FD_functions_enable"))
-    if FD_functions_enable:
+    enable_FD_functions = bool(par.parval_from_str("finite_difference::enable_FD_functions"))
+    if enable_FD_functions:
         includes += ["finite_difference_functions.h"]
 
     # Set up the C function for the BSSN constraints
@@ -448,8 +448,8 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
 
     if includes is None:
         includes = []
-    FD_functions_enable = bool(par.parval_from_str("finite_difference::FD_functions_enable"))
-    if FD_functions_enable:
+    enable_FD_functions = bool(par.parval_from_str("finite_difference::enable_FD_functions"))
+    if enable_FD_functions:
         includes += ["finite_difference_functions.h"]
 
     # Set up the C function for enforcing the det(gammabar) = det(gammahat) BSSN algebraic constraint

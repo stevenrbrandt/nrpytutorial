@@ -15,7 +15,7 @@ import grid as gri                  # NRPy+: Functions having to do with numeric
 import sys                          # Standard Python module for multiplatform OS-level functions
 from collections import namedtuple  # Standard Python: Enable namedtuple data type
 
-FDparams = namedtuple('FDparams', 'PRECISION FD_CD_order FD_functions_enable enable_SIMD DIM MemAllocStyle upwindcontrolvec fullindent outCparams')
+FDparams = namedtuple('FDparams', 'PRECISION FD_CD_order enable_FD_functions enable_SIMD DIM MemAllocStyle upwindcontrolvec fullindent outCparams')
 
 #########################################
 # STEP 1: EXTRACT DERIVATIVES TO COMPUTE
@@ -632,7 +632,7 @@ def construct_Ccode(sympyexpr_list, list_of_deriv_vars,
     # >>> par.set_parval_from_str("finite_difference::FD_CENTDERIVS_ORDER",2)
     # >>> FDparams.DIM=3
     # >>> FDparams.enable_SIMD="False"
-    # >>> FDparams.FD_functions_enable=False
+    # >>> FDparams.enable_FD_functions=False
     # >>> FDparams.PRECISION="double"
     # >>> FDparams.MemAllocStyle="012"
     # >>> FDparams.upwindcontrolvec=vU
@@ -703,14 +703,14 @@ def construct_Ccode(sympyexpr_list, list_of_deriv_vars,
     #             variables.
     FDexprs = []
     FDlhsvarnames = []
-    if not FDparams.FD_functions_enable:
+    if not FDparams.enable_FD_functions:
         FDexprs, FDlhsvarnames = \
             construct_FD_exprs_as_SymPy_exprs(list_of_deriv_vars,
                                               list_of_base_gridfunction_names_in_derivs, list_of_deriv_operators,
                                               fdcoeffs, fdstencl)
 
     # Compute finite differences using function calls (instead of inlined calculations)?
-    if FDparams.FD_functions_enable:
+    if FDparams.enable_FD_functions:
         # If so, add FD functions to outputC's outC_function_dict (C function dictionary),
         #   AND return the full set of needed calls to these functions (to funccall_list)
         funccall_list = \
@@ -767,7 +767,7 @@ def construct_Ccode(sympyexpr_list, list_of_deriv_vars,
                                 + str(NRPy_FD_StepNumber) + " of " + str(NRPy_FD__Number_of_Steps) +
                                 ": Read from main memory and compute finite difference stencils:\n */\n")
         NRPy_FD_StepNumber = NRPy_FD_StepNumber + 1
-        if FDparams.FD_functions_enable:
+        if FDparams.enable_FD_functions:
             # Compute finite differences using function calls (instead of inlined calculations)
             Coutput += indent_Ccode(read_from_memory_Ccode)
             for funccall in funccall_list:
