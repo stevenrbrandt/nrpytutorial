@@ -23,7 +23,7 @@ import re, sys, os, stat                      # Standard Python: regular express
 from collections import namedtuple            # Standard Python: Enable namedtuple data type
 
 lhrh = namedtuple('lhrh', 'lhs rhs')
-outCparams = namedtuple('outCparams', 'preindent includebraces declareoutputvars outCfileaccess outCverbose CSE_enable CSE_varprefix CSE_sorting CSE_preprocess SIMD_enable SIMD_find_more_subs SIMD_find_more_FMAsFMSs SIMD_debug enable_TYPE gridsuffix')
+outCparams = namedtuple('outCparams', 'preindent includebraces declareoutputvars outCfileaccess outCverbose CSE_enable CSE_varprefix CSE_sorting CSE_preprocess enable_SIMD SIMD_find_more_subs SIMD_find_more_FMAsFMSs SIMD_debug enable_TYPE gridsuffix')
 
 # Sometimes SymPy has problems evaluating complicated expressions involving absolute
 #    values, resulting in hangs. So instead of using sp.Abs(), if we instead use
@@ -51,7 +51,7 @@ custom_functions_for_SymPy_ccode = {
 
 # Parameter initialization is called once, within nrpy.py.
 par.initialize_param(par.glb_param("char", __name__, "PRECISION", "double")) # __name__ = "outputC", this module's name.
-# par.initialize_param(par.glb_param("bool", thismodule, "SIMD_enable", False))
+# par.initialize_param(par.glb_param("bool", thismodule, "enable_SIMD", False))
 
 # super fast 'uniq' function:
 # f8() function from https://www.peterbe.com/plog/uniqifiers-benchmark
@@ -121,7 +121,7 @@ def parse_outCparams_string(params):
     CSE_sorting = "canonical"
     CSE_varprefix = "tmp"
     CSE_preprocess = "False"
-    SIMD_enable = "False"
+    enable_SIMD = "False"
     SIMD_find_more_subs = "False"
     SIMD_find_more_FMAsFMSs = "True" # Finding too many FMAs/FMSs can degrade performance; currently tuned to optimize BSSN
     SIMD_debug = "False"
@@ -173,8 +173,8 @@ def parse_outCparams_string(params):
                 CSE_sorting = value[i]
             elif parname == "CSE_preprocess":
                 CSE_preprocess = value[i]
-            elif parname == "SIMD_enable":
-                SIMD_enable = value[i]
+            elif parname == "enable_SIMD":
+                enable_SIMD = value[i]
             elif parname == "SIMD_find_more_subs":
                 SIMD_find_more_subs = value[i]
             elif parname == "SIMD_find_more_FMAsFMSs":
@@ -209,7 +209,7 @@ def parse_outCparams_string(params):
 
     return outCparams(preindent,includebraces,declareoutputvars,outCfileaccess,outCverbose,
                       CSE_enable,CSE_varprefix,CSE_sorting,CSE_preprocess,
-                      SIMD_enable,SIMD_find_more_subs,SIMD_find_more_FMAsFMSs,SIMD_debug,
+                      enable_SIMD,SIMD_find_more_subs,SIMD_find_more_FMAsFMSs,SIMD_debug,
                       enable_TYPE,gridsuffix)
 
 # Input: sympyexpr = a single SymPy expression *or* a list of SymPy expressions
@@ -231,11 +231,11 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
     commentblock = ""
     outstring = ""
 
-    # Step 1: If SIMD_enable==True, then check if TYPE=="double". If not, error out.
+    # Step 1: If enable_SIMD==True, then check if TYPE=="double". If not, error out.
     #         Otherwise set TYPE="REAL_SIMD_ARRAY", which should be #define'd
     #         within the C code. For example for AVX-256, the C code should have
     #         #define REAL_SIMD_ARRAY __m256d
-    if outCparams.SIMD_enable == "True":
+    if outCparams.enable_SIMD == "True":
         if TYPE not in ('double', ''):
             print("SIMD output currently only supports double precision or typeless. Sorry!")
             sys.exit(1)
@@ -325,15 +325,15 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
         SIMD_const_values = []
 
         varprefix = '' if outCparams.CSE_varprefix == 'tmp' else outCparams.CSE_varprefix
-        if outCparams.CSE_preprocess == "True" or outCparams.SIMD_enable == "True":
+        if outCparams.CSE_preprocess == "True" or outCparams.enable_SIMD == "True":
             # If CSE_preprocess == True, then perform partial factorization
-            # If SIMD_enable == True, then declare _NegativeOne_ in preprocessing
-            factor_negative = eval(outCparams.SIMD_enable) and eval(outCparams.SIMD_find_more_subs)
+            # If enable_SIMD == True, then declare _NegativeOne_ in preprocessing
+            factor_negative = eval(outCparams.enable_SIMD) and eval(outCparams.SIMD_find_more_subs)
             sympyexpr, map_sym_to_rat = cse_preprocess(sympyexpr, prefix=varprefix,
-                declare=eval(outCparams.SIMD_enable), negative=factor_negative, factor=eval(outCparams.CSE_preprocess))
+                declare=eval(outCparams.enable_SIMD), negative=factor_negative, factor=eval(outCparams.CSE_preprocess))
             for v in map_sym_to_rat:
                 p, q = float(map_sym_to_rat[v].p), float(map_sym_to_rat[v].q)
-                if outCparams.SIMD_enable == "False":
+                if outCparams.enable_SIMD == "False":
                     RATIONAL_decls += indent + 'const double ' + str(v) + ' = '
                     # Since Integer is a subclass of Rational in SymPy, we need only check whether
                     # the denominator q = 1 to determine if a rational is an integer.
@@ -356,7 +356,7 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
             if outCparams.enable_TYPE == "False":
                 FULLTYPESTRING = ""
 
-            if outCparams.SIMD_enable == "True":
+            if outCparams.enable_SIMD == "True":
                 outstring += indent + FULLTYPESTRING + str(commonsubexpression[0]) + " = " + \
                              str(expr_convert_to_SIMD_intrins(commonsubexpression[1],map_sym_to_rat,varprefix,outCparams.SIMD_find_more_FMAsFMSs)) + ";\n"
             else:
@@ -364,7 +364,7 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
                                                                 user_functions=custom_functions_for_SymPy_ccode)) + "\n"
 
         for i, result in enumerate(CSE_results[1]):
-            if outCparams.SIMD_enable == "True":
+            if outCparams.enable_SIMD == "True":
                 outstring += outtypestring + output_varname_str[i] + " = " + \
                              str(expr_convert_to_SIMD_intrins(result,map_sym_to_rat,varprefix,outCparams.SIMD_find_more_FMAsFMSs)) + ";\n"
             else:
@@ -374,17 +374,17 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
         # Resolution: This function extends lists "SIMD_const_varnms" and "SIMD_const_values",
         #             which store the name of each constant SIMD array (e.g., _Integer_1) and
         #             the value of each variable (e.g., 1.0).
-        if outCparams.SIMD_enable == "True":
+        if outCparams.enable_SIMD == "True":
             for v in map_sym_to_rat:
                 p, q = float(map_sym_to_rat[v].p), float(map_sym_to_rat[v].q)
                 SIMD_const_varnms.extend([str(v)])
                 if q != 1: SIMD_const_values.extend([str(p) + '/' + str(q)])
                 else:      SIMD_const_values.extend([str(p)])
 
-        # Step 6b.i: If SIMD_enable == True , and
+        # Step 6b.i: If enable_SIMD == True , and
         #            there is at least one SIMD const variable,
         #            then declare the SIMD_const_varnms and SIMD_const_values arrays
-        if outCparams.SIMD_enable == "True" and len(SIMD_const_varnms) != 0:
+        if outCparams.enable_SIMD == "True" and len(SIMD_const_varnms) != 0:
             # Step 6a) Sort the list of definitions. Idea from:
             # https://stackoverflow.com/questions/9764298/is-it-possible-to-sort-two-listswhich-reference-each-other-in-the-exact-same-w
             SIMD_const_varnms, SIMD_const_values = \
@@ -599,7 +599,7 @@ CFLAGS = """ + CHOSEN_CFLAGS + """
         os.chmod(os.path.join(Ccodesrootdir, "backup_script_nomake.sh"), stat.S_IRWXU)
 
 
-def construct_NRPy_basic_defines_h(Ccodesrootdir, SIMD_enable=False, supplemental_dict={}):
+def construct_NRPy_basic_defines_h(Ccodesrootdir, enable_SIMD=False, supplemental_dict={}):
     if not os.path.isdir(Ccodesrootdir):
         print("Error (in construct_NRPy_basic_defines_h): Directory \"" + Ccodesrootdir + "\" does not exist.")
         sys.exit(1)
@@ -612,8 +612,8 @@ def construct_NRPy_basic_defines_h(Ccodesrootdir, SIMD_enable=False, supplementa
     with open(os.path.join(Ccodesrootdir, "NRPy_basic_defines.h"), "w") as file:
         file.write("""// NRPy+ basic definitions, automatically generated from outC_NRPy_basic_defines_h_dict within outputC,
 //    and populated within NRPy+ modules. DO NOT EDIT THIS FILE BY HAND.\n\n""")
-        if SIMD_enable:
-            file.write("// construct_NRPy_basic_defines_h(...,SIMD_enable=True) was called so we #include SIMD intrinsics:\n")
+        if enable_SIMD:
+            file.write("// construct_NRPy_basic_defines_h(...,enable_SIMD=True) was called so we #include SIMD intrinsics:\n")
             file.write("""#include "SIMD/SIMD_intrinsics.h"\n""")
         for key in ["outputC", "NRPy_param_funcs", "grid", "finite_difference", "reference_metric", "CurviBoundaryConditions", "MoL"]:
             if key in outC_NRPy_basic_defines_h_dict:

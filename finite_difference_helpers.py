@@ -15,7 +15,7 @@ import grid as gri                  # NRPy+: Functions having to do with numeric
 import sys                          # Standard Python module for multiplatform OS-level functions
 from collections import namedtuple  # Standard Python: Enable namedtuple data type
 
-FDparams = namedtuple('FDparams', 'PRECISION FD_CD_order FD_functions_enable SIMD_enable DIM MemAllocStyle upwindcontrolvec fullindent outCparams')
+FDparams = namedtuple('FDparams', 'PRECISION FD_CD_order FD_functions_enable enable_SIMD DIM MemAllocStyle upwindcontrolvec fullindent outCparams')
 
 #########################################
 # STEP 1: EXTRACT DERIVATIVES TO COMPUTE
@@ -178,12 +178,12 @@ def type__var(in_var,FDparams, AddPrefix_for_UpDownWindVars=True):
     :param AddPrefix_for_UpDownWindVars: Boolean -- add a prefix to up/downwind variables?
     :return: Return [type] [variable name]
     >>> from finite_difference_helpers import type__var, FDparams
-    >>> FDparams.SIMD_enable = "True"
+    >>> FDparams.enable_SIMD = "True"
     >>> type__var("aDD00",FDparams)
     \'const REAL_SIMD_ARRAY aDD00\'
 
     >>> from finite_difference_helpers import type__var, FDparams
-    >>> FDparams.SIMD_enable = "False"
+    >>> FDparams.enable_SIMD = "False"
     >>> FDparams.PRECISION = "double"
     >>> type__var("variable",FDparams)
     \'const double variable\'
@@ -208,7 +208,7 @@ def type__var(in_var,FDparams, AddPrefix_for_UpDownWindVars=True):
             varname = "UpwindAlgInput"+varname
         if "_ddnD" in varname:  # For consistency with _dupD
             varname = "UpwindAlgInput"+varname
-    if FDparams.SIMD_enable == "True":
+    if FDparams.enable_SIMD == "True":
         return "const REAL_SIMD_ARRAY " + varname
     return "const " + FDparams.PRECISION + " " + varname
 
@@ -223,7 +223,7 @@ def read_from_memory_Ccode_onept(gfname,idx, FDparams):
     >>> from finite_difference_helpers import FDparams, read_from_memory_Ccode_onept
     >>> FDparams.DIM = 3
     >>> FDparams.upwindcontrolvec = ""
-    >>> FDparams.SIMD_enable = "True"
+    >>> FDparams.enable_SIMD = "True"
     >>> vetU = ixp.register_gridfunctions_for_single_rank1("EVOL","vetU",FDparams.DIM)
     >>> read_from_memory_Ccode_onept("vetU0","0,1,-2,300",FDparams)
     \'const REAL_SIMD_ARRAY vetU0_i0_i1p1_i2m2 = ReadSIMD(&in_gfs[IDX4S(VETU0GF, i0,i1+1,i2-2)]);\\n\'
@@ -232,7 +232,7 @@ def read_from_memory_Ccode_onept(gfname,idx, FDparams):
     idx4 = [int(idxsplit[0]),int(idxsplit[1]),int(idxsplit[2]),int(idxsplit[3])]
     gf_array_name = "in_gfs" # Default array name.
     gfaccess_str = gri.gfaccess(gf_array_name,gfname,ijkl_string(idx4, FDparams))
-    if FDparams.SIMD_enable == "True":
+    if FDparams.enable_SIMD == "True":
         retstring = type__var(gfname, FDparams) + varsuffix(idx4, FDparams) + " = ReadSIMD(&" + gfaccess_str + ");"
     else:
         retstring = type__var(gfname, FDparams) + varsuffix(idx4, FDparams) + " = " + gfaccess_str + ";"
@@ -317,7 +317,7 @@ def read_gfs_from_memory(list_of_base_gridfunction_names_in_derivs, fdstencl, sy
     >>> a0,a1,b,c = par.Cparameters("REAL",__name__,["a0","a1","b","c"],1)
     >>> par.set_parval_from_str("finite_difference::FD_CENTDERIVS_ORDER",2)
     >>> FDparams.DIM=3
-    >>> FDparams.SIMD_enable="False"
+    >>> FDparams.enable_SIMD="False"
     >>> FDparams.PRECISION="double"
     >>> FDparams.MemAllocStyle="012"
     >>> FDparams.upwindcontrolvec=vU
@@ -516,7 +516,7 @@ def add_FD_func_to_outC_function_dict(list_of_deriv_vars,
     if par.parval_from_str("grid::GridFuncMemAccess") == "ETK":
         c_type = "CCTK_REAL"
     func_prefix = "order_"+str(FDparams.FD_CD_order)+"_"
-    if FDparams.SIMD_enable == "True":
+    if FDparams.enable_SIMD == "True":
         c_type = "REAL_SIMD_ARRAY"
         func_prefix = "SIMD_"+func_prefix
 
@@ -581,7 +581,7 @@ def add_FD_func_to_outC_function_dict(list_of_deriv_vars,
 
         # If the function already exists in the outC_function_dict, then do not add it; move to the next op.
         if func_prefix + "f_" + str(op) not in outC_function_dict:
-            p = "preindent=1,SIMD_enable="+FDparams.SIMD_enable+",outCverbose=False,CSE_preprocess=True,includebraces=False"
+            p = "preindent=1,enable_SIMD="+FDparams.enable_SIMD+",outCverbose=False,CSE_preprocess=True,includebraces=False"
             outFDstr = outputC(rhs_expr, "retval", "returnstring", params=p)
             outFDstr = outFDstr.replace("retval = ", "return ")
             add_to_Cfunction_dict(desc=" * (__FD_OPERATOR_FUNC__) Finite difference operator for "+str(op).replace("dDD", "second derivative: ").
@@ -631,7 +631,7 @@ def construct_Ccode(sympyexpr_list, list_of_deriv_vars,
     # >>> a0,a1,b,c = par.Cparameters("REAL",__name__,["a0","a1","b","c"],1)
     # >>> par.set_parval_from_str("finite_difference::FD_CENTDERIVS_ORDER",2)
     # >>> FDparams.DIM=3
-    # >>> FDparams.SIMD_enable="False"
+    # >>> FDparams.enable_SIMD="False"
     # >>> FDparams.FD_functions_enable=False
     # >>> FDparams.PRECISION="double"
     # >>> FDparams.MemAllocStyle="012"
@@ -794,7 +794,7 @@ def construct_Ccode(sympyexpr_list, list_of_deriv_vars,
                                     + str(NRPy_FD_StepNumber) + " of " + str(NRPy_FD__Number_of_Steps) +
                                     ": Implement upwinding algorithm:\n */\n")
             NRPy_FD_StepNumber = NRPy_FD_StepNumber + 1
-            if FDparams.SIMD_enable == "True":
+            if FDparams.enable_SIMD == "True":
                 for n in ["0", "1"]:
                     Coutput += indent_Ccode("const double tmp_upwind_Integer_"+n+" = "+n+".000000000000000000000000000000000;\n")
                     Coutput += indent_Ccode("const REAL_SIMD_ARRAY upwind_Integer_"+n+" = ConstSIMD(tmp_upwind_Integer_"+n+");\n")
@@ -828,7 +828,7 @@ def construct_Ccode(sympyexpr_list, list_of_deriv_vars,
     lhsvarnames = []
     for i in range(len(sympyexpr_list)):
         exprs.append(sympyexpr_list[i].rhs)
-        if FDparams.SIMD_enable == "True":
+        if FDparams.enable_SIMD == "True":
             lhsvarnames.append("const REAL_SIMD_ARRAY __RHS_exp_" + str(i))
         else:
             lhsvarnames.append(sympyexpr_list[i].lhs)
@@ -836,7 +836,7 @@ def construct_Ccode(sympyexpr_list, list_of_deriv_vars,
     # Step 5.c.ii: Write output to gridfunctions specified in
     #              sympyexpr_list[].lhs.
     write_to_mem_string = ""
-    if FDparams.SIMD_enable == "True":
+    if FDparams.enable_SIMD == "True":
         for i in range(len(sympyexpr_list)):
             write_to_mem_string += "WriteSIMD(&" + sympyexpr_list[i].lhs + ", __RHS_exp_" + str(i) + ");\n"
 

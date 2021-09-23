@@ -688,7 +688,7 @@ void BaikalETK_BSSN_constraints(CCTK_ARGUMENTS) {
             lhrh(lhs=gri.gfaccess("in_gfs","T4UU23"),rhs=T4UUraised[2][3]),
             lhrh(lhs=gri.gfaccess("in_gfs","T4UU33"),rhs=T4UUraised[3][3])]
 
-        outCparams = "outCverbose=False,includebraces=False,preindent=2,SIMD_enable=True"
+        outCparams = "outCverbose=False,includebraces=False,preindent=2,enable_SIMD=True"
         T4UUstr = fin.FD_outputC("returnstring",T4UU_expressions, outCparams)
         T4UUstr_loop = lp.loop(["i2","i1","i0"],["0","0","0"],["cctk_lsh[2]","cctk_lsh[1]","cctk_lsh[0]"],
                                ["1","1","SIMD_width"],["#pragma omp parallel for","",""],"",T4UUstr)

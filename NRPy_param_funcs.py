@@ -261,8 +261,8 @@ def generate_Cparameters_Ccodes(directory="./", output_declare_Cparameters_struc
 
     # Step 4: Generate C code to set C parameter constants
     #         (i.e., all ints != -12345678 and REALs != 1e300);
-    #         output to filename "set_Cparameters.h" if SIMD_enable==False
-    #         or "set_Cparameters-SIMD.h" if SIMD_enable==True
+    #         output to filename "set_Cparameters.h" if enable_SIMD==False
+    #         or "set_Cparameters-SIMD.h" if enable_SIMD==True
     # Step 4.a: Output non-SIMD version, set_Cparameters.h
     def gen_set_Cparameters(pointerEnable=True):
         returnstring = ""

@@ -216,7 +216,7 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
 
     starttime = print_msg_with_timing("BSSN_RHSs", msg="Ccodegen", startstop="start")
 
-    FD_outCparams = "outCverbose=False,SIMD_enable=" + str(enable_SIMD)
+    FD_outCparams = "outCverbose=False,enable_SIMD=" + str(enable_SIMD)
     FD_outCparams += ",GoldenKernelsEnable=" + str(enable_golden_kernels)
     if gridsuffix != "":
         FD_outCparams += ",gridsuffix=" + gridsuffix
@@ -319,7 +319,7 @@ def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.
 
     # Construct body:
     Ricci_SymbExpressions = Ricci__generate_symbolic_expressions()
-    FD_outCparams = "outCverbose=False,SIMD_enable=" + str(enable_SIMD)
+    FD_outCparams = "outCverbose=False,enable_SIMD=" + str(enable_SIMD)
     FD_outCparams += ",GoldenKernelsEnable=" + str(enable_golden_kernels)
     if gridsuffix != "":
         FD_outCparams += ",gridsuffix="+gridsuffix
@@ -422,7 +422,7 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
     BSSN_constraints_SymbExpressions = BSSN_constraints__generate_symbolic_expressions(enable_stress_energy_source_terms,
                                                                                        output_H_only=output_H_only)
 
-    FD_outCparams = "outCverbose=False,SIMD_enable=" + str(enable_SIMD)
+    FD_outCparams = "outCverbose=False,enable_SIMD=" + str(enable_SIMD)
     FD_outCparams += ",GoldenKernelsEnable=" + str(enable_golden_kernels)
     if gridsuffix != "":
         FD_outCparams += ",gridsuffix="+gridsuffix
@@ -463,7 +463,7 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
     # Construct body:
     enforce_detg_constraint_symb_expressions = EGC.Enforce_Detgammahat_Constraint_symb_expressions()
 
-    FD_outCparams = "outCverbose=False,SIMD_enable=False"
+    FD_outCparams = "outCverbose=False,enable_SIMD=False"
     FD_outCparams += ",GoldenKernelsEnable=" + str(enable_golden_kernels)
     if gridsuffix != "":
         FD_outCparams += ",gridsuffix="+gridsuffix
