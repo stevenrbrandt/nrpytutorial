@@ -195,7 +195,7 @@ def output_finite_difference_functions_h(path=os.path.join(".")):
 ################
 
 
-def register_C_functions_and_NRPy_basic_defines(NGHOSTS_account_for_onezone_upwind=False):
+def register_C_functions_and_NRPy_basic_defines(NGHOSTS_account_for_onezone_upwind=False, enable_SIMD=True):
     # First register C functions needed by finite_difference
 
     # Then set up the dictionary entry for finite_difference in NRPy_basic_defines
@@ -207,6 +207,10 @@ def register_C_functions_and_NRPy_basic_defines(NGHOSTS_account_for_onezone_upwi
 // Note that upwinding in e.g., BSSN requires that NGHOSTS = FD_CENTDERIVS_ORDER/2 + 1 <- Notice the +1.
 """
     Nbd_str += "#define NGHOSTS " + str(NGHOSTS)+"\n"
+    if not enable_SIMD:
+        Nbd_str += """
+// When enable_SIMD = False, this is the UPWIND_ALG() macro:
+#define UPWIND_ALG(UpwindVecU) UpwindVecU > 0.0 ? 1.0 : 0.0\n"""
     outC_NRPy_basic_defines_h_dict["finite_difference"] = Nbd_str
 
 
