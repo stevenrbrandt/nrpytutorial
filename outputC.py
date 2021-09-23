@@ -538,9 +538,9 @@ def construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_fr
         else:
             with open(add_to_Makefile(Ccodesrootdir, os.path.join(key+".c")), "w") as file:
                 file.write(item)
-    CFLAGS      = " -march=native -O2 -g -fopenmp"
-    DEBUGCFLAGS = " -O2 -g"
-    OPTCFLAGS   = " -march=native -Ofast -fopenmp"
+    CFLAGS      = " -march=native -O2 -g -fopenmp -Wall -Wno-unused-variable"
+    DEBUGCFLAGS = " -O2 -g -Wall -Wno-unused-variable"
+    OPTCFLAGS   = " -march=native -Ofast -fopenmp -Wall -Wno-unused-variable"
     if CC == "gcc":
         CFLAGS      += " -std=gnu99"
         DEBUGCFLAGS += " -std=gnu99"
