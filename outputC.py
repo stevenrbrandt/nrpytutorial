@@ -539,7 +539,9 @@ def construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_fr
             with open(add_to_Makefile(Ccodesrootdir, os.path.join(key+".c")), "w") as file:
                 file.write(item)
     CFLAGS      = " -march=native -O2 -g -fopenmp -Wall -Wno-unused-variable"
-    DEBUGCFLAGS = " -O2 -g -Wall -Wno-unused-variable"
+    DEBUGCFLAGS = " -O2 -g -Wall -Wno-unused-variable -Wunknown-pragmas"  # OpenMP requires -fopenmp, and when disabling
+                                                                          # -fopenmp, unknown pragma warnings appear.
+                                                                          # -Wunknown-pragmas silences these warnings
     OPTCFLAGS   = " -march=native -Ofast -fopenmp -Wall -Wno-unused-variable"
     if CC == "gcc":
         CFLAGS      += " -std=gnu99"
