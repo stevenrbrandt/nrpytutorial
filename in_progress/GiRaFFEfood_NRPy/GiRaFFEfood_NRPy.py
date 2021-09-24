@@ -20,11 +20,11 @@ rfm.reference_metric()
 import GiRaFFEfood_NRPy_Exact_Wald as gfew
 import GiRaFFEfood_NRPy_Magnetospheric_Wald as gfmw
 import GiRaFFEfood_NRPy_Split_Monopole as gfsm
-import GiRaFFEfood_NRPy_1D_tests as gfaw
-import GiRaFFEfood_NRPy_1D_tests_fast_wave as gffw
-import GiRaFFEfood_NRPy_1D_tests_degen_Alfven_wave as gfdaw
-import GiRaFFEfood_NRPy_1D_tests_three_waves as gftw
-import GiRaFFEfood_NRPy_1D_tests_FFE_breakdown as gffb
+import GiRaFFEfood_NRPy_Alfven_Wave as gfaw
+import GiRaFFEfood_NRPy_Fast_Wave as gffw
+import GiRaFFEfood_NRPy_Degen_Alfven_Wave as gfdaw
+import GiRaFFEfood_NRPy_Three_Waves as gftw
+import GiRaFFEfood_NRPy_FFE_Breakdown as gffb
 import GiRaFFEfood_NRPy_Aligned_Rotator as gfar
 
 # Step 1a: Set commonly used parameters.
