@@ -538,20 +538,20 @@ def construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_fr
         else:
             with open(add_to_Makefile(Ccodesrootdir, os.path.join(key+".c")), "w") as file:
                 file.write(item)
-    CFLAGS      = " -march=native -O2 -g -fopenmp -Wall -Wno-unused-variable"
+    CFLAGS      = " -O2 -march=native -g -fopenmp -Wall -Wno-unused-variable"
     DEBUGCFLAGS = " -O2 -g -Wall -Wno-unused-variable -Wno-unknown-pragmas"  # OpenMP requires -fopenmp, and when disabling
                                                                              # -fopenmp, unknown pragma warnings appear.
                                                                              # -Wunknown-pragmas silences these warnings
-    OPTCFLAGS   = " -march=native -Ofast -fopenmp -Wall -Wno-unused-variable"
+    FASTCFLAGS  = "  -O2 -march=native -fopenmp -Wall -Wno-unused-variable"
     if CC == "gcc":
         CFLAGS      += " -std=gnu99"
         DEBUGCFLAGS += " -std=gnu99"
-        OPTCFLAGS   += " -std=gnu99"
+        FASTCFLAGS   += " -std=gnu99"
     CHOSEN_CFLAGS = CFLAGS
     if compiler_opt_option == "debug":
         CHOSEN_CFLAGS = DEBUGCFLAGS
     elif compiler_opt_option == "fast":
-        CHOSEN_CFLAGS = OPTCFLAGS
+        CHOSEN_CFLAGS = FASTCFLAGS
     if addl_CFLAGS is not None:
         if not isinstance(addl_CFLAGS, list):
             print("Error: construct_Makefile_from_outC_function_dict(): addl_CFLAGS must be a list!")
@@ -585,7 +585,7 @@ def construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_fr
 CFLAGS = """ + CHOSEN_CFLAGS + """
 #CFLAGS = """ + CFLAGS + """
 #CFLAGS = """ + DEBUGCFLAGS + """
-#CFLAGS = """ + OPTCFLAGS + "\n")
+#CFLAGS = """ + FASTCFLAGS + "\n")
             Makefile.write("all: " + all_str + "\n")
             for idx, dep in enumerate(dep_list):
                 Makefile.write(dep + "\n")
