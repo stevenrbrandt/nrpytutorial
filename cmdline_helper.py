@@ -162,9 +162,13 @@ def Execute(executable, executable_output_arguments="", file_to_redirect_stdout=
     taskset_exists = check_executable_exists("taskset", error_if_not_found=False)
     if taskset_exists:
         execute_string += "taskset -c 0"
-        if getpass.getuser() != "jovyan": # on mybinder, username is jovyan, and taskset -c 0 is the fastest option.
+        on_4900hs = False
+        if platform.system() == "Linux" and \
+                "AMD Ryzen 9 4900HS" in str(subprocess.check_output("cat /proc/cpuinfo", shell=True)):
+            on_4900hs = True
+        if not on_4900hs and getpass.getuser() != "jovyan": # on mybinder, username is jovyan, and taskset -c 0 is the fastest option.
             # If not on mybinder and taskset exists:
-            has_HT_cores = False # Does CPU have hyperthreading cores?
+            has_HT_cores = False  # Does CPU have hyperthreading cores?
             if platform.processor() != '': # If processor string returns null, then assume CPU does not support hyperthreading.
                                            # This will yield correct behavior on ARM (e.g., cell phone) CPUs.
                 has_HT_cores=True
@@ -176,6 +180,8 @@ def Execute(executable, executable_output_arguments="", file_to_redirect_stdout=
                                                                   # This will happen on ARM (e.g., cellphone) CPUs
             for i in range(N_cores_to_use-1):
                 execute_string += ","+str(i+1)
+        if on_4900hs:
+            execute_string = "taskset -c 1,3,5,7,9,11,13,15"
         execute_string += " "
     execute_string += execute_prefix+executable+" "+executable_output_arguments
 
