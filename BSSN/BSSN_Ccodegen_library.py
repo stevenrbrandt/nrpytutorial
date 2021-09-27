@@ -20,20 +20,25 @@
 
 
 # Step P1: Import needed NRPy+ core modules:
-from outputC import lhrh, add_to_Cfunction_dict  # NRPy+: Core C code output module
+from outputC import lhrh, add_to_Cfunction_dict, outputC  # NRPy+: Core C code output module
 import finite_difference as fin  # NRPy+: Finite difference C code generation module
 import NRPy_param_funcs as par   # NRPy+: Parameter interface
 import grid as gri               # NRPy+: Functions having to do with numerical grids
 import indexedexp as ixp         # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
 import reference_metric as rfm   # NRPy+: Reference metric support
 from pickling import pickle_NRPy_env   # NRPy+: Pickle/unpickle NRPy+ environment, for parallel codegen
-import os, time             # Standard Python modules for multiplatform OS-level functions, benchmarking
+import os, time                  # Standard Python modules for multiplatform OS-level functions, benchmarking
+import sympy as sp               # SymPy: The Python computer algebra package upon which NRPy+ depends
 import BSSN.BSSN_RHSs as rhs
 import BSSN.BSSN_gauge_RHSs as gaugerhs
 import BSSN.Enforce_Detgammahat_Constraint as EGC
+import BSSN.Psi4 as psi4
+import BSSN.Psi4_tetrads as psi4tet
+import SpinWeight_minus2_SphHarmonics.SpinWeight_minus2_SphHarmonics as SWm2SH
 import loop as lp
 
 ###############################################
+# Helper Python functions for C code generation
 # print_msg_with_timing() gives the user an idea of what's going on/taking so long. Also outputs timing info.
 def print_msg_with_timing(desc, msg="Symbolic", startstop="start", starttime=0.0):
     CoordSystem = par.parval_from_str("reference_metric::CoordSystem")
@@ -83,7 +88,7 @@ def register_stress_energy_source_terms_return_T4UU(enable_stress_energy_source_
 
 #################################
 #################################
-
+# Generate symbolic BSSN RHS expressions
 def BSSN_RHSs__generate_symbolic_expressions(LapseCondition="OnePlusLog",
                                              ShiftCondition="GammaDriving2ndOrder_Covariant",
                                              enable_KreissOliger_dissipation=True,
@@ -182,6 +187,7 @@ def BSSN_RHSs__generate_symbolic_expressions(LapseCondition="OnePlusLog",
     return [betaU, BSSN_RHSs_SymbExpressions]
 
 
+# Register C code rhs_eval() for BSSN RHS expressions
 def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."),
                                    enable_rfm_precompute=True, enable_golden_kernels=False,
                                    enable_SIMD=True, enable_split_for_optimizations_doesnt_help=False,
@@ -263,6 +269,7 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
     return pickle_NRPy_env()
 
 
+# Generate symbolic expressions for 3-Ricci tensor Rbar[i][j]
 def Ricci__generate_symbolic_expressions():
     ######################################
     # START: GENERATE SYMBOLIC EXPRESSIONS
@@ -298,6 +305,7 @@ def Ricci__generate_symbolic_expressions():
     return Ricci_SymbExpressions
 
 
+# Register C function Ricci_eval() for evaluating 3-Ricci tensor
 def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."),
                                      enable_rfm_precompute=True, enable_golden_kernels=False, enable_SIMD=True,
                                      enable_split_for_optimizations_doesnt_help=False):
@@ -366,6 +374,7 @@ def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.
     return pickle_NRPy_env()
 
 
+# Generate symbolic expressions for BSSN Hamiltonian & momentum constraints
 def BSSN_constraints__generate_symbolic_expressions(enable_stress_energy_source_terms=False, output_H_only=False):
     ######################################
     # START: GENERATE SYMBOLIC EXPRESSIONS
@@ -398,6 +407,7 @@ def BSSN_constraints__generate_symbolic_expressions(enable_stress_energy_source_
     return BSSN_constraints_SymbExpressions
 
 
+# Register C function BSSN_constraints() for evaluating BSSN Hamiltonian & momentum constraints
 def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."),
                                            enable_rfm_precompute=True, enable_golden_kernels=False, enable_SIMD=True,
                                            enable_stress_energy_source_terms=False,
@@ -447,6 +457,7 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
     return pickle_NRPy_env()
 
 
+# Register C function enforce_detgammahat_constraint for enforcing the conformal 3-metric: det(gammahat)=det(gammabar)
 def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."),
                                                          enable_rfm_precompute=True, enable_golden_kernels=False):
     # This function disables SIMD, as it includes cbrt() and abs() functions.
@@ -487,5 +498,309 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
         name=name, params=params,
         body=body,
         loopopts=get_loopopts("AllPoints", enable_SIMD, enable_rfm_precompute, gridsuffix),
+        rel_path_to_Cparams=rel_path_to_Cparams)
+    return pickle_NRPy_env()
+
+
+# Add psi4 to Cfunction dictionary. psi4 is a really huge expression, so we output
+#   it in 3 parts: psi4_part0, psi4_part1, and psi4_part2
+def add_psi4_part_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."), whichpart=1,
+                                    setPsi4tozero=False):
+    gridsuffix = par.parval_from_str("grid::current_gridsuffix")
+
+    starttime = print_msg_with_timing("psi4, part " + str(whichpart), msg="Ccodegen", startstop="start")
+
+    # Set up the C function for psi4
+    if includes is None:
+        includes = []
+    includes += ["NRPy_function_prototypes.h"]
+
+    desc = "Compute psi4 at all interior gridpoints, part " + str(whichpart)
+    name = "psi4_part" + str(whichpart) + gridsuffix
+    params = """const paramstruct *restrict params, const REAL *restrict in_gfs, REAL *restrict xx[3], REAL *restrict aux_gfs"""
+
+    body = ""
+    gri.register_gridfunctions("AUX", ["psi4_part" + str(whichpart) + "re", "psi4_part" + str(whichpart) + "im"])
+    FD_outCparams = "outCverbose=False,enable_SIMD=False,CSE_sorting=none"
+    if gridsuffix != "":
+        FD_outCparams += ",gridsuffix=" + gridsuffix
+    if not setPsi4tozero:
+        # Set the body of the function
+        # First compute the symbolic expressions
+        psi4.Psi4(specify_tetrad=False)
+
+        # We really don't want to store these "Cparameters" permanently; they'll be set via function call...
+        #   so we make a copy of the original par.glb_Cparams_list (sans tetrad vectors) and restore it below
+        Cparams_list_orig = par.glb_Cparams_list.copy()
+        par.Cparameters("REAL", __name__, ["mre4U0", "mre4U1", "mre4U2", "mre4U3"], [0, 0, 0, 0])
+        par.Cparameters("REAL", __name__, ["mim4U0", "mim4U1", "mim4U2", "mim4U3"], [0, 0, 0, 0])
+        par.Cparameters("REAL", __name__, ["n4U0", "n4U1", "n4U2", "n4U3"], [0, 0, 0, 0])
+
+        body += """
+REAL mre4U0,mre4U1,mre4U2,mre4U3,mim4U0,mim4U1,mim4U2,mim4U3,n4U0,n4U1,n4U2,n4U3;
+psi4_tetrad"""+gridsuffix+"""(params,
+              in_gfs[IDX4S"""+gridsuffix+"""(CFGF, i0,i1,i2)],
+              in_gfs[IDX4S"""+gridsuffix+"""(HDD00GF, i0,i1,i2)],
+              in_gfs[IDX4S"""+gridsuffix+"""(HDD01GF, i0,i1,i2)],
+              in_gfs[IDX4S"""+gridsuffix+"""(HDD02GF, i0,i1,i2)],
+              in_gfs[IDX4S"""+gridsuffix+"""(HDD11GF, i0,i1,i2)],
+              in_gfs[IDX4S"""+gridsuffix+"""(HDD12GF, i0,i1,i2)],
+              in_gfs[IDX4S"""+gridsuffix+"""(HDD22GF, i0,i1,i2)],
+              &mre4U0,&mre4U1,&mre4U2,&mre4U3,&mim4U0,&mim4U1,&mim4U2,&mim4U3,&n4U0,&n4U1,&n4U2,&n4U3,
+              xx, i0,i1,i2);
+"""
+        body += "REAL xCart_rel_to_globalgrid_center[3];\n"
+        body += "xx_to_Cart" + gridsuffix + "(params, xx, i0, i1, i2,  xCart_rel_to_globalgrid_center);\n"
+        body += "int ignore_Cart_to_i0i1i2[3];  REAL xx_rel_to_globalgridorigin[3];\n"
+        body += "Cart_to_xx_and_nearest_i0i1i2_global_grid_center" + gridsuffix + "(params, xCart_rel_to_globalgrid_center,xx_rel_to_globalgridorigin,ignore_Cart_to_i0i1i2);\n"
+        for i in range(3):
+            body += "const REAL xx" + str(i) + "=xx_rel_to_globalgridorigin[" + str(i) + "];\n"
+        body += fin.FD_outputC("returnstring",
+                               [lhrh(lhs=gri.gfaccess("in_gfs", "psi4_part" + str(whichpart) + "re"),
+                                     rhs=psi4.psi4_re_pt[whichpart]),
+                                lhrh(lhs=gri.gfaccess("in_gfs", "psi4_part" + str(whichpart) + "im"),
+                                     rhs=psi4.psi4_im_pt[whichpart])],
+                               params=FD_outCparams)
+        par.glb_Cparams_list = Cparams_list_orig.copy()
+
+    elif setPsi4tozero:
+        body += fin.FD_outputC("returnstring",
+                               [lhrh(lhs=gri.gfaccess("in_gfs", "psi4_part" + str(whichpart) + "re"),
+                                     rhs=sp.sympify(0)),
+                                lhrh(lhs=gri.gfaccess("in_gfs", "psi4_part" + str(whichpart) + "im"),
+                                     rhs=sp.sympify(0))],
+                               params=FD_outCparams)
+    loopopts = "InteriorPoints"
+    if gridsuffix != "":
+        loopopts += "," + gridsuffix.replace("_", "")
+
+    print_msg_with_timing("psi4, part " + str(whichpart), msg="Ccodegen", startstop="stop", starttime=starttime)
+    add_to_Cfunction_dict(
+        includes=includes,
+        desc=desc,
+        name=name, params=params,
+        body=body,
+        loopopts=loopopts,
+        rel_path_to_Cparams=rel_path_to_Cparams)
+    return pickle_NRPy_env()
+
+
+def add_psi4_tetrad_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."), setPsi4tozero=False):
+    gridsuffix = par.parval_from_str("grid::current_gridsuffix")
+
+    starttime = print_msg_with_timing("psi4 tetrads", msg="Ccodegen", startstop="start")
+
+    # Set up the C function for BSSN basis transformations
+    desc = "Compute tetrad for psi4"
+    name = "psi4_tetrad" + gridsuffix
+
+    # First set up the symbolic expressions (RHSs) and their names (LHSs)
+    psi4tet.Psi4_tetrads()
+    list_of_varnames = []
+    list_of_symbvars = []
+    for i in range(4):
+        list_of_varnames.append("*mre4U" + str(i))
+        list_of_symbvars.append(psi4tet.mre4U[i])
+    for i in range(4):
+        list_of_varnames.append("*mim4U" + str(i))
+        list_of_symbvars.append(psi4tet.mim4U[i])
+    for i in range(4):
+        list_of_varnames.append("*n4U" + str(i))
+        list_of_symbvars.append(psi4tet.n4U[i])
+
+    paramsindent = "                  "
+    params = """const paramstruct *restrict params,\n""" + paramsindent
+    list_of_metricvarnames = ["cf"]
+    for i in range(3):
+        for j in range(i, 3):
+            list_of_metricvarnames.append("hDD" + str(i) + str(j))
+    for var in list_of_metricvarnames:
+        params += "const REAL " + var + ","
+    params += "\n" + paramsindent
+    for var in list_of_varnames:
+        params += "REAL " + var + ","
+    params += "\n" + paramsindent + "REAL *restrict xx[3], const int i0,const int i1,const int i2"
+
+    # Set the body of the function
+    body = ""
+    outCparams = "includebraces=False,outCverbose=False,enable_SIMD=False,preindent=1"
+    if gridsuffix != "":
+        outCparams += ",gridsuffix=" + gridsuffix
+    if not setPsi4tozero:
+        for i in range(3):
+            body += "  const REAL xx" + str(i) + " = xx[" + str(i) + "][i" + str(i) + "];\n"
+        body += "  // Compute tetrads:\n"
+        body += "  {\n"
+        # Sort the lhss list alphabetically, and rhss to match:
+        lhss, rhss = [list(x) for x in zip(*sorted(zip(list_of_varnames, list_of_symbvars), key=lambda pair: pair[0]))]
+        body += outputC(rhss, lhss, filename="returnstring", params=outCparams)
+        body += "  }\n"
+
+    elif setPsi4tozero:
+        body += "return;\n"
+    loopopts = ""
+
+    print_msg_with_timing("psi4 tetrads", msg="Ccodegen", startstop="stop", starttime=starttime)
+    add_to_Cfunction_dict(
+        includes=includes,
+        desc=desc,
+        name=name, params=params,
+        body=body,
+        loopopts=loopopts,
+        rel_path_to_Cparams=rel_path_to_Cparams)
+    return pickle_NRPy_env()
+
+
+def add_SpinWeight_minus2_SphHarmonics_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."),
+                                                      maximum_l=8):
+    gridsuffix = par.parval_from_str("grid::current_gridsuffix")
+
+    starttime = print_msg_with_timing("Spin-weight s=-2 Spherical Harmonics", msg="Ccodegen", startstop="start")
+
+    # Set up the C function for computing the spin-weight -2 spherical harmonic at theta,phi: Y_{s=-2, l,m}(theta,phi)
+    prefunc = r"""// Compute at a single point (th,ph) the spin-weight -2 spherical harmonic Y_{s=-2, l,m}(th,ph)
+// Manual "inline void" of this function results in compilation error with clang.
+void SpinWeight_minus2_SphHarmonics(const int l, const int m, const REAL th, const REAL ph,
+                                           REAL *reYlmswm2_l_m, REAL *imYlmswm2_l_m) {
+"""
+    # Construct prefunc:
+    outCparams = "preindent=1,outCfileaccess=a,outCverbose=False,includebraces=False"
+    prefunc += """
+  switch(l) {
+"""
+    for l in range(maximum_l + 1):  # Output values up to and including l=8.
+        prefunc += "  case " + str(l) + ":\n"
+        prefunc += "    switch(m) {\n"
+        for m in range(-l, l + 1):
+            prefunc += "    case " + str(m) + ":\n"
+            prefunc += "      {\n"
+            Y_m2_lm = SWm2SH.Y(-2, l, m, SWm2SH.th, SWm2SH.ph)
+            prefunc += outputC([sp.re(Y_m2_lm), sp.im(Y_m2_lm)], ["*reYlmswm2_l_m", "*imYlmswm2_l_m"],
+                            "returnstring", outCparams)
+            prefunc += "      }\n"
+            prefunc += "      return;\n"
+        prefunc += "    }  // END switch(m)\n"
+    prefunc += "  } // END switch(l)\n"
+
+    prefunc += r"""
+  fprintf(stderr, "ERROR: SpinWeight_minus2_SphHarmonics handles only l=[0,"""+str(maximum_l)+r"""] and only m=[-l,+l] is defined.\n");
+  fprintf(stderr, "       You chose l=%d and m=%d, which is out of these bounds.\n",l,m);
+  exit(1);
+}
+
+void lowlevel_decompose_psi4_into_swm2_modes(const int Nxx_plus_2NGHOSTS1,const int Nxx_plus_2NGHOSTS2,
+                                             const REAL dxx1, const REAL dxx2,
+                                             const REAL curr_time, const REAL R_ext,
+                                             const REAL *restrict th_array, const REAL *restrict sinth_array, const REAL *restrict ph_array,
+                                             const REAL *restrict psi4r_at_R_ext, const REAL *restrict psi4i_at_R_ext) {
+  for(int l=2;l<="""+str(maximum_l)+r""";l++) {  // The maximum l here is set in Python.
+    for(int m=-l;m<=l;m++) {
+      // Parallelize the integration loop:
+      REAL psi4r_l_m = 0.0;
+      REAL psi4i_l_m = 0.0;
+#pragma omp parallel for reduction(+:psi4r_l_m,psi4i_l_m)
+      for(int i1=0;i1<Nxx_plus_2NGHOSTS1-2*NGHOSTS;i1++) {
+        const REAL th    = th_array[i1];
+        const REAL sinth = sinth_array[i1];
+        for(int i2=0;i2<Nxx_plus_2NGHOSTS2-2*NGHOSTS;i2++) {
+          const REAL ph = ph_array[i2];
+          // Construct integrand for psi4 spin-weight s=-2,l=2,m=0 spherical harmonic
+          REAL ReY_sm2_l_m,ImY_sm2_l_m;
+          SpinWeight_minus2_SphHarmonics(l,m, th,ph,  &ReY_sm2_l_m,&ImY_sm2_l_m);
+
+          const int idx2d = i1*(Nxx_plus_2NGHOSTS2-2*NGHOSTS)+i2;
+          const REAL a = psi4r_at_R_ext[idx2d];
+          const REAL b = psi4i_at_R_ext[idx2d];
+          const REAL c = ReY_sm2_l_m;
+          const REAL d = ImY_sm2_l_m;
+          psi4r_l_m += (a*c + b*d) * dxx2  * sinth*dxx1;
+          psi4i_l_m += (b*c - a*d) * dxx2  * sinth*dxx1;
+        }
+      }
+      // Step 4: Output the result of the integration to file.
+      char filename[100];
+      sprintf(filename,"outpsi4_l%d_m%d-r%.2f.txt",l,m, (double)R_ext);
+      // If you love "+"'s in filenames by all means enable this (ugh):
+      //if(m>=0) sprintf(filename,"outpsi4_l%d_m+%d-r%.2f.txt",l,m, (double)R_ext);
+      FILE *outpsi4_l_m;
+      // 0 = n*dt when n=0 is exactly represented in double/long double precision,
+      //          so no worries about the result being ~1e-16 in double/ld precision
+      if(curr_time==0) outpsi4_l_m = fopen(filename, "w");
+      else             outpsi4_l_m = fopen(filename, "a");
+      fprintf(outpsi4_l_m,"%e %.15e %.15e\n", (double)(curr_time),
+              (double)psi4r_l_m,(double)psi4i_l_m);
+      fclose(outpsi4_l_m);
+    }
+  }
+}
+"""
+
+    desc = ""
+    name = "driver__spherlikegrids__psi4_spinweightm2_decomposition"
+    params = r"""const paramstruct *restrict params,  REAL *restrict diagnostic_output_gfs,
+        const int *restrict list_of_R_ext_idxs, const int num_of_R_ext_idxs, const REAL time,
+        REAL *restrict xx[3],void xx_to_Cart(const paramstruct *restrict params, REAL *restrict xx[3],const int i0,const int i1,const int i2, REAL xCart[3])"""
+
+    body = r"""  // Step 1: Allocate memory for 2D arrays used to store psi4, theta, sin(theta), and phi.
+  const int sizeof_2Darray = sizeof(REAL)*(Nxx_plus_2NGHOSTS1"""+gridsuffix+r"""-2*NGHOSTS)*(Nxx_plus_2NGHOSTS2"""+gridsuffix+r"""-2*NGHOSTS);
+  REAL *restrict psi4r_at_R_ext = (REAL *restrict)malloc(sizeof_2Darray);
+  REAL *restrict psi4i_at_R_ext = (REAL *restrict)malloc(sizeof_2Darray);
+  //         ... also store theta, sin(theta), and phi to corresponding 1D arrays.
+  REAL *restrict sinth_array = (REAL *restrict)malloc(sizeof(REAL)*(Nxx_plus_2NGHOSTS1"""+gridsuffix+r"""-2*NGHOSTS));
+  REAL *restrict th_array    = (REAL *restrict)malloc(sizeof(REAL)*(Nxx_plus_2NGHOSTS1"""+gridsuffix+r"""-2*NGHOSTS));
+  REAL *restrict ph_array    = (REAL *restrict)malloc(sizeof(REAL)*(Nxx_plus_2NGHOSTS2"""+gridsuffix+r"""-2*NGHOSTS));
+
+  // Step 2: Loop over all extraction indices:
+  for(int ii0=0;ii0<num_of_R_ext_idxs;ii0++) {
+    // Step 2.a: Set the extraction radius R_ext based on the radial index R_ext_idx
+    REAL R_ext;
+    {
+      REAL xCart[3];  xx_to_Cart(params,xx,list_of_R_ext_idxs[ii0],1,1,xCart); // values for itheta and iphi don't matter.
+      R_ext = sqrt(xCart[0]*xCart[0] + xCart[1]*xCart[1] + xCart[2]*xCart[2]);
+    }
+
+    // Step 2.b: Compute psi_4 at this extraction radius and store to a local 2D array.
+    const int i0=list_of_R_ext_idxs[ii0];
+#pragma omp parallel for
+    for(int i1=NGHOSTS;i1<Nxx_plus_2NGHOSTS1"""+gridsuffix+r"""-NGHOSTS;i1++) {
+      th_array[i1-NGHOSTS]    =     xx[1][i1];
+      sinth_array[i1-NGHOSTS] = sin(xx[1][i1]);
+      for(int i2=NGHOSTS;i2<Nxx_plus_2NGHOSTS2"""+gridsuffix+r"""-NGHOSTS;i2++) {
+        ph_array[i2-NGHOSTS] = xx[2][i2];
+
+        // Compute real & imaginary parts of psi_4, output to diagnostic_output_gfs
+        const REAL psi4r = (diagnostic_output_gfs[IDX4S"""+gridsuffix+r"""(PSI4_PART0REGF, i0,i1,i2)] +
+                            diagnostic_output_gfs[IDX4S"""+gridsuffix+r"""(PSI4_PART1REGF, i0,i1,i2)] +
+                            diagnostic_output_gfs[IDX4S"""+gridsuffix+r"""(PSI4_PART2REGF, i0,i1,i2)]);
+        const REAL psi4i = (diagnostic_output_gfs[IDX4S"""+gridsuffix+r"""(PSI4_PART0IMGF, i0,i1,i2)] +
+                            diagnostic_output_gfs[IDX4S"""+gridsuffix+r"""(PSI4_PART1IMGF, i0,i1,i2)] +
+                            diagnostic_output_gfs[IDX4S"""+gridsuffix+r"""(PSI4_PART2IMGF, i0,i1,i2)]);
+
+        // Store result to "2D" array (actually 1D array with 2D storage):
+        const int idx2d = (i1-NGHOSTS)*(Nxx_plus_2NGHOSTS2"""+gridsuffix+r"""-2*NGHOSTS)+(i2-NGHOSTS);
+        psi4r_at_R_ext[idx2d] = psi4r;
+        psi4i_at_R_ext[idx2d] = psi4i;
+      }
+    }
+    // Step 3: Perform integrations across all l,m modes from l=2 up to and including L_MAX (global variable):
+    lowlevel_decompose_psi4_into_swm2_modes(Nxx_plus_2NGHOSTS1"""+gridsuffix+r""",Nxx_plus_2NGHOSTS2"""+gridsuffix+r""",
+                                            dxx1"""+gridsuffix+r""",dxx2"""+gridsuffix+r""",
+                                            time, R_ext, th_array, sinth_array, ph_array,
+                                            psi4r_at_R_ext,psi4i_at_R_ext);
+  }
+
+  // Step 4: Free all allocated memory:
+  free(psi4r_at_R_ext); free(psi4i_at_R_ext);
+  free(sinth_array); free(th_array); free(ph_array);
+"""
+
+    print_msg_with_timing("Spin-weight s=-2 Spherical Harmonics", msg="Ccodegen", startstop="stop", starttime=starttime)
+
+    add_to_Cfunction_dict(
+        includes=includes,
+        prefunc=prefunc,
+        desc=desc,
+        name=name, params=params,
+        body=body,
         rel_path_to_Cparams=rel_path_to_Cparams)
     return pickle_NRPy_env()
