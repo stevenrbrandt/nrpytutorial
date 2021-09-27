@@ -449,7 +449,7 @@ def Cfunction(includes=None, prefunc="", desc="", c_type="void", name=None, para
 
     include_Cparams_str = ""
     if enableCparameters:
-        if "EnableSIMD" in loopopts:
+        if "enable_SIMD" in loopopts:
             include_Cparams_str = "#include \"" + os.path.join(rel_path_to_Cparams, "set_Cparameters-SIMD.h") + "\"\n"
         else:
             include_Cparams_str = "#include \"" + os.path.join(rel_path_to_Cparams, "set_Cparameters.h") + "\"\n"

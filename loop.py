@@ -108,8 +108,8 @@ def loop(idx_var, lower_bound, upper_bound, increment, pragma, padding='', inter
             # Generate header and footer for a single loop dimension over each tile
             ext_header, ext_footer = loop1D(idx_var[i] + 'B', lower_bound[i], upper_bound[i], tile_size[i], '', padding + i*'    ')
             # Generate header and footer for a nested loop over the iteration space inside of each tile
-            header, footer = loop1D(idx_var[i], idx_var[i] + 'B', 'MIN(%s, %s + %s)' % (upper_bound[i], idx_var[i] + 'B', \
-                tile_size[i]), increment[i], pragma[i], padding + (length + i)*'    ')
+            header, footer = loop1D(idx_var[i], idx_var[i] + 'B', 'MIN(%s, %s + %s)' % (upper_bound[i], idx_var[i] + 'B',
+                                    tile_size[i]), increment[i], pragma[i], padding + (length + i)*'    ')
             header_list.insert(i, ext_header)
             footer_list.insert(i, ext_footer)
         else:
@@ -144,7 +144,8 @@ def simple_loop(options, interior):
             } // END LOOP: for (int i2 = 0; i2 < Nxx_plus_2NGHOSTS2; i2++)
         <BLANKLINE>
     """
-    if not options: return interior
+    if not options:
+        return interior
 
     # 'AllPoints': loop over all points on a numerical grid, including ghost zones
     if "AllPoints" in options:
@@ -158,12 +159,13 @@ def simple_loop(options, interior):
         i2i1i0_maxs = ["NGHOSTS+Nxx2", "NGHOSTS+Nxx1", "NGHOSTS+Nxx0"]
         if "oldloops" in options:
             i2i1i0_maxs = ["NGHOSTS+Nxx[2]", "NGHOSTS+Nxx[1]", "NGHOSTS+Nxx[0]"]
-    else: raise ValueError('no interation space was specified.')
+    else:
+        raise ValueError('no iteration space was specified.')
 
     Read_1Darrays = ["", "", ""]
     # 'Read_xxs': read the xx[3][:] 1D coordinate arrays, as some interior dependency exists
     if "Read_xxs" in options:
-        if not "EnableSIMD" in options:
+        if not "enable_SIMD" in options:
             Read_1Darrays = ["const REAL xx0 = xx[0][i0];",
                              "const REAL xx1 = xx[1][i1];",
                              "const REAL xx2 = xx[2][i2];", ]
@@ -172,7 +174,7 @@ def simple_loop(options, interior):
     if "Enable_rfm_precompute" in options:
         if "Read_xxs" in options:
             raise ValueError('Enable_rfm_precompute and Read_xxs cannot both be enabled.')
-        if "EnableSIMD" in options:
+        if "enable_SIMD" in options:
             Read_1Darrays = ["#include \"rfm_files/rfm_struct__SIMD_inner_read0.h\"",
                              "#include \"rfm_files/rfm_struct__SIMD_outer_read1.h\"",
                              "#include \"rfm_files/rfm_struct__SIMD_outer_read2.h\""]
@@ -188,7 +190,7 @@ def simple_loop(options, interior):
         pragma = re.search(r'OMP_custom_pragma=[\'\"](.+)[\'\"]', options).group(1)
     else:
         pragma = "#pragma omp parallel for"
-    increment = ["1", "1", "SIMD_width"] if "EnableSIMD" in options else ["1", "1", "1"]
+    increment = ["1", "1", "SIMD_width"] if "enable_SIMD" in options else ["1", "1", "1"]
 
     return loop(["i2", "i1", "i0"], i2i1i0_mins, i2i1i0_maxs, increment, [pragma, Read_1Darrays[2], Read_1Darrays[1]],
                 padding='    ', interior=Read_1Darrays[0] + ("\n" if Read_1Darrays[0] else "") + interior)

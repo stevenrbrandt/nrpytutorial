@@ -62,7 +62,7 @@ def print_msg_with_timing(desc, msg="Symbolic", startstop="start", starttime=0.0
 def get_loopopts(points_to_update, enable_SIMD, enable_rfm_precompute, gridsuffix):
     loopopts = points_to_update
     if enable_SIMD:
-        loopopts += ",EnableSIMD"
+        loopopts += ",enable_SIMD"
     if enable_rfm_precompute:
         loopopts += ",Enable_rfm_precompute"
     else:
