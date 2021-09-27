@@ -1465,8 +1465,9 @@ def register_C_functions_and_NRPy_basic_defines(rel_path_to_Cparams=os.path.join
                                          use_unit_wavespeed=use_unit_wavespeed_for_find_timestep)
     add_to_Cfunc_dict_xx_to_Cart(rel_path_to_Cparams=rel_path_to_Cparams)
     add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=rel_path_to_Cparams)
-    add_to_Cfunc_dict__Cart_to_xx_and_nearest_i0i1i2(rel_path_to_Cparams=rel_path_to_Cparams,
-                                                     relative_to="local_grid_center")
+    for frame in "local", "global":
+        add_to_Cfunc_dict__Cart_to_xx_and_nearest_i0i1i2(rel_path_to_Cparams=rel_path_to_Cparams,
+                                                         relative_to=frame + "_grid_center")
 
     if enable_rfm_precompute:
         if par.parval_from_str(thismodule+"::rfm_precompute_to_Cfunctions_and_NRPy_basic_defines") == "True":
