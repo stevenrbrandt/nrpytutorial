@@ -126,9 +126,10 @@ def unpickle_NRPy_env(NRPyEnvVars):
 
     # Set glb_paramsvals_list:
     # Step 1: Reset all paramsvals to their defaults
-    par.glb_paramsvals_list = []
-    for parm in param_list_uniq:
-        par.glb_paramsvals_list.append(parm.defaultval)
+    #  BAD IDEA: OVERWRITTEN DEFAULTS SHOULD BE KEPT.
+    # par.glb_paramsvals_list = []
+    # for parm in param_list_uniq:
+    #     par.glb_paramsvals_list.append(parm.defaultval)
 
     Cparm_list_uniq = []
     for Cp_ntuple_stored in Cparm_list:
