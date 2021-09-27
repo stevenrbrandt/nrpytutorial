@@ -59,16 +59,20 @@ def print_msg_with_timing(desc, msg="Symbolic", startstop="start", starttime=0.0
 
 
 # get_loopopts() sets up options for NRPy+'s loop module
-def get_loopopts(points_to_update, enable_SIMD, enable_rfm_precompute, gridsuffix):
+def get_loopopts(points_to_update, enable_SIMD, enable_rfm_precompute, gridsuffix, OMP_pragma_on, enable_xxs=True):
     loopopts = points_to_update
     if enable_SIMD:
         loopopts += ",enable_SIMD"
     if enable_rfm_precompute:
         loopopts += ",enable_rfm_precompute"
+    elif not enable_xxs:
+        pass
     else:
         loopopts += ",Read_xxs"
     if gridsuffix != "":
         loopopts += ","+gridsuffix.replace("_", "")
+    if OMP_pragma_on != "i2":
+        loopopts += ",pragma_on_"+OMP_pragma_on
     return loopopts
 
 
@@ -193,7 +197,7 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
                                    enable_SIMD=True, enable_split_for_optimizations_doesnt_help=False,
                                    LapseCondition="OnePlusLog", ShiftCondition="GammaDriving2ndOrder_Covariant",
                                    enable_KreissOliger_dissipation=False, enable_stress_energy_source_terms=False,
-                                   leave_Ricci_symbolic=True):
+                                   leave_Ricci_symbolic=True, OMP_pragma_on="i2"):
     gridsuffix = par.parval_from_str("grid::current_gridsuffix")
 
     if includes is None:
@@ -229,7 +233,7 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
     if gridsuffix != "":
         FD_outCparams += ",gridsuffix=" + gridsuffix
 
-    loopopts = get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, gridsuffix)
+    loopopts = get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, gridsuffix, OMP_pragma_on)
     FDorder = par.parval_from_str("finite_difference::FD_CENTDERIVS_ORDER")
     if enable_split_for_optimizations_doesnt_help and FDorder == 6:
         loopopts += ",DisableOpenMP"
@@ -308,7 +312,7 @@ def Ricci__generate_symbolic_expressions():
 # Register C function Ricci_eval() for evaluating 3-Ricci tensor
 def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."),
                                      enable_rfm_precompute=True, enable_golden_kernels=False, enable_SIMD=True,
-                                     enable_split_for_optimizations_doesnt_help=False):
+                                     enable_split_for_optimizations_doesnt_help=False, OMP_pragma_on="i2"):
     gridsuffix = par.parval_from_str("grid::current_gridsuffix")
 
     if includes is None:
@@ -336,7 +340,7 @@ def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.
     if gridsuffix != "":
         FD_outCparams += ",gridsuffix="+gridsuffix
     starttime = print_msg_with_timing("3-Ricci tensor", msg="Ccodegen", startstop="start")
-    loopopts = get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, gridsuffix)
+    loopopts = get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, gridsuffix, OMP_pragma_on)
     preloop = ""
     FDorder = par.parval_from_str("finite_difference::FD_CENTDERIVS_ORDER")
     if enable_split_for_optimizations_doesnt_help and FDorder >= 8:
@@ -411,7 +415,7 @@ def BSSN_constraints__generate_symbolic_expressions(enable_stress_energy_source_
 def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."),
                                            enable_rfm_precompute=True, enable_golden_kernels=False, enable_SIMD=True,
                                            enable_stress_energy_source_terms=False,
-                                           output_H_only=False):
+                                           output_H_only=False, OMP_pragma_on="i2"):
 
     gridsuffix = par.parval_from_str("grid::current_gridsuffix")
 
@@ -452,14 +456,15 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
         desc=desc,
         name=name, params=params,
         body=body,
-        loopopts=get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, gridsuffix),
+        loopopts=get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, gridsuffix, OMP_pragma_on),
         rel_path_to_Cparams=rel_path_to_Cparams)
     return pickle_NRPy_env()
 
 
 # Register C function enforce_detgammahat_constraint for enforcing the conformal 3-metric: det(gammahat)=det(gammabar)
 def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."),
-                                                         enable_rfm_precompute=True, enable_golden_kernels=False):
+                                                         enable_rfm_precompute=True, enable_golden_kernels=False,
+                                                         OMP_pragma_on="i2"):
     # This function disables SIMD, as it includes cbrt() and abs() functions.
     gridsuffix = par.parval_from_str("grid::current_gridsuffix")
 
@@ -497,7 +502,7 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
         desc=desc,
         name=name, params=params,
         body=body,
-        loopopts=get_loopopts("AllPoints", enable_SIMD, enable_rfm_precompute, gridsuffix),
+        loopopts=get_loopopts("AllPoints", enable_SIMD, enable_rfm_precompute, gridsuffix, OMP_pragma_on),
         rel_path_to_Cparams=rel_path_to_Cparams)
     return pickle_NRPy_env()
 
@@ -505,7 +510,7 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
 # Add psi4 to Cfunction dictionary. psi4 is a really huge expression, so we output
 #   it in 3 parts: psi4_part0, psi4_part1, and psi4_part2
 def add_psi4_part_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."), whichpart=1,
-                                    setPsi4tozero=False):
+                                    setPsi4tozero=False, OMP_pragma_on="i2"):
     gridsuffix = par.parval_from_str("grid::current_gridsuffix")
 
     starttime = print_msg_with_timing("psi4, part " + str(whichpart), msg="Ccodegen", startstop="start")
@@ -570,9 +575,8 @@ psi4_tetrad"""+gridsuffix+"""(params,
                                 lhrh(lhs=gri.gfaccess("in_gfs", "psi4_part" + str(whichpart) + "im"),
                                      rhs=sp.sympify(0))],
                                params=FD_outCparams)
-    loopopts = "InteriorPoints"
-    if gridsuffix != "":
-        loopopts += "," + gridsuffix.replace("_", "")
+    enable_SIMD = False
+    enable_rfm_precompute = False
 
     print_msg_with_timing("psi4, part " + str(whichpart), msg="Ccodegen", startstop="stop", starttime=starttime)
     add_to_Cfunction_dict(
@@ -580,7 +584,8 @@ psi4_tetrad"""+gridsuffix+"""(params,
         desc=desc,
         name=name, params=params,
         body=body,
-        loopopts=loopopts,
+        loopopts=get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, gridsuffix, OMP_pragma_on,
+                              enable_xxs=False),
         rel_path_to_Cparams=rel_path_to_Cparams)
     return pickle_NRPy_env()
 

@@ -39,14 +39,14 @@ def loop1D(idx_var='i', lower_bound='0', upper_bound='N', increment='1', pragma=
     if any(not isinstance(i, str) for i in (idx_var, lower_bound, upper_bound, increment, pragma)):
         raise ValueError('all parameters must have type string.')
     # Generate header and footer for a one-dimensional loop with optional parallelization using OpenMP
-    pragma     = padding + pragma + '\n' if pragma else ''
-    increment  = ' += ' + increment if increment != '1' else '++'
-    header     = padding + 'for (int {i0} = {i1}; {i0} < {i2}; {i0}{i3})'.format(\
-                     i0=idx_var, i1=lower_bound, i2=upper_bound, i3=increment)
-    footer     = padding + '} // END LOOP: ' + header.strip() + '\n'
+    pragma    = padding + pragma + '\n' if pragma else ''
+    increment = ' += ' + increment if increment != '1' else '++'
+    header    = padding + 'for (int {i0} = {i1}; {i0} < {i2}; {i0}{i3})'.format(
+                                                            i0=idx_var, i1=lower_bound, i2=upper_bound, i3=increment)
+    footer    = padding + '} // END LOOP: ' + header.strip() + '\n'
     return pragma + header + ' {\n', footer
 
-def loop(idx_var, lower_bound, upper_bound, increment, pragma, padding='', interior="", tile_size=""):
+def loop(idx_var, lower_bound, upper_bound, increment, pragma, padding='  ', interior="", tile_size=""):
     """ Generate a nested loop of arbitrary dimension in C.
 
         :arg:    index variable for the loop
@@ -59,7 +59,7 @@ def loop(idx_var, lower_bound, upper_bound, increment, pragma, padding='', inter
         :arg:    tile size for cache blocking
         :return: (header, footer) or string of the loop
 
-        >>> header, footer = loop('i', '0', 'N', '1', '')
+        >>> header, footer = loop('i', '0', 'N', '1', '', padding='')
         >>> print(header)
         for (int i = 0; i < N; i++) {
         <BLANKLINE>
@@ -68,26 +68,26 @@ def loop(idx_var, lower_bound, upper_bound, increment, pragma, padding='', inter
         } // END LOOP: for (int i = 0; i < N; i++)
         <BLANKLINE>
 
-        >>> print(loop('i', '0', 'N', '1', '', interior='// <INTERIOR>'))
-        for (int i = 0; i < N; i++) {
+        >>> print(loop('i', '0', 'N', '1', '',padding='  ', interior='// <INTERIOR>'))
+          for (int i = 0; i < N; i++) {
             // <INTERIOR>
-        } // END LOOP: for (int i = 0; i < N; i++)
+          } // END LOOP: for (int i = 0; i < N; i++)
         <BLANKLINE>
 
-        >>> print(loop('i', '0', 'N', '1', '', interior='// <INTERIOR>', tile_size='16'))
-        for (int iB = 0; iB < N; iB += 16) {
-            for (int i = iB; i < MIN(N, iB + 16); i++) {
-                // <INTERIOR>
-            } // END LOOP: for (int i = iB; i < MIN(N, iB + 16); i++)
-        } // END LOOP: for (int iB = 0; iB < N; iB += 16)
+        >>> print(loop('i', '0', 'N', '1', '', padding='    ', interior='// <INTERIOR>', tile_size='16'))
+            for (int iB = 0; iB < N; iB += 16) {
+                for (int i = iB; i < MIN(N, iB + 16); i++) {
+                    // <INTERIOR>
+                } // END LOOP: for (int i = iB; i < MIN(N, iB + 16); i++)
+            } // END LOOP: for (int iB = 0; iB < N; iB += 16)
         <BLANKLINE>
 
-        >>> print(loop(['i', 'j'], ['0', '0'], ['Nx', 'Ny'], ['1', '1'], ['', ''], interior='// <INTERIOR>'))
-        for (int i = 0; i < Nx; i++) {
+        >>> print(loop(['i', 'j'], ['0', '0'], ['Nx', 'Ny'], ['1', '1'], ['', ''], padding='  ', interior='// <INTERIOR>'))
+          for (int i = 0; i < Nx; i++) {
             for (int j = 0; j < Ny; j++) {
-                // <INTERIOR>
+              // <INTERIOR>
             } // END LOOP: for (int j = 0; j < Ny; j++)
-        } // END LOOP: for (int i = 0; i < Nx; i++)
+          } // END LOOP: for (int i = 0; i < Nx; i++)
         <BLANKLINE>
     """
     # If every argument has type string, then nest each argument inside a list
@@ -106,20 +106,20 @@ def loop(idx_var, lower_bound, upper_bound, increment, pragma, padding='', inter
     for i in range(length):
         if len(tile_size) > 0:
             # Generate header and footer for a single loop dimension over each tile
-            ext_header, ext_footer = loop1D(idx_var[i] + 'B', lower_bound[i], upper_bound[i], tile_size[i], '', padding + i*'    ')
+            ext_header, ext_footer = loop1D(idx_var[i] + 'B', lower_bound[i], upper_bound[i], tile_size[i], '', padding*(i+1))
             # Generate header and footer for a nested loop over the iteration space inside of each tile
             header, footer = loop1D(idx_var[i], idx_var[i] + 'B', 'MIN(%s, %s + %s)' % (upper_bound[i], idx_var[i] + 'B',
-                                    tile_size[i]), increment[i], pragma[i], padding + (length + i)*'    ')
+                                    tile_size[i]), increment[i], pragma[i], padding + (length + i)*padding)
             header_list.insert(i, ext_header)
             footer_list.insert(i, ext_footer)
         else:
             # Generate header and footer for a single loop dimension
-            header, footer = loop1D(idx_var[i], lower_bound[i], upper_bound[i], increment[i], pragma[i], padding + i*'    ')
+            header, footer = loop1D(idx_var[i], lower_bound[i], upper_bound[i], increment[i], pragma[i], padding*(i+1))
         header_list.append(header)
         footer_list.append(footer)
     # If loop interior was provided, generate the loop body with appropriate formatting
     if interior:
-        interior = [padding + (length + len(tile_size))*'    ' + line + '\n' for line in interior.split('\n')]
+        interior = [padding + (length + len(tile_size))*padding + line + '\n' for line in interior.split('\n')]
     # Build global looping structure from each generated header/footer
     header = ''.join(header_list)
     footer = ''.join(footer_list[::-1])
@@ -134,14 +134,14 @@ def simple_loop(options, interior):
         :return: string of the loop
 
         >>> print(simple_loop('AllPoints', '// <INTERIOR>'))
-            #pragma omp parallel for
-            for (int i2 = 0; i2 < Nxx_plus_2NGHOSTS2; i2++) {
-                for (int i1 = 0; i1 < Nxx_plus_2NGHOSTS1; i1++) {
-                    for (int i0 = 0; i0 < Nxx_plus_2NGHOSTS0; i0++) {
-                        // <INTERIOR>
-                    } // END LOOP: for (int i0 = 0; i0 < Nxx_plus_2NGHOSTS0; i0++)
-                } // END LOOP: for (int i1 = 0; i1 < Nxx_plus_2NGHOSTS1; i1++)
-            } // END LOOP: for (int i2 = 0; i2 < Nxx_plus_2NGHOSTS2; i2++)
+          #pragma omp parallel for
+          for (int i2 = 0; i2 < Nxx_plus_2NGHOSTS2; i2++) {
+            for (int i1 = 0; i1 < Nxx_plus_2NGHOSTS1; i1++) {
+              for (int i0 = 0; i0 < Nxx_plus_2NGHOSTS0; i0++) {
+                // <INTERIOR>
+              } // END LOOP: for (int i0 = 0; i0 < Nxx_plus_2NGHOSTS0; i0++)
+            } // END LOOP: for (int i1 = 0; i1 < Nxx_plus_2NGHOSTS1; i1++)
+          } // END LOOP: for (int i2 = 0; i2 < Nxx_plus_2NGHOSTS2; i2++)
         <BLANKLINE>
     """
     if not options:
@@ -169,7 +169,8 @@ def simple_loop(options, interior):
             Read_1Darrays = ["const REAL xx0 = xx[0][i0];",
                              "const REAL xx1 = xx[1][i1];",
                              "const REAL xx2 = xx[2][i2];", ]
-        else: raise ValueError('no SIMD support for Read_xxs (currently).')
+        else:
+            raise ValueError('no SIMD support for Read_xxs (currently).')
     # 'enable_rfm_precompute': enable pre-computation of reference metric
     if "enable_rfm_precompute" in options:
         if "Read_xxs" in options:
@@ -192,8 +193,16 @@ def simple_loop(options, interior):
         pragma = "#pragma omp parallel for"
     increment = ["1", "1", "SIMD_width"] if "enable_SIMD" in options else ["1", "1", "1"]
 
-    return loop(["i2", "i1", "i0"], i2i1i0_mins, i2i1i0_maxs, increment, [pragma, Read_1Darrays[2], Read_1Darrays[1]],
-                padding='    ', interior=Read_1Darrays[0] + ("\n" if Read_1Darrays[0] else "") + interior)
+    padding = '  '
+
+    loop_order = [pragma, Read_1Darrays[2], Read_1Darrays[1]]
+    if "pragma_on_i1" in options:
+        loop_order = ["", Read_1Darrays[2] + "\n" + padding*2 + pragma, Read_1Darrays[1]]
+    elif "pragma_on_i0" in options:
+        loop_order = ["", Read_1Darrays[2], Read_1Darrays[1] + "\n" + padding*3 + pragma]
+
+    return loop(["i2", "i1", "i0"], i2i1i0_mins, i2i1i0_maxs, increment, loop_order,
+                padding=padding, interior=Read_1Darrays[0] + ("\n" if Read_1Darrays[0] else "") + interior)
 
 if __name__ == "__main__":
     import doctest
