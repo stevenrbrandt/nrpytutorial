@@ -170,10 +170,10 @@ def simple_loop(options, interior):
                              "const REAL xx1 = xx[1][i1];",
                              "const REAL xx2 = xx[2][i2];", ]
         else: raise ValueError('no SIMD support for Read_xxs (currently).')
-    # 'Enable_rfm_precompute': enable pre-computation of reference metric
-    if "Enable_rfm_precompute" in options:
+    # 'enable_rfm_precompute': enable pre-computation of reference metric
+    if "enable_rfm_precompute" in options:
         if "Read_xxs" in options:
-            raise ValueError('Enable_rfm_precompute and Read_xxs cannot both be enabled.')
+            raise ValueError('enable_rfm_precompute and Read_xxs cannot both be enabled.')
         if "enable_SIMD" in options:
             Read_1Darrays = ["#include \"rfm_files/rfm_struct__SIMD_inner_read0.h\"",
                              "#include \"rfm_files/rfm_struct__SIMD_outer_read1.h\"",

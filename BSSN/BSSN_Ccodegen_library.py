@@ -64,7 +64,7 @@ def get_loopopts(points_to_update, enable_SIMD, enable_rfm_precompute, gridsuffi
     if enable_SIMD:
         loopopts += ",enable_SIMD"
     if enable_rfm_precompute:
-        loopopts += ",Enable_rfm_precompute"
+        loopopts += ",enable_rfm_precompute"
     else:
         loopopts += ",Read_xxs"
     if gridsuffix != "":

@@ -64,7 +64,7 @@ def output_Enforce_Detgammahat_Constraint_Ccode(outdir="BSSN/", exprs="", Read_x
     desc = "Enforce det(gammabar) = det(gammahat) constraint."
     name = "enforce_detgammahat_constraint"
     params = "const rfm_struct *restrict rfmstruct, const paramstruct *restrict params, REAL *restrict in_gfs"
-    loopopts = "AllPoints,Enable_rfm_precompute"
+    loopopts = "AllPoints,enable_rfm_precompute"
     if Read_xxs:
         params = "const paramstruct *restrict params, REAL *restrict xx[3], REAL *restrict in_gfs"
         loopopts = "AllPoints,Read_xxs"
