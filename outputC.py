@@ -609,7 +609,7 @@ def construct_NRPy_basic_defines_h(Ccodesrootdir, enable_SIMD=False, supplementa
     def output_key(filestream, key, item):
         filestream.write("\n\n//********************************************\n")
         filestream.write("// Basic definitions for module " + key + ":\n" + item)
-        filestream.write("\n\n//********************************************\n")
+        filestream.write("//********************************************\n")
 
     with open(os.path.join(Ccodesrootdir, "NRPy_basic_defines.h"), "w") as file:
         file.write("""// NRPy+ basic definitions, automatically generated from outC_NRPy_basic_defines_h_dict within outputC,
@@ -623,8 +623,6 @@ def construct_NRPy_basic_defines_h(Ccodesrootdir, enable_SIMD=False, supplementa
 
         for key in supplemental_dict:
             output_key(file, key, supplemental_dict[key])
-
-        file.write("\n")
 
 def construct_NRPy_function_prototypes_h(Ccodesrootdir):
     if not os.path.isdir(Ccodesrootdir):

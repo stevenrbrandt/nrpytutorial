@@ -878,7 +878,7 @@ for(int i1=0;i1<Nxx_plus_2NGHOSTS1;i1++) for(int i0=0;i0<Nxx_plus_2NGHOSTS0;i0++
 
         which_freevar += 1
 
-    struct_str += "} rfm_struct;\n\n"
+    struct_str += "} rfm_struct;\n"
 
     # Step 8: Output needed C code to files
     outdir = par.parval_from_str(thismodule+"::rfm_precompute_Ccode_outdir")
