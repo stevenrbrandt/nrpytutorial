@@ -974,7 +974,6 @@ def get_EigenCoord():
     sys.exit(1)
 
 
-
 # Compute proper distance in all 3 directions. Used to find the appropriate timestep for the CFL condition.
 def ds_dirn(delxx, append_gridsuffix_to_xx=False):
     gridsuffix = ""  # Disable for now
