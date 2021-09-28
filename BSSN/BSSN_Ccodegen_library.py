@@ -509,7 +509,7 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
 
 # Add psi4 to Cfunction dictionary. psi4 is a really huge expression, so we output
 #   it in 3 parts: psi4_part0, psi4_part1, and psi4_part2
-def add_psi4_part_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."), whichpart=1,
+def add_psi4_part_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."), whichpart=0,
                                     setPsi4tozero=False, OMP_pragma_on="i2"):
     gridsuffix = par.parval_from_str("grid::current_gridsuffix")
 
@@ -657,7 +657,7 @@ def add_psi4_tetrad_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path
 
 
 def add_SpinWeight_minus2_SphHarmonics_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."),
-                                                      maximum_l=8):
+                                                         maximum_l=8):
     gridsuffix = par.parval_from_str("grid::current_gridsuffix")
 
     starttime = print_msg_with_timing("Spin-weight s=-2 Spherical Harmonics", msg="Ccodegen", startstop="start")
