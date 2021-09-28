@@ -633,7 +633,7 @@ def construct_NRPy_function_prototypes_h(Ccodesrootdir):
             file.write(item + "\n")
 
 
-def register_C_functions_and_NRPy_basic_defines():
+def outputC_register_C_functions_and_NRPy_basic_defines():
     # First register C functions needed by outputC
 
     # Then set up the dictionary entry for outputC in NRPy_basic_defines
@@ -656,14 +656,93 @@ def register_C_functions_and_NRPy_basic_defines():
 #endif
 """
     Nbd_str += "#define REAL " + par.parval_from_str("outputC::PRECISION") + "\n"
+    outC_NRPy_basic_defines_h_dict["outputC"] = Nbd_str
 
-    # Then set up the dictionary entry for grid in NRPy_basic_defines
-    # Step 2: Generate C code to declare C paramstruct;
+
+# Must be done here since outputC imports NRPy_param_funcs
+def NRPy_param_funcs_register_C_functions_and_NRPy_basic_defines(directory=os.path.join(".")):
+    # Set up the C function for BSSN basis transformations
+    includes = ["NRPy_basic_defines.h"]
+    desc = "Set Cparameters to default values specified within NRPy+."
+    c_type = "void"
+    name = "set_Cparameters_to_default"
+    params = "paramstruct *restrict params"
+    body = ""
+    for i in range(len(par.glb_Cparams_list)):
+        if par.glb_Cparams_list[i].type != "#define":
+            c_output = "  params->" + par.glb_Cparams_list[i].parname
+            comment = "  // " + par.glb_Cparams_list[i].module + "::" + par.glb_Cparams_list[i].parname
+            if isinstance(par.glb_Cparams_list[i].defaultval, (bool, int, float)):
+                c_output += " = " + str(par.glb_Cparams_list[i].defaultval).lower() + ";" + comment + "\n"
+            elif par.glb_Cparams_list[i].type == "char" and isinstance(par.glb_Cparams_list[i].defaultval, (str)):
+                c_output += " = \"" + str(par.glb_Cparams_list[i].defaultval).lower() + "\";" + comment + "\n"
+            else:
+                c_output += " = " + str(par.glb_Cparams_list[i].defaultval) + ";" + comment + "\n"
+            body += c_output
+    add_to_Cfunction_dict(
+        includes=includes,
+        desc=desc,
+        c_type=c_type, name=name, params=params,
+        body=body,
+        loopopts="",
+        enableCparameters=False)
+
+
+    # Step 4: Generate C code to set C parameter constants
+    #         (i.e., all ints != -12345678 and REALs != 1e300);
+    #         output to filename "set_Cparameters.h" if enable_SIMD==False
+    #         or "set_Cparameters-SIMD.h" if enable_SIMD==True
+    # Step 4.a: Output non-SIMD version, set_Cparameters.h
+    def gen_set_Cparameters(pointerEnable=True):
+        returnstring = ""
+        for i in range(len(par.glb_Cparams_list)):
+            if par.glb_Cparams_list[i].type == "char":
+                c_type = "char *"
+            else:
+                c_type = par.glb_Cparams_list[i].type
+
+            pointer = "->"
+            if pointerEnable==False:
+                pointer = "."
+
+            if not ((c_type == "REAL" and par.glb_Cparams_list[i].defaultval == 1e300) or c_type == "#define"):
+                comment = "  // " + par.glb_Cparams_list[i].module + "::" + par.glb_Cparams_list[i].parname
+                Coutput = "const "+c_type+" "+par.glb_Cparams_list[i].parname+" = "+"params"+pointer+par.glb_Cparams_list[i].parname + ";" + comment + "\n"
+                returnstring += Coutput
+        return returnstring
+
+    # Next output header files for setting C parameters to current values within functions.
+    with open(os.path.join(directory, "set_Cparameters.h"), "w") as file:
+        file.write(gen_set_Cparameters(pointerEnable=True))
+    with open(os.path.join(directory, "set_Cparameters-nopointer.h"), "w") as file:
+        file.write(gen_set_Cparameters(pointerEnable=False))
+
+    # Step 4.b: Output SIMD version, set_Cparameters-SIMD.h
+    with open(os.path.join(directory, "set_Cparameters-SIMD.h"), "w") as file:
+        for i in range(len(par.glb_Cparams_list)):
+            if par.glb_Cparams_list[i].type == "char":
+                c_type = "char *"
+            else:
+                c_type = par.glb_Cparams_list[i].type
+
+            comment = "  // " + par.glb_Cparams_list[i].module + "::" + par.glb_Cparams_list[i].parname
+            parname = par.glb_Cparams_list[i].parname
+            if c_type == "REAL" and par.glb_Cparams_list[i].defaultval != 1e300:
+                c_output =  "const REAL            NOSIMD" + parname + " = " + "params->" + par.glb_Cparams_list[i].parname + ";"+comment+"\n"
+                c_output += "const REAL_SIMD_ARRAY " + parname + " = ConstSIMD(NOSIMD" + parname + ");"+comment+"\n"
+                file.write(c_output)
+            elif par.glb_Cparams_list[i].defaultval != 1e300 and c_type != "#define":
+                c_output = "const "+c_type+" "+parname + " = " + "params->" + par.glb_Cparams_list[i].parname + ";"+comment+"\n"
+                file.write(c_output)
+
+
+    # Set up the dictionary entry for grid in NRPy_basic_defines
+    # Generate C code to declare C paramstruct;
     #         output to "declare_Cparameters_struct.h"
     #         We want the elements of this struct to be *sorted*,
     #         to ensure that the struct is consistently ordered
     #         for checkpointing purposes.
-    Nbd_str += "typedef struct __paramstruct__ {\n"
+    Nbd_str = "typedef struct __paramstruct__ {\n"
     CCodelines = []
     for i in range(len(par.glb_Cparams_list)):
         if par.glb_Cparams_list[i].type != "#define":
@@ -677,4 +756,4 @@ def register_C_functions_and_NRPy_basic_defines():
         Nbd_str += line
     Nbd_str += "} paramstruct;\n"
 
-    outC_NRPy_basic_defines_h_dict["outputC"] = Nbd_str
+    outC_NRPy_basic_defines_h_dict["NRPy_param_funcs"] = Nbd_str

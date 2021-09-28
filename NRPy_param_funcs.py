@@ -213,7 +213,10 @@ def Cparameters(c_type, module, names, default_vals, assumption="Real"):
         return output[0]
     return output
 
-def generate_Cparameters_Ccodes(directory="./", output_declare_Cparameters_struct_h=True):
+
+############################
+## TO BE DEPRECATED BY NRPy_param_funcs_register_C_functions_and_NRPy_basic_defines() WITHIN OUTPUTC
+def generate_Cparameters_Ccodes(directory=os.path.join(".")):
     # Step 1: Check that Cparams types are supported.
     for i in range(len(glb_Cparams_list)):
         partype = glb_Cparams_list[i].type
@@ -222,26 +225,26 @@ def generate_Cparameters_Ccodes(directory="./", output_declare_Cparameters_struc
                   + glb_Cparams_list[i].type + "\"")
             sys.exit(1)
 
-    if output_declare_Cparameters_struct_h:
-        # Step 2: Generate C code to declare C paramstruct;
-        #         output to "declare_Cparameters_struct.h"
-        #         We want the elements of this struct to be *sorted*,
-        #         to ensure that the struct is consistently ordered
-        #         for checkpointing purposes.
-        with open(os.path.join(directory, "declare_Cparameters_struct.h"), "w") as file:
-            file.write("typedef struct __paramstruct__ {\n")
-            CCodelines = []
-            for i in range(len(glb_Cparams_list)):
-                if glb_Cparams_list[i].type != "#define":
-                    if glb_Cparams_list[i].type == "char":
-                        c_type = "char *"
-                    else:
-                        c_type = glb_Cparams_list[i].type
-                    comment = "  // " + glb_Cparams_list[i].module + "::" + glb_Cparams_list[i].parname
-                    CCodelines.append("    " + c_type + " " + glb_Cparams_list[i].parname + ";" + comment + "\n")
-            for line in sorted(CCodelines):
-                file.write(line)
-            file.write("} paramstruct;\n")
+    # Step 2: Generate C code to declare C paramstruct;
+    #         output to "declare_Cparameters_struct.h"
+    #         We want the elements of this struct to be *sorted*,
+    #         to ensure that the struct is consistently ordered
+    #         for checkpointing purposes.
+    Cparameters_struct = "typedef struct __paramstruct__ {\n"
+    CCodelines = []
+    for i in range(len(glb_Cparams_list)):
+        if glb_Cparams_list[i].type != "#define":
+            if glb_Cparams_list[i].type == "char":
+                c_type = "char *"
+            else:
+                c_type = glb_Cparams_list[i].type
+            comment = "  // " + glb_Cparams_list[i].module + "::" + glb_Cparams_list[i].parname
+            CCodelines.append("    " + c_type + " " + glb_Cparams_list[i].parname + ";" + comment + "\n")
+    for line in sorted(CCodelines):
+        Cparameters_struct += line
+    Cparameters_struct += "} paramstruct;\n"
+    with open(os.path.join(directory, "declare_Cparameters_struct.h"), "w") as file:
+        file.write(Cparameters_struct)
 
     # Step 3: Generate C code to set all elements in
     #         C paramstruct to default values; output to
@@ -304,3 +307,4 @@ def generate_Cparameters_Ccodes(directory="./", output_declare_Cparameters_struc
             elif glb_Cparams_list[i].defaultval != 1e300 and c_type != "#define":
                 c_output = "const "+c_type+" "+parname + " = " + "params->" + glb_Cparams_list[i].parname + ";"+comment+"\n"
                 file.write(c_output)
+############################
