@@ -22,7 +22,7 @@ from finite_difference_helpers import read_gfs_from_memory, FDparams, construct_
 modulename = __name__
 # Centered finite difference accuracy order
 par.initialize_param(par.glb_param("int",  modulename, "FD_CENTDERIVS_ORDER",          4))
-par.initialize_param(par.glb_param("bool", modulename, "FD_functions_enable",      False))
+par.initialize_param(par.glb_param("bool", modulename, "enable_FD_functions",      False))
 par.initialize_param(par.glb_param("int",  modulename, "FD_KO_ORDER__CENTDERIVS_PLUS", 2))
 
 def FD_outputC(filename, sympyexpr_list, params="", upwindcontrolvec=""):
@@ -56,10 +56,10 @@ def FD_outputC(filename, sympyexpr_list, params="", upwindcontrolvec=""):
         indent = ""
 
     # Step 0.c: FDparams named tuple stores parameters used in the finite-difference codegen
-    FDparams.SIMD_enable         = outCparams.SIMD_enable
+    FDparams.enable_SIMD         = outCparams.enable_SIMD
     FDparams.PRECISION           = par.parval_from_str("PRECISION")
     FDparams.FD_CD_order         = par.parval_from_str("FD_CENTDERIVS_ORDER")
-    FDparams.FD_functions_enable = par.parval_from_str("FD_functions_enable")
+    FDparams.enable_FD_functions = par.parval_from_str("enable_FD_functions")
     FDparams.DIM                 = par.parval_from_str("DIM")
     FDparams.MemAllocStyle       = par.parval_from_str("MemAllocStyle")
     FDparams.upwindcontrolvec    = upwindcontrolvec
@@ -195,7 +195,7 @@ def output_finite_difference_functions_h(path=os.path.join(".")):
 ################
 
 
-def register_C_functions_and_NRPy_basic_defines(NGHOSTS_account_for_onezone_upwind=False):
+def register_C_functions_and_NRPy_basic_defines(NGHOSTS_account_for_onezone_upwind=False, enable_SIMD=True):
     # First register C functions needed by finite_difference
 
     # Then set up the dictionary entry for finite_difference in NRPy_basic_defines
@@ -207,6 +207,10 @@ def register_C_functions_and_NRPy_basic_defines(NGHOSTS_account_for_onezone_upwi
 // Note that upwinding in e.g., BSSN requires that NGHOSTS = FD_CENTDERIVS_ORDER/2 + 1 <- Notice the +1.
 """
     Nbd_str += "#define NGHOSTS " + str(NGHOSTS)+"\n"
+    if not enable_SIMD:
+        Nbd_str += """
+// When enable_SIMD = False, this is the UPWIND_ALG() macro:
+#define UPWIND_ALG(UpwindVecU) UpwindVecU > 0.0 ? 1.0 : 0.0\n"""
     outC_NRPy_basic_defines_h_dict["finite_difference"] = Nbd_str
 
 

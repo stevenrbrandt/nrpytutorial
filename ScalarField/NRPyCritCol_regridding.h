@@ -144,7 +144,7 @@ void regrid(const int regrid_type,
   // Apply boundary conditions to the evolved gridfunctions
   // and enforce the deteterminant of gammabar constraint
   apply_bcs_curvilinear(params,bcstruct,NUM_EVOL_GFS,evol_gf_parity,in_gfs);
-  enforce_detgammabar_constraint(rfmstruct,params,in_gfs);
+  enforce_detgammahat_constraint(rfmstruct,params,in_gfs);
 
   // Update dt
   *dt      = find_timestep(params, xx);

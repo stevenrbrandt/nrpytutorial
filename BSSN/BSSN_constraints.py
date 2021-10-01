@@ -10,13 +10,14 @@
 import sympy as sp                # SymPy: The Python computer algebra package upon which NRPy+ depends
 import NRPy_param_funcs as par    # NRPy+: Parameter interface
 import indexedexp as ixp          # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
+import grid as gri                # NRPy+: Functions having to do with numerical grids
 import reference_metric as rfm    # NRPy+: Reference metric support
 import BSSN.BSSN_quantities as Bq # NRPy+: Computes useful BSSN quantities
 import BSSN.BSSN_T4UUmunu_vars as BTmunu
 
 thismodule = __name__
 
-def BSSN_constraints(add_T4UUmunu_source_terms=False):
+def BSSN_constraints(add_T4UUmunu_source_terms=False, output_H_only=False):
     # Step 1.a: Set spatial dimension (must be 3 for BSSN, as BSSN is
     #           a 3+1-dimensional decomposition of the general
     #           relativistic field equations)
@@ -30,6 +31,18 @@ def BSSN_constraints(add_T4UUmunu_source_terms=False):
     #    ReU, and hatted quantities.
     rfm.reference_metric()
 
+    # Step 1.c: Register H and MU gridfunctions for
+    #           Hamiltonian & momentum constraints,
+    #           respectively.
+    registered_already = False
+    for i in range(len(gri.glb_gridfcs_list)):
+        if gri.glb_gridfcs_list[i].name == "H":
+            registered_already = True
+    if not registered_already:
+        _H = gri.register_gridfunctions("AUX", "H")  # _H unused.
+        if not output_H_only:
+            _MU = ixp.register_gridfunctions_for_single_rank1("AUX", "MU")  # _MU unused.
+
 
     # Step 2: Hamiltonian constraint.
     # First declare all needed variables
@@ -40,14 +53,13 @@ def BSSN_constraints(add_T4UUmunu_source_terms=False):
     Bq.RicciBar__gammabarDD_dHatD__DGammaUDD__DGammaU()  # Sets RbarDD
     Bq.phi_and_derivs()  # Sets phi_dBarD & phi_dBarDD
 
-    ###############################
-    ###############################
-    #  HAMILTONIAN CONSTRAINT
-    ###############################
-    ###############################
+    #################################
+    # -={ HAMILTONIAN CONSTRAINT }=-
+    #################################
 
     # Term 1: 2/3 K^2
     global H
+
     H = sp.Rational(2, 3) * Bq.trK ** 2
 
     # Term 2: -A_{ij} A^{ij}
@@ -83,11 +95,9 @@ def BSSN_constraints(add_T4UUmunu_source_terms=False):
 
     # Step 3: M^i, the momentum constraint
 
-    ###############################
-    ###############################
-    #  MOMENTUM CONSTRAINT
-    ###############################
-    ###############################
+    ##############################
+    # -={ MOMENTUM CONSTRAINT }=-
+    ##############################
 
     # SEE Tutorial-BSSN_constraints.ipynb for full documentation.
     global MU

@@ -146,7 +146,7 @@ def GiRaFFE_NRPy_Main_Driver_generate_all(out_dir):
     outCfunction(
         outfile  = os.path.join(out_dir,subdir,name+".h"), desc=desc, name=name,
         params   ="const paramstruct *params,REAL *xx[3],REAL *auxevol_gfs,REAL *in_gfs",
-        body     = fin.FD_outputC("returnstring",values_to_print,params=outCparams).replace("IDX4","IDX4S"),
+        body     = fin.FD_outputC("returnstring",values_to_print,params=outCparams),
         loopopts ="AllPoints,Read_xxs",
         rel_path_to_Cparams=os.path.join("../"))
 
@@ -163,7 +163,7 @@ def GiRaFFE_NRPy_Main_Driver_generate_all(out_dir):
     outCfunction(
         outfile  = os.path.join(out_dir,subdir,name+".h"), desc=desc, name=name,
         params   ="const paramstruct *params,REAL *auxevol_gfs,REAL *in_gfs",
-        body     = fin.FD_outputC("returnstring",values_to_print,params=outCparams).replace("IDX4","IDX4S"),
+        body     = fin.FD_outputC("returnstring",values_to_print,params=outCparams),
         loopopts ="AllPoints",
         rel_path_to_Cparams=os.path.join("../"))
 

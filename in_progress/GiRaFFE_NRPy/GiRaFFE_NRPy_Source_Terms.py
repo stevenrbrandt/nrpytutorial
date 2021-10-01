@@ -79,7 +79,7 @@ def write_out_functions_for_StildeD_source_term(outdir,outCparams,gammaDD,betaU,
             params   ="const paramstruct *params,const REAL *auxevol_gfs, REAL *rhs_gfs",
             body     = general_access \
                       +metric_deriv_access[i]\
-                      +outputC(GRHD.S_tilde_source_termD[i],"Stilde_rhsD"+str(i),"returnstring",params=outCparams).replace("IDX4","IDX4S")\
+                      +outputC(GRHD.S_tilde_source_termD[i],"Stilde_rhsD"+str(i),"returnstring",params=outCparams)\
                       +write_final_quantity[i],
             loopopts ="InteriorPoints",
             rel_path_to_Cparams=os.path.join("../"))

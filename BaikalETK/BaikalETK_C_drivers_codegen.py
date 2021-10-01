@@ -370,7 +370,7 @@ void BaikalETK_ADM_to_BSSN(CCTK_ARGUMENTS) {
     #   does not take long to compile, and we have already output all the
     #   FD functions to file, so if this one contains new FD functions,
     #   the compile will fail.
-    par.set_parval_from_str("finite_difference::FD_functions_enable", False)
+    par.set_parval_from_str("finite_difference::enable_FD_functions", False)
 
     all_but_lambdaU_expressions = [
         lhrh(lhs=gri.gfaccess("in_gfs", "hDD00"), rhs=IDhDD[0][0]),
@@ -618,7 +618,7 @@ void BaikalETK_driver_pt2_BSSN_RHSs(CCTK_ARGUMENTS) {
 
     # Next, the driver for enforcing detgammabar = detgammahat constraint:
     outstr = common_includes + """
-void BaikalETK_enforce_detgammabar_constraint(CCTK_ARGUMENTS) {
+void BaikalETK_enforce_detgammahat_constraint(CCTK_ARGUMENTS) {
     DECLARE_CCTK_ARGUMENTS;
     DECLARE_CCTK_PARAMETERS;
 
@@ -688,7 +688,7 @@ void BaikalETK_BSSN_constraints(CCTK_ARGUMENTS) {
             lhrh(lhs=gri.gfaccess("in_gfs","T4UU23"),rhs=T4UUraised[2][3]),
             lhrh(lhs=gri.gfaccess("in_gfs","T4UU33"),rhs=T4UUraised[3][3])]
 
-        outCparams = "outCverbose=False,includebraces=False,preindent=2,SIMD_enable=True"
+        outCparams = "outCverbose=False,includebraces=False,preindent=2,enable_SIMD=True"
         T4UUstr = fin.FD_outputC("returnstring",T4UU_expressions, outCparams)
         T4UUstr_loop = lp.loop(["i2","i1","i0"],["0","0","0"],["cctk_lsh[2]","cctk_lsh[1]","cctk_lsh[0]"],
                                ["1","1","SIMD_width"],["#pragma omp parallel for","",""],"",T4UUstr)

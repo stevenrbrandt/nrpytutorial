@@ -238,7 +238,7 @@ REAL find_accepted_Bx_order(REAL *Bx) {
         params   = "const paramstruct *restrict params,REAL *restrict in_gfs,REAL *restrict auxevol_gfs",
         body     = fin.FD_outputC("returnstring",[lhrh(lhs=gri.gfaccess("out_gfs","BU0"),rhs=BU[0]),\
                                                   lhrh(lhs=gri.gfaccess("out_gfs","BU1"),rhs=BU[1]),\
-                                                  lhrh(lhs=gri.gfaccess("out_gfs","BU2"),rhs=BU[2])]).replace("IDX4","IDX4S"),
+                                                  lhrh(lhs=gri.gfaccess("out_gfs","BU2"),rhs=BU[2])]),
 #         body     = order_lowering_body,
         postloop = """
     int imin[3] = { NGHOSTS_A2B, NGHOSTS_A2B, NGHOSTS_A2B };

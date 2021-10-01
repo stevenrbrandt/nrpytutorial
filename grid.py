@@ -18,6 +18,9 @@ par.initialize_param(par.glb_param("char", thismodule, "GridFuncMemAccess", "SEN
 par.initialize_param(par.glb_param("char", thismodule, "MemAllocStyle", "210"))
 par.initialize_param(par.glb_param("int",  thismodule, "DIM", 3))
 
+# This parameter is set as many times as needed.
+par.initialize_param(par.glb_param("char", thismodule, "current_gridsuffix", ""))
+
 # Multiple grid support.
 par.Cparameters("int",  thismodule, "numgrids", 1)
 
@@ -95,7 +98,7 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = ""):
         elif gftype == "AUXEVOL":
             gfarrayname = "auxevol_gfs"
         # Return gfarrayname[IDX3(varname,i0)] for DIM=1, gfarrayname[IDX3(varname,i0,i1)] for DIM=2, etc.
-        retstring += gfarrayname + "[IDX" + str(DIM+1) + "(" + varname.upper()+"GF" + ", "
+        retstring += gfarrayname + "[IDX" + str(DIM+1) + "S(" + varname.upper()+"GF" + ", "
     elif par.parval_from_str("GridFuncMemAccess") == "ETK":
         # Return varname[CCTK_GFINDEX3D(i0,i1,i2)] for DIM=3. Error otherwise
         if DIM != 3:
@@ -294,6 +297,7 @@ def register_C_functions_and_NRPy_basic_defines():
 //   "k" are separated by Nxx_plus_2NGHOSTS0*Nxx_plus_2NGHOSTS1 in memory, etc.
 #define IDX4S(g,i,j,k) \
 ( (i) + Nxx_plus_2NGHOSTS0 * ( (j) + Nxx_plus_2NGHOSTS1 * ( (k) + Nxx_plus_2NGHOSTS2 * (g) ) ) )
+#define IDX4ptS(g,idx) ( (idx) + (Nxx_plus_2NGHOSTS0*Nxx_plus_2NGHOSTS1*Nxx_plus_2NGHOSTS2) * (g) )
 #define IDX3S(i,j,k) ( (i) + Nxx_plus_2NGHOSTS0 * ( (j) + Nxx_plus_2NGHOSTS1 * ( (k) ) ) )
 #define LOOP_REGION(i0min,i0max, i1min,i1max, i2min,i2max) \
   for(int i2=i2min;i2<i2max;i2++) for(int i1=i1min;i1<i1max;i1++) for(int i0=i0min;i0<i0max;i0++)

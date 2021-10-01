@@ -45,7 +45,7 @@ ShiftCondition = "GammaDriving2ndOrder_NoCovariant"
 # Output finite difference stencils as functions instead of inlined expressions.
 #   Dramatically speeds up compile times (esp with higher-order finite differences
 #   and GCC 9.3+)
-par.set_parval_from_str("finite_difference::FD_functions_enable", True)
+par.set_parval_from_str("finite_difference::enable_FD_functions", True)
 
 # Step 1.b: Set runtime parameters for Baikal and BaikalVacuum
 #         Current runtime choices:

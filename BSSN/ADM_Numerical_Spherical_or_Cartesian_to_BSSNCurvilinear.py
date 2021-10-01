@@ -160,11 +160,9 @@ def Convert_Spherical_or_Cartesian_ADM_to_BSSN_curvilinear(CoordType_in, ADM_inp
     params = "const paramstruct *restrict params,REAL *restrict xx[3],REAL *restrict in_gfs"
     preloop = ""
     enableCparameters=True
-    idx4replace = "IDX4S"
     if "oldloops" in loopopts:
         params = "const int Nxx[3],const int Nxx_plus_2NGHOSTS[3],REAL *xx[3],const REAL dxx[3],REAL *in_gfs"
         enableCparameters=False
-        idx4replace = "IDX4"
         preloop = """
 const REAL invdx0 = 1.0/dxx[0];
 const REAL invdx1 = 1.0/dxx[1];
@@ -173,7 +171,7 @@ const REAL invdx2 = 1.0/dxx[2];
     outCfunction(
         outfile=os.path.join(Ccodesdir, name + ".h"), desc=desc, name=name, params=params,
         preloop=preloop,
-        body=fin.FD_outputC("returnstring", lambdaU_expressions, outCparams).replace("IDX4",idx4replace),
+        body=fin.FD_outputC("returnstring", lambdaU_expressions, outCparams),
         loopopts="InteriorPoints,Read_xxs"+loopopts, enableCparameters=enableCparameters)
 
     # Step 5: Output all ADM-to-BSSN expressions to a C function. This function

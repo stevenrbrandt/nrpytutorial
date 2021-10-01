@@ -34,7 +34,7 @@ def Ath_EW(r,theta,phi, **params):
 
 def Aph_EW(r,theta,phi, **params):
     # 1/2 r^2 \sin^2 \theta
-    return (r * r * sp.sin(theta)**2)/2
+    return sp.Rational(1,2) * (r * r * sp.sin(theta)**2)
 
 #Step 3: Compute v^i from A_i and E_i
 def ValenciavU_func_EW(**params):

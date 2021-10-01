@@ -74,7 +74,8 @@ def stress_energy_source_terms_ito_T4UU_and_ADM_or_BSSN_metricvars(inputvars,cus
     for mu in range(4):
         for nu in range(4):
             rho += n4D[mu] * n4D[nu] * T4UU[mu][nu]
-    return SDD,SD,S,rho
+    return SDD, SD, S, rho
+
 
 # Step 3: Add BSSN stress-energy source terms to BSSN RHSs
 def BSSN_source_terms_for_BSSN_RHSs(custom_T4UU=None):

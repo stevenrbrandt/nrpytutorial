@@ -23,7 +23,7 @@
 #         zachetie **at** gmail **dot* com
 
 import sympy as sp                  # SymPy: The Python computer algebra package upon which NRPy+ depends
-from outputC import outputC,superfast_uniq,add_to_Cfunction_dict # NRPy+: Core C code output module
+from outputC import outputC, superfast_uniq, add_to_Cfunction_dict, indent_Ccode  # NRPy+: Core C code output module
 # VVVVVVVVVVVVVVVVV
 ## TO BE DEPRECATED
 from outputC import outC_function_dict
@@ -841,8 +841,8 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
             for dirn in range(3):
                 if (gri.xx[dirn] in frees_uniq) and not (gri.xx[(dirn+1)%3] in frees_uniq) and not (gri.xx[(dirn+2)%3] in frees_uniq):
                     define_str += "for(int i"+str(dirn)+"=0;i"+str(dirn)+"<Nxx_plus_2NGHOSTS"+str(dirn)+";i"+str(dirn)+"++) {\n"
-                    define_str += "    const REAL xx"+str(dirn)+" = xx["+str(dirn)+"][i"+str(dirn)+"];\n"
-                    define_str += "    rfmstruct." + str(freevars_uniq_xx_indep[which_freevar]) + "[i"+str(dirn)+"] = " + str(sp.ccode(freevars_uniq_vals[which_freevar])) + ";\n"
+                    define_str += "  const REAL xx"+str(dirn)+" = xx["+str(dirn)+"][i"+str(dirn)+"];\n"
+                    define_str += "  rfmstruct." + str(freevars_uniq_xx_indep[which_freevar]) + "[i"+str(dirn)+"] = " + str(sp.ccode(freevars_uniq_vals[which_freevar])) + ";\n"
                     define_str += "}\n\n"
                     readvr_str[dirn] += "const REAL " + str(freevars_uniq_xx_indep[which_freevar]) + " = rfmstruct->" + \
                                      str(freevars_uniq_xx_indep[which_freevar]) + "[i"+str(dirn)+"];\n"
@@ -857,9 +857,9 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
             if (not output_define_and_readvr) and (gri.xx[0] in frees_uniq) and (gri.xx[1] in frees_uniq):
                 define_str += """
 for(int i1=0;i1<Nxx_plus_2NGHOSTS1;i1++) for(int i0=0;i0<Nxx_plus_2NGHOSTS0;i0++) {
-    const REAL xx0 = xx[0][i0];
-    const REAL xx1 = xx[1][i1];
-    rfmstruct.""" + str(freevars_uniq_xx_indep[which_freevar]) + """[i0 + Nxx_plus_2NGHOSTS0*i1] = """ + str(sp.ccode(freevars_uniq_vals[which_freevar])) + """;
+  const REAL xx0 = xx[0][i0];
+  const REAL xx1 = xx[1][i1];
+  rfmstruct.""" + str(freevars_uniq_xx_indep[which_freevar]) + """[i0 + Nxx_plus_2NGHOSTS0*i1] = """ + str(sp.ccode(freevars_uniq_vals[which_freevar])) + """;
 }\n\n"""
                 readvr_str[0] += "const REAL " + str(freevars_uniq_xx_indep[which_freevar]) + " = rfmstruct->" + \
                                  str(freevars_uniq_xx_indep[which_freevar]) + "[i0 + Nxx_plus_2NGHOSTS0*i1];\n"
@@ -878,7 +878,7 @@ for(int i1=0;i1<Nxx_plus_2NGHOSTS1;i1++) for(int i0=0;i0<Nxx_plus_2NGHOSTS0;i0++
 
         which_freevar += 1
 
-    struct_str += "} rfm_struct;\n\n"
+    struct_str += "} rfm_struct;\n"
 
     # Step 8: Output needed C code to files
     outdir = par.parval_from_str(thismodule+"::rfm_precompute_Ccode_outdir")
@@ -974,7 +974,6 @@ def get_EigenCoord():
     sys.exit(1)
 
 
-
 # Compute proper distance in all 3 directions. Used to find the appropriate timestep for the CFL condition.
 def ds_dirn(delxx, append_gridsuffix_to_xx=False):
     gridsuffix = ""  # Disable for now
@@ -996,7 +995,7 @@ def ds_dirn(delxx, append_gridsuffix_to_xx=False):
 
 # Find the appropriate timestep for the CFL condition.
 def add_to_Cfunction_dict__find_timestep(rel_path_to_Cparams=os.path.join("./"), enable_mask=False,
-                                         output_dt_local_h_only=False):
+                                         output_dt_local_h_only=False, use_unit_wavespeed=False):
     gridsuffix = ""  # Disable for now
     ##############################
     # Step 1: Function description
@@ -1047,6 +1046,8 @@ def add_to_Cfunction_dict__find_timestep(rel_path_to_Cparams=os.path.join("./"),
         # output_dt_local_h_only means we seek a minimum over all directions at given gridpoint only
         body += indent + "// Set dt_local["+gridsuffix.replace("_grid", "")+"] = MIN(ds_dirn0, ds_dirn1, ds_dirn2) * CFL_FACTOR/wavespeed :\n"
         body += indent + "dt_local["+gridsuffix.replace("_grid", "")+"] = MIN(ds_dirn0, MIN(ds_dirn1, ds_dirn2)) * CFL_FACTOR/wavespeed;\n"
+        if use_unit_wavespeed:
+            body = body.replace("wavespeed", "1.0")
     if enable_mask:
         body += "}\n"
 
@@ -1059,6 +1060,8 @@ def add_to_Cfunction_dict__find_timestep(rel_path_to_Cparams=os.path.join("./"),
     ##############################
     # Step 8: after the loop
     postloop = "    return dsmin*CFL_FACTOR/wavespeed;\n"
+    if use_unit_wavespeed:
+        postloop = postloop.replace("wavespeed", "1.0")
     ##############################
     # Step 9: add to Cfunction dictionary
     add_to_Cfunction_dict(
@@ -1200,7 +1203,7 @@ void set_Nxx_dxx_invdx_params__and__xx(const int EigenCoord, const int Nxx[3],
             file.write("        xxmin["+str(i)+"] = "+str(xxmin[i])+";\n")
             file.write("        xxmax["+str(i)+"] = "+str(xxmax[i])+";\n")
         file.write("""
-    } else if (EigenCoord == 1) {
+    } else { // if (EigenCoord == 1)
 """)
         CoordSystem_orig = par.parval_from_str("reference_metric::CoordSystem")
         par.set_parval_from_str("reference_metric::CoordSystem",get_EigenCoord())
@@ -1357,8 +1360,7 @@ def add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=os.p
     // Step 0d.i: Declare Delta x^i=dxx{0,1,2} and invdxx{0,1,2}, as well as xxmin[3] and xxmax[3]:
     REAL xxmin[3],xxmax[3];
     if(EigenCoord == 0) {
-"""
-    body += set_xxmin_xxmax() + """    } else if (EigenCoord == 1) {
+""" + set_xxmin_xxmax() + """    } else { // if (EigenCoord == 1)
 """
     CoordSystem_orig = par.parval_from_str("reference_metric::CoordSystem")
     # If we are using a "holey" Spherical-like coordinate, for certain grids xx0min>0 is
@@ -1455,13 +1457,16 @@ def out_timestep_func_to_file(outfile):
         file.write(outC_function_dict["find_timestep"])
 
 
-def register_C_functions_and_NRPy_basic_defines(rel_path_to_Cparams=os.path.join("./"), enable_rfm_precompute=False):
+def register_C_functions_and_NRPy_basic_defines(rel_path_to_Cparams=os.path.join("./"), enable_rfm_precompute=False,
+                                                use_unit_wavespeed_for_find_timestep=False):
     add_to_Cfunction_dict__find_timestep(rel_path_to_Cparams=rel_path_to_Cparams, enable_mask=False,
-                                         output_dt_local_h_only=False)
+                                         output_dt_local_h_only=False,
+                                         use_unit_wavespeed=use_unit_wavespeed_for_find_timestep)
     add_to_Cfunc_dict_xx_to_Cart(rel_path_to_Cparams=rel_path_to_Cparams)
     add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=rel_path_to_Cparams)
-    add_to_Cfunc_dict__Cart_to_xx_and_nearest_i0i1i2(rel_path_to_Cparams=rel_path_to_Cparams,
-                                                     relative_to="local_grid_center")
+    for frame in "local", "global":
+        add_to_Cfunc_dict__Cart_to_xx_and_nearest_i0i1i2(rel_path_to_Cparams=rel_path_to_Cparams,
+                                                         relative_to=frame + "_grid_center")
 
     if enable_rfm_precompute:
         if par.parval_from_str(thismodule+"::rfm_precompute_to_Cfunctions_and_NRPy_basic_defines") == "True":
@@ -1472,7 +1477,7 @@ def register_C_functions_and_NRPy_basic_defines(rel_path_to_Cparams=os.path.join
                 c_type="void",
                 name="rfm_precompute_rfmstruct_malloc",
                 params="const paramstruct *restrict params, rfm_struct *restrict rfmstruct",
-                body=rfm_struct__malloc.replace("rfmstruct.", "rfmstruct->"),
+                body=indent_Ccode(rfm_struct__malloc.replace("rfmstruct.", "rfmstruct->")),
                 rel_path_to_Cparams=rel_path_to_Cparams)
             add_to_Cfunction_dict(
                 includes=[os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
@@ -1480,7 +1485,7 @@ def register_C_functions_and_NRPy_basic_defines(rel_path_to_Cparams=os.path.join
                 c_type="void",
                 name="rfm_precompute_rfmstruct_define",
                 params="const paramstruct *restrict params, REAL *restrict xx[3], rfm_struct *restrict rfmstruct",
-                body=rfm_struct__define.replace("rfmstruct.", "rfmstruct->"),
+                body=indent_Ccode(rfm_struct__define.replace("rfmstruct.", "rfmstruct->")),
                 rel_path_to_Cparams=rel_path_to_Cparams)
             add_to_Cfunction_dict(
                 includes=[os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
@@ -1488,7 +1493,7 @@ def register_C_functions_and_NRPy_basic_defines(rel_path_to_Cparams=os.path.join
                 c_type="void",
                 name="rfm_precompute_rfmstruct_freemem",
                 params="const paramstruct *restrict params, rfm_struct *restrict rfmstruct",
-                body=rfm_struct__freemem.replace("rfmstruct.", "rfmstruct->"),
+                body=indent_Ccode(rfm_struct__freemem.replace("rfmstruct.", "rfmstruct->")),
                 rel_path_to_Cparams=rel_path_to_Cparams)
             outC_NRPy_basic_defines_h_dict["reference_metric"] = NRPy_basic_defines_str
         else:

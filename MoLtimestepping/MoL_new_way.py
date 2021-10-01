@@ -20,7 +20,7 @@ def diagonal(key):
     L = len(Butcher)-1  # Establish the number of rows to check for diagonal trait, all bust last row
     row_idx = 0  # Initialize the Butcher table row index
     for i in range(L):  # Check all the desired rows
-        for j in range(1,row_idx):  # Check each element before the diagonal element in a row
+        for j in range(1, row_idx):  # Check each element before the diagonal element in a row
             if Butcher[i][j] != sp.sympify(0):  # If any non-diagonal coeffcient is non-zero,
                                                 # then the table is not diagonal
                 return False
@@ -106,6 +106,7 @@ def add_to_Cfunction_dict_MoL_malloc(MoL_method, which_gfs):
         if gridfunctions == "auxevol_gfs":
             num_gfs = "NUM_AUXEVOL_GFS"
         body += "gridfuncs->" + gridfunctions + " = (REAL *restrict)malloc(sizeof(REAL) * " + num_gfs + " * Nxx_plus_2NGHOSTS_tot);\n"
+    body += "\ngridfuncs->diagnostic_output_gfs = gridfuncs->" + diagnostic_gridfunctions_point_to + ";\n"
     add_to_Cfunction_dict(
         includes=includes,
         desc=desc,
@@ -181,6 +182,8 @@ def add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string = "", 
     params  = "const paramstruct *restrict params, "
     if enable_rfm:
         params += "const rfm_struct *restrict rfmstruct, "
+    else:
+        params += "REAL *xx[3], "
     if enable_curviBCs:
         params += "const bc_struct *restrict bcstruct, "
     params += "MoL_gridfunctions_struct *restrict gridfuncs, const REAL dt"
