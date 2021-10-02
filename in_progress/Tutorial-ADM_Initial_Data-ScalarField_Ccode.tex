@@ -1,0 +1,1379 @@
+% Based on http://nbviewer.jupyter.org/github/ipython/nbconvert-examples/blob/master/citations/Tutorial.ipynb , authored by Brian E. Granger
+    % Declare the document class
+    \documentclass[landscape,letterpaper,10pt,english]{article}
+
+
+    \usepackage[breakable]{tcolorbox}
+    \usepackage{parskip} % Stop auto-indenting (to mimic markdown behaviour)
+    
+    \usepackage{iftex}
+    \ifPDFTeX
+    	\usepackage[T1]{fontenc}
+    	\usepackage{mathpazo}
+    \else
+    	\usepackage{fontspec}
+    \fi
+
+    % Basic figure setup, for now with no caption control since it's done
+    % automatically by Pandoc (which extracts ![](path) syntax from Markdown).
+    \usepackage{graphicx}
+    % Maintain compatibility with old templates. Remove in nbconvert 6.0
+    \let\Oldincludegraphics\includegraphics
+    % Ensure that by default, figures have no caption (until we provide a
+    % proper Figure object with a Caption API and a way to capture that
+    % in the conversion process - todo).
+    \usepackage{caption}
+    \DeclareCaptionFormat{nocaption}{}
+    \captionsetup{format=nocaption,aboveskip=0pt,belowskip=0pt}
+
+    \usepackage{float}
+    \floatplacement{figure}{H} % forces figures to be placed at the correct location
+    \usepackage{xcolor} % Allow colors to be defined
+    \usepackage{enumerate} % Needed for markdown enumerations to work
+    \usepackage{geometry} % Used to adjust the document margins
+    \usepackage{amsmath} % Equations
+    \usepackage{amssymb} % Equations
+    \usepackage{textcomp} % defines textquotesingle
+    % Hack from http://tex.stackexchange.com/a/47451/13684:
+    \AtBeginDocument{%
+        \def\PYZsq{\textquotesingle}% Upright quotes in Pygmentized code
+    }
+    \usepackage{upquote} % Upright quotes for verbatim code
+    \usepackage{eurosym} % defines \euro
+    \usepackage[mathletters]{ucs} % Extended unicode (utf-8) support
+    \usepackage{fancyvrb} % verbatim replacement that allows latex
+    \usepackage{grffile} % extends the file name processing of package graphics 
+                         % to support a larger range
+    \makeatletter % fix for old versions of grffile with XeLaTeX
+    \@ifpackagelater{grffile}{2019/11/01}
+    {
+      % Do nothing on new versions
+    }
+    {
+      \def\Gread@@xetex#1{%
+        \IfFileExists{"\Gin@base".bb}%
+        {\Gread@eps{\Gin@base.bb}}%
+        {\Gread@@xetex@aux#1}%
+      }
+    }
+    \makeatother
+    \usepackage[Export]{adjustbox} % Used to constrain images to a maximum size
+    \adjustboxset{max size={0.9\linewidth}{0.9\paperheight}}
+
+    % The hyperref package gives us a pdf with properly built
+    % internal navigation ('pdf bookmarks' for the table of contents,
+    % internal cross-reference links, web links for URLs, etc.)
+    \usepackage{hyperref}
+    % The default LaTeX title has an obnoxious amount of whitespace. By default,
+    % titling removes some of it. It also provides customization options.
+    \usepackage{titling}
+    \usepackage{longtable} % longtable support required by pandoc >1.10
+    \usepackage{booktabs}  % table support for pandoc > 1.12.2
+    \usepackage[inline]{enumitem} % IRkernel/repr support (it uses the enumerate* environment)
+    \usepackage[normalem]{ulem} % ulem is needed to support strikethroughs (\sout)
+                                % normalem makes italics be italics, not underlines
+    \usepackage{mathrsfs}
+    
+
+    
+    % Colors for the hyperref package
+    \definecolor{urlcolor}{rgb}{0,.145,.698}
+    \definecolor{linkcolor}{rgb}{.71,0.21,0.01}
+    \definecolor{citecolor}{rgb}{.12,.54,.11}
+
+    % ANSI colors
+    \definecolor{ansi-black}{HTML}{3E424D}
+    \definecolor{ansi-black-intense}{HTML}{282C36}
+    \definecolor{ansi-red}{HTML}{E75C58}
+    \definecolor{ansi-red-intense}{HTML}{B22B31}
+    \definecolor{ansi-green}{HTML}{00A250}
+    \definecolor{ansi-green-intense}{HTML}{007427}
+    \definecolor{ansi-yellow}{HTML}{DDB62B}
+    \definecolor{ansi-yellow-intense}{HTML}{B27D12}
+    \definecolor{ansi-blue}{HTML}{208FFB}
+    \definecolor{ansi-blue-intense}{HTML}{0065CA}
+    \definecolor{ansi-magenta}{HTML}{D160C4}
+    \definecolor{ansi-magenta-intense}{HTML}{A03196}
+    \definecolor{ansi-cyan}{HTML}{60C6C8}
+    \definecolor{ansi-cyan-intense}{HTML}{258F8F}
+    \definecolor{ansi-white}{HTML}{C5C1B4}
+    \definecolor{ansi-white-intense}{HTML}{A1A6B2}
+    \definecolor{ansi-default-inverse-fg}{HTML}{FFFFFF}
+    \definecolor{ansi-default-inverse-bg}{HTML}{000000}
+
+    % common color for the border for error outputs.
+    \definecolor{outerrorbackground}{HTML}{FFDFDF}
+
+    % commands and environments needed by pandoc snippets
+    % extracted from the output of `pandoc -s`
+    \providecommand{\tightlist}{%
+      \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+    \DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+    % Add ',fontsize=\small' for more characters per line
+    \newenvironment{Shaded}{}{}
+    \newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.00,0.44,0.13}{\textbf{{#1}}}}
+    \newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.56,0.13,0.00}{{#1}}}
+    \newcommand{\DecValTok}[1]{\textcolor[rgb]{0.25,0.63,0.44}{{#1}}}
+    \newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.25,0.63,0.44}{{#1}}}
+    \newcommand{\FloatTok}[1]{\textcolor[rgb]{0.25,0.63,0.44}{{#1}}}
+    \newcommand{\CharTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{{#1}}}
+    \newcommand{\StringTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{{#1}}}
+    \newcommand{\CommentTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textit{{#1}}}}
+    \newcommand{\OtherTok}[1]{\textcolor[rgb]{0.00,0.44,0.13}{{#1}}}
+    \newcommand{\AlertTok}[1]{\textcolor[rgb]{1.00,0.00,0.00}{\textbf{{#1}}}}
+    \newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.02,0.16,0.49}{{#1}}}
+    \newcommand{\RegionMarkerTok}[1]{{#1}}
+    \newcommand{\ErrorTok}[1]{\textcolor[rgb]{1.00,0.00,0.00}{\textbf{{#1}}}}
+    \newcommand{\NormalTok}[1]{{#1}}
+    
+    % Additional commands for more recent versions of Pandoc
+    \newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.53,0.00,0.00}{{#1}}}
+    \newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{{#1}}}
+    \newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.25,0.44,0.63}{{#1}}}
+    \newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.73,0.40,0.53}{{#1}}}
+    \newcommand{\ImportTok}[1]{{#1}}
+    \newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.73,0.13,0.13}{\textit{{#1}}}}
+    \newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{{#1}}}}}
+    \newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{{#1}}}}}
+    \newcommand{\VariableTok}[1]{\textcolor[rgb]{0.10,0.09,0.49}{{#1}}}
+    \newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.00,0.44,0.13}{\textbf{{#1}}}}
+    \newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.40,0.40,0.40}{{#1}}}
+    \newcommand{\BuiltInTok}[1]{{#1}}
+    \newcommand{\ExtensionTok}[1]{{#1}}
+    \newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.74,0.48,0.00}{{#1}}}
+    \newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.49,0.56,0.16}{{#1}}}
+    \newcommand{\InformationTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{{#1}}}}}
+    \newcommand{\WarningTok}[1]{\textcolor[rgb]{0.38,0.63,0.69}{\textbf{\textit{{#1}}}}}
+    
+    
+    % Define a nice break command that doesn't care if a line doesn't already
+    % exist.
+    \def\br{\hspace*{\fill} \\* }
+    % Math Jax compatibility definitions
+    \def\gt{>}
+    \def\lt{<}
+    \let\Oldtex\TeX
+    \let\Oldlatex\LaTeX
+    \renewcommand{\TeX}{\textrm{\Oldtex}}
+    \renewcommand{\LaTeX}{\textrm{\Oldlatex}}
+    % Document parameters
+    % Document title
+    \title{Tutorial-ADM\_Initial\_Data-ScalarField\_Ccode}
+    
+    
+    
+    
+    
+% Pygments definitions
+\makeatletter
+\def\PY@reset{\let\PY@it=\relax \let\PY@bf=\relax%
+    \let\PY@ul=\relax \let\PY@tc=\relax%
+    \let\PY@bc=\relax \let\PY@ff=\relax}
+\def\PY@tok#1{\csname PY@tok@#1\endcsname}
+\def\PY@toks#1+{\ifx\relax#1\empty\else%
+    \PY@tok{#1}\expandafter\PY@toks\fi}
+\def\PY@do#1{\PY@bc{\PY@tc{\PY@ul{%
+    \PY@it{\PY@bf{\PY@ff{#1}}}}}}}
+\def\PY#1#2{\PY@reset\PY@toks#1+\relax+\PY@do{#2}}
+
+\@namedef{PY@tok@w}{\def\PY@tc##1{\textcolor[rgb]{0.73,0.73,0.73}{##1}}}
+\@namedef{PY@tok@c}{\let\PY@it=\textit\def\PY@tc##1{\textcolor[rgb]{0.25,0.50,0.50}{##1}}}
+\@namedef{PY@tok@cp}{\def\PY@tc##1{\textcolor[rgb]{0.74,0.48,0.00}{##1}}}
+\@namedef{PY@tok@k}{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\@namedef{PY@tok@kp}{\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\@namedef{PY@tok@kt}{\def\PY@tc##1{\textcolor[rgb]{0.69,0.00,0.25}{##1}}}
+\@namedef{PY@tok@o}{\def\PY@tc##1{\textcolor[rgb]{0.40,0.40,0.40}{##1}}}
+\@namedef{PY@tok@ow}{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.67,0.13,1.00}{##1}}}
+\@namedef{PY@tok@nb}{\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\@namedef{PY@tok@nf}{\def\PY@tc##1{\textcolor[rgb]{0.00,0.00,1.00}{##1}}}
+\@namedef{PY@tok@nc}{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.00,1.00}{##1}}}
+\@namedef{PY@tok@nn}{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.00,1.00}{##1}}}
+\@namedef{PY@tok@ne}{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.82,0.25,0.23}{##1}}}
+\@namedef{PY@tok@nv}{\def\PY@tc##1{\textcolor[rgb]{0.10,0.09,0.49}{##1}}}
+\@namedef{PY@tok@no}{\def\PY@tc##1{\textcolor[rgb]{0.53,0.00,0.00}{##1}}}
+\@namedef{PY@tok@nl}{\def\PY@tc##1{\textcolor[rgb]{0.63,0.63,0.00}{##1}}}
+\@namedef{PY@tok@ni}{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.60,0.60,0.60}{##1}}}
+\@namedef{PY@tok@na}{\def\PY@tc##1{\textcolor[rgb]{0.49,0.56,0.16}{##1}}}
+\@namedef{PY@tok@nt}{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\@namedef{PY@tok@nd}{\def\PY@tc##1{\textcolor[rgb]{0.67,0.13,1.00}{##1}}}
+\@namedef{PY@tok@s}{\def\PY@tc##1{\textcolor[rgb]{0.73,0.13,0.13}{##1}}}
+\@namedef{PY@tok@sd}{\let\PY@it=\textit\def\PY@tc##1{\textcolor[rgb]{0.73,0.13,0.13}{##1}}}
+\@namedef{PY@tok@si}{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.73,0.40,0.53}{##1}}}
+\@namedef{PY@tok@se}{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.73,0.40,0.13}{##1}}}
+\@namedef{PY@tok@sr}{\def\PY@tc##1{\textcolor[rgb]{0.73,0.40,0.53}{##1}}}
+\@namedef{PY@tok@ss}{\def\PY@tc##1{\textcolor[rgb]{0.10,0.09,0.49}{##1}}}
+\@namedef{PY@tok@sx}{\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\@namedef{PY@tok@m}{\def\PY@tc##1{\textcolor[rgb]{0.40,0.40,0.40}{##1}}}
+\@namedef{PY@tok@gh}{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.00,0.50}{##1}}}
+\@namedef{PY@tok@gu}{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.50,0.00,0.50}{##1}}}
+\@namedef{PY@tok@gd}{\def\PY@tc##1{\textcolor[rgb]{0.63,0.00,0.00}{##1}}}
+\@namedef{PY@tok@gi}{\def\PY@tc##1{\textcolor[rgb]{0.00,0.63,0.00}{##1}}}
+\@namedef{PY@tok@gr}{\def\PY@tc##1{\textcolor[rgb]{1.00,0.00,0.00}{##1}}}
+\@namedef{PY@tok@ge}{\let\PY@it=\textit}
+\@namedef{PY@tok@gs}{\let\PY@bf=\textbf}
+\@namedef{PY@tok@gp}{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.00,0.50}{##1}}}
+\@namedef{PY@tok@go}{\def\PY@tc##1{\textcolor[rgb]{0.53,0.53,0.53}{##1}}}
+\@namedef{PY@tok@gt}{\def\PY@tc##1{\textcolor[rgb]{0.00,0.27,0.87}{##1}}}
+\@namedef{PY@tok@err}{\def\PY@bc##1{{\setlength{\fboxsep}{\string -\fboxrule}\fcolorbox[rgb]{1.00,0.00,0.00}{1,1,1}{\strut ##1}}}}
+\@namedef{PY@tok@kc}{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\@namedef{PY@tok@kd}{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\@namedef{PY@tok@kn}{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\@namedef{PY@tok@kr}{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\@namedef{PY@tok@bp}{\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\@namedef{PY@tok@fm}{\def\PY@tc##1{\textcolor[rgb]{0.00,0.00,1.00}{##1}}}
+\@namedef{PY@tok@vc}{\def\PY@tc##1{\textcolor[rgb]{0.10,0.09,0.49}{##1}}}
+\@namedef{PY@tok@vg}{\def\PY@tc##1{\textcolor[rgb]{0.10,0.09,0.49}{##1}}}
+\@namedef{PY@tok@vi}{\def\PY@tc##1{\textcolor[rgb]{0.10,0.09,0.49}{##1}}}
+\@namedef{PY@tok@vm}{\def\PY@tc##1{\textcolor[rgb]{0.10,0.09,0.49}{##1}}}
+\@namedef{PY@tok@sa}{\def\PY@tc##1{\textcolor[rgb]{0.73,0.13,0.13}{##1}}}
+\@namedef{PY@tok@sb}{\def\PY@tc##1{\textcolor[rgb]{0.73,0.13,0.13}{##1}}}
+\@namedef{PY@tok@sc}{\def\PY@tc##1{\textcolor[rgb]{0.73,0.13,0.13}{##1}}}
+\@namedef{PY@tok@dl}{\def\PY@tc##1{\textcolor[rgb]{0.73,0.13,0.13}{##1}}}
+\@namedef{PY@tok@s2}{\def\PY@tc##1{\textcolor[rgb]{0.73,0.13,0.13}{##1}}}
+\@namedef{PY@tok@sh}{\def\PY@tc##1{\textcolor[rgb]{0.73,0.13,0.13}{##1}}}
+\@namedef{PY@tok@s1}{\def\PY@tc##1{\textcolor[rgb]{0.73,0.13,0.13}{##1}}}
+\@namedef{PY@tok@mb}{\def\PY@tc##1{\textcolor[rgb]{0.40,0.40,0.40}{##1}}}
+\@namedef{PY@tok@mf}{\def\PY@tc##1{\textcolor[rgb]{0.40,0.40,0.40}{##1}}}
+\@namedef{PY@tok@mh}{\def\PY@tc##1{\textcolor[rgb]{0.40,0.40,0.40}{##1}}}
+\@namedef{PY@tok@mi}{\def\PY@tc##1{\textcolor[rgb]{0.40,0.40,0.40}{##1}}}
+\@namedef{PY@tok@il}{\def\PY@tc##1{\textcolor[rgb]{0.40,0.40,0.40}{##1}}}
+\@namedef{PY@tok@mo}{\def\PY@tc##1{\textcolor[rgb]{0.40,0.40,0.40}{##1}}}
+\@namedef{PY@tok@ch}{\let\PY@it=\textit\def\PY@tc##1{\textcolor[rgb]{0.25,0.50,0.50}{##1}}}
+\@namedef{PY@tok@cm}{\let\PY@it=\textit\def\PY@tc##1{\textcolor[rgb]{0.25,0.50,0.50}{##1}}}
+\@namedef{PY@tok@cpf}{\let\PY@it=\textit\def\PY@tc##1{\textcolor[rgb]{0.25,0.50,0.50}{##1}}}
+\@namedef{PY@tok@c1}{\let\PY@it=\textit\def\PY@tc##1{\textcolor[rgb]{0.25,0.50,0.50}{##1}}}
+\@namedef{PY@tok@cs}{\let\PY@it=\textit\def\PY@tc##1{\textcolor[rgb]{0.25,0.50,0.50}{##1}}}
+
+\def\PYZbs{\char`\\}
+\def\PYZus{\char`\_}
+\def\PYZob{\char`\{}
+\def\PYZcb{\char`\}}
+\def\PYZca{\char`\^}
+\def\PYZam{\char`\&}
+\def\PYZlt{\char`\<}
+\def\PYZgt{\char`\>}
+\def\PYZsh{\char`\#}
+\def\PYZpc{\char`\%}
+\def\PYZdl{\char`\$}
+\def\PYZhy{\char`\-}
+\def\PYZsq{\char`\'}
+\def\PYZdq{\char`\"}
+\def\PYZti{\char`\~}
+% for compatibility with earlier versions
+\def\PYZat{@}
+\def\PYZlb{[}
+\def\PYZrb{]}
+\makeatother
+
+
+    % For linebreaks inside Verbatim environment from package fancyvrb. 
+    \makeatletter
+        \newbox\Wrappedcontinuationbox 
+        \newbox\Wrappedvisiblespacebox 
+        \newcommand*\Wrappedvisiblespace {\textcolor{red}{\textvisiblespace}} 
+        \newcommand*\Wrappedcontinuationsymbol {\textcolor{red}{\llap{\tiny$\m@th\hookrightarrow$}}} 
+        \newcommand*\Wrappedcontinuationindent {3ex } 
+        \newcommand*\Wrappedafterbreak {\kern\Wrappedcontinuationindent\copy\Wrappedcontinuationbox} 
+        % Take advantage of the already applied Pygments mark-up to insert 
+        % potential linebreaks for TeX processing. 
+        %        {, <, #, %, $, ' and ": go to next line. 
+        %        _, }, ^, &, >, - and ~: stay at end of broken line. 
+        % Use of \textquotesingle for straight quote. 
+        \newcommand*\Wrappedbreaksatspecials {% 
+            \def\PYGZus{\discretionary{\char`\_}{\Wrappedafterbreak}{\char`\_}}% 
+            \def\PYGZob{\discretionary{}{\Wrappedafterbreak\char`\{}{\char`\{}}% 
+            \def\PYGZcb{\discretionary{\char`\}}{\Wrappedafterbreak}{\char`\}}}% 
+            \def\PYGZca{\discretionary{\char`\^}{\Wrappedafterbreak}{\char`\^}}% 
+            \def\PYGZam{\discretionary{\char`\&}{\Wrappedafterbreak}{\char`\&}}% 
+            \def\PYGZlt{\discretionary{}{\Wrappedafterbreak\char`\<}{\char`\<}}% 
+            \def\PYGZgt{\discretionary{\char`\>}{\Wrappedafterbreak}{\char`\>}}% 
+            \def\PYGZsh{\discretionary{}{\Wrappedafterbreak\char`\#}{\char`\#}}% 
+            \def\PYGZpc{\discretionary{}{\Wrappedafterbreak\char`\%}{\char`\%}}% 
+            \def\PYGZdl{\discretionary{}{\Wrappedafterbreak\char`\$}{\char`\$}}% 
+            \def\PYGZhy{\discretionary{\char`\-}{\Wrappedafterbreak}{\char`\-}}% 
+            \def\PYGZsq{\discretionary{}{\Wrappedafterbreak\textquotesingle}{\textquotesingle}}% 
+            \def\PYGZdq{\discretionary{}{\Wrappedafterbreak\char`\"}{\char`\"}}% 
+            \def\PYGZti{\discretionary{\char`\~}{\Wrappedafterbreak}{\char`\~}}% 
+        } 
+        % Some characters . , ; ? ! / are not pygmentized. 
+        % This macro makes them "active" and they will insert potential linebreaks 
+        \newcommand*\Wrappedbreaksatpunct {% 
+            \lccode`\~`\.\lowercase{\def~}{\discretionary{\hbox{\char`\.}}{\Wrappedafterbreak}{\hbox{\char`\.}}}% 
+            \lccode`\~`\,\lowercase{\def~}{\discretionary{\hbox{\char`\,}}{\Wrappedafterbreak}{\hbox{\char`\,}}}% 
+            \lccode`\~`\;\lowercase{\def~}{\discretionary{\hbox{\char`\;}}{\Wrappedafterbreak}{\hbox{\char`\;}}}% 
+            \lccode`\~`\:\lowercase{\def~}{\discretionary{\hbox{\char`\:}}{\Wrappedafterbreak}{\hbox{\char`\:}}}% 
+            \lccode`\~`\?\lowercase{\def~}{\discretionary{\hbox{\char`\?}}{\Wrappedafterbreak}{\hbox{\char`\?}}}% 
+            \lccode`\~`\!\lowercase{\def~}{\discretionary{\hbox{\char`\!}}{\Wrappedafterbreak}{\hbox{\char`\!}}}% 
+            \lccode`\~`\/\lowercase{\def~}{\discretionary{\hbox{\char`\/}}{\Wrappedafterbreak}{\hbox{\char`\/}}}% 
+            \catcode`\.\active
+            \catcode`\,\active 
+            \catcode`\;\active
+            \catcode`\:\active
+            \catcode`\?\active
+            \catcode`\!\active
+            \catcode`\/\active 
+            \lccode`\~`\~ 	
+        }
+    \makeatother
+
+    \let\OriginalVerbatim=\Verbatim
+    \makeatletter
+    \renewcommand{\Verbatim}[1][1]{%
+        %\parskip\z@skip
+        \sbox\Wrappedcontinuationbox {\Wrappedcontinuationsymbol}%
+        \sbox\Wrappedvisiblespacebox {\FV@SetupFont\Wrappedvisiblespace}%
+        \def\FancyVerbFormatLine ##1{\hsize\linewidth
+            \vtop{\raggedright\hyphenpenalty\z@\exhyphenpenalty\z@
+                \doublehyphendemerits\z@\finalhyphendemerits\z@
+                \strut ##1\strut}%
+        }%
+        % If the linebreak is at a space, the latter will be displayed as visible
+        % space at end of first line, and a continuation symbol starts next line.
+        % Stretch/shrink are however usually zero for typewriter font.
+        \def\FV@Space {%
+            \nobreak\hskip\z@ plus\fontdimen3\font minus\fontdimen4\font
+            \discretionary{\copy\Wrappedvisiblespacebox}{\Wrappedafterbreak}
+            {\kern\fontdimen2\font}%
+        }%
+        
+        % Allow breaks at special characters using \PYG... macros.
+        \Wrappedbreaksatspecials
+        % Breaks at punctuation characters . , ; ? ! and / need catcode=\active 	
+        \OriginalVerbatim[#1,codes*=\Wrappedbreaksatpunct]%
+    }
+    \makeatother
+
+    % Exact colors from NB
+    \definecolor{incolor}{HTML}{303F9F}
+    \definecolor{outcolor}{HTML}{D84315}
+    \definecolor{cellborder}{HTML}{CFCFCF}
+    \definecolor{cellbackground}{HTML}{F7F7F7}
+    
+    % prompt
+    \makeatletter
+    \newcommand{\boxspacing}{\kern\kvtcb@left@rule\kern\kvtcb@boxsep}
+    \makeatother
+    \newcommand{\prompt}[4]{
+        {\ttfamily\llap{{\color{#2}[#3]:\hspace{3pt}#4}}\vspace{-\baselineskip}}
+    }
+    
+
+    
+% Start the section counter at -1, so the Table of Contents is Section 0
+   \setcounter{section}{-2}
+% Prevent overflowing lines due to hard-to-break entities
+    \sloppy
+    % Setup hyperref package
+    \hypersetup{
+      breaklinks=true,  % so long urls are correctly broken across lines
+      colorlinks=true,
+      urlcolor=urlcolor,
+      linkcolor=linkcolor,
+      citecolor=citecolor,
+      }
+
+    % Slightly bigger margins than the latex defaults
+    \geometry{verbose,tmargin=0.5in,bmargin=0.5in,lmargin=0.5in,rmargin=0.5in}
+
+
+\begin{document}
+    
+    \maketitle
+    
+    
+
+    
+    \hypertarget{tutorial-adm-initial-data-for-scalar-field-collapse}{%
+\section{Tutorial: ADM initial data for scalar field
+collapse}\label{tutorial-adm-initial-data-for-scalar-field-collapse}}
+
+\hypertarget{author-leo-werneck}{%
+\subsection{Author: Leo Werneck}\label{author-leo-werneck}}
+
+    \hypertarget{table-of-contents}{%
+\section{Table of Contents}\label{table-of-contents}}
+
+\[\label{toc}\]
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{-1}
+\tightlist
+\item
+  \hyperref[introduction]{Introduction}
+\item
+  \hyperref[initialize_nrpy]{Step 1}: Initialize core Python/NRPy+
+  modules
+\item
+  \hyperref[adding_functions_to_dictionary]{Step 2}: Adding C functions
+  to the dictionary
+
+  \begin{enumerate}
+  \def\labelenumii{\arabic{enumii}.}
+  \tightlist
+  \item
+    \hyperref[scalar_field_id_spherical]{Step 2.a}:
+    \texttt{scalar\_field\_id\_Spherical}
+  \item
+    \hyperref[build_tridiagonal_system_from_input_spherical]{Step 2.b}:
+    \texttt{build\_tridiagonal\_system\_from\_input\_Spherical}
+
+    \begin{enumerate}
+    \def\labelenumiii{\arabic{enumiii}.}
+    \tightlist
+    \item
+      \hyperref[tridiag_system_aux_vars]{Step 2.b.i}: Auxiliary
+      variables
+    \item
+      \hyperref[tridiag_system_main_diag]{Step 2.b.ii}: Main diagonal
+    \item
+      \hyperref[tridiag_system_upper_diag]{Step 2.b.iii}: Upper diagonal
+    \item
+      \hyperref[tridiag_system_lower_diag]{Step 2.b.iv}: Lower diagonal
+    \item
+      \hyperref[tridiag_system_source_vector]{Step 2.b.v}: Source vector
+      \(\vec{s}\)
+    \item
+      \hyperref[tridiag_system_func_body]{Step 2.b.vi}: Writing the
+      function's body
+    \item
+      \hyperref[tridiag_system_add_to_dict]{Step 2.b.vii}: Adding to
+      dictionary
+    \end{enumerate}
+  \end{enumerate}
+\item
+  \hyperref[main_standalone]{Step 3} Example usage: The \texttt{main}
+  function of a standalone code
+\item
+  \hyperref[validation]{Step 4} Validation of this tutorial against the
+  \href{../edit/ScalarField/ScalarField_InitialData.py}{ScalarField/ScalarField\_InitialData.py}
+  module
+\item
+  \hyperref[output_to_pdf]{Step 5} Output this module as
+  \(\LaTeX\)-formatted PDF file
+\end{enumerate}
+
+    \hypertarget{step-0-introduction-back-to-top}{%
+\section{\texorpdfstring{Step 0: Introduction {[}Back to
+\hyperref[toc]{top}{]}}{Step 0: Introduction {[}Back to {]}}}\label{step-0-introduction-back-to-top}}
+
+\[\label{introduction}\]
+
+\[
+\partial^{2}_{r}\psi + \frac{2}{r}\partial_{r}\psi + \pi\Phi^{2}\psi = 0\ ,
+\]
+
+where \(\psi \equiv e^{-\phi}\) is the conformal factor and
+\(\Phi \equiv \partial_{r}\varphi\), with \(\varphi\) the massless
+scalar field.
+
+We discretize the Hamiltonian constraint using
+\href{https://en.wikipedia.org/wiki/Finite_difference_coefficient}{second-order
+accurate finite differences}. We get
+
+\[
+\frac{\psi_{i+1} - 2\psi_{i} + \psi_{i-1}}{\Delta r^{2}} + \frac{2}{r_{i}}\left(\frac{\psi_{i+1}-\psi_{i-1}}{2\Delta r}\right) + \pi\psi_{i}\Phi^{2}_{i} = 0\ ,
+\]
+
+or, by multiplying the entire equation by \(\Delta r^{2}\) and then
+grouping the coefficients of each \(\psi_{j}\):
+
+\[
+\boxed{\left(1-\frac{\Delta r}{r_{i}}\right)\psi_{i-1}+\left(\pi\Delta r^{2}\Phi_{i}^{2}-2\right)\psi_{i} + \left(1+\frac{\Delta r}{r_{i}}\right)\psi_{i+1} = 0}\ .
+\]
+
+We choose to set up a grid that is cell-centered, with:
+
+\[
+r_{i} = \left(i-\frac{1}{2}\right)\Delta r\ ,
+\]
+
+so that \(r_{0} = - \frac{\Delta r}{2}\). This is a two-point boundary
+value problem, which we solve using the same strategy as
+\href{https://arxiv.org/pdf/1508.01614.pdf}{A\&C}, described in eqs.
+(48)-(50):
+
+\begin{align}
+\left.\partial_{r}\psi\right|_{r=0} &= 0\ ,\\
+\lim_{r\to\infty}\psi &= 1\ .
+\end{align}
+
+In terms of our grid structure, the first boundary condition (regularity
+at the origin) is written to second-order in \(\Delta r\) as:
+
+\[
+\left.\partial_{r}\psi\right|_{r=0} = \frac{\psi_{1} - \psi_{0}}{\Delta r} = 0 \Rightarrow \psi_{0} = \psi_{1}\ .
+\]
+
+The second boundary condition (asymptotic flatness) can be interpreted
+as
+
+\[
+\psi_{N} = 1 + \frac{C}{r_{N}}\ (r_{N}\gg1)\ ,
+\]
+
+which then implies
+
+\[
+\partial_{r}\psi_{N} = -\frac{C}{r_{N}^{2}} = -\frac{1}{r_{N}}\left(\frac{C}{r_{N}}\right) = -\frac{1}{r_{N}}\left(\psi_{N} - 1\right) = \frac{1-\psi_{N}}{r_{N}}\ ,
+\]
+
+which can then be written as
+
+\[
+\frac{\psi_{N+1}-\psi_{N-1}}{2\Delta r} = \frac{1-\psi_{N}}{r_{N}}\Rightarrow \psi_{N+1} = \psi_{N-1} - \frac{2\Delta r}{r_{N}}\psi_{N} + \frac{2\Delta r}{r_{N}}\ .
+\]
+
+Substituting the boundary conditions at the boxed equations above, we
+end up with
+
+\begin{align}
+\left(\pi\Delta r^{2}\Phi^{2}_{1} - 1 - \frac{\Delta r}{r_{1}}\right)\psi_{1} + \left(1+\frac{\Delta r}{r_{1}}\right)\psi_{2} = 0\quad &(i=1)\ ,\\
+\left(1-\frac{\Delta r}{r_{i}}\right)\psi_{i-1}+\left(\pi\Delta r^{2}\Phi_{i}^{2}-2\right)\psi_{i} + \left(1+\frac{\Delta r}{r_{i}}\right)\psi_{i+1} = 0\quad &(1<i<N)\ ,\\
+2\psi_{N-1} + \left[\pi\Delta r^{2}\Phi^{2}_{N} - 2 - \frac{2\Delta r}{r_{N}}\left(1+\frac{\Delta r}{r_{N}}\right)\right]\psi_{N} = - \frac{2\Delta r}{r_{N}}\left(1+\frac{\Delta r}{r_{N}}\right)\quad &(i=N)\ .
+\end{align}
+
+This results in the following tridiagonal system of linear equations
+
+\[
+A \cdot \vec{\psi} = \vec{s}\Rightarrow \vec{\psi} = A^{-1}\cdot\vec{s}\ ,
+\]
+
+where
+
+\[
+A=\begin{pmatrix}
+\left(\pi\Delta r^{2}\Phi^{2}_{1} - 1 - \frac{\Delta r}{r_{1}}\right) & \left(1+\frac{\Delta r}{r_{1}}\right) & 0 & 0 & 0 & 0 & 0\\
+\left(1-\frac{\Delta r}{r_{2}}\right) & \left(\pi\Delta r^{2}\Phi_{2}^{2}-2\right) & \left(1+\frac{\Delta r}{r_{2}}\right) & 0 & 0 & 0 & 0\\
+0 & \ddots & \ddots & \ddots & 0 & 0 & 0\\
+0 & 0 & \left(1-\frac{\Delta r}{r_{i}}\right) & \left(\pi\Delta r^{2}\Phi_{i}^{2}-2\right) & \left(1+\frac{\Delta r}{r_{i}}\right) & 0 & 0\\
+0 & 0 & 0 & \ddots & \ddots & \ddots & 0\\
+0 & 0 & 0 & 0 & \left(1-\frac{\Delta r}{r_{N-1}}\right) & \left(\pi\Delta r^{2}\Phi_{N-1}^{2}-2\right) & \left(1+\frac{\Delta r}{r_{N-1}}\right)\\
+0 & 0 & 0 & 0 & 0 & 2 & \left[\pi\Delta r^{2}\Phi^{2}_{N} - 2 - \frac{2\Delta r}{r_{N}}\left(1+\frac{\Delta r}{r_{N}}\right)\right]
+\end{pmatrix}\ ,
+\]
+
+\[
+\vec{\psi} = 
+\begin{pmatrix}
+\psi_{1}\\
+\psi_{2}\\
+\vdots\\
+\psi_{i}\\
+\vdots\\
+\psi_{N-1}\\
+\psi_{N}
+\end{pmatrix}\ ,
+\]
+
+and
+
+\[
+\vec{s} = 
+\begin{pmatrix}
+0\\
+0\\
+\vdots\\
+0\\
+\vdots\\
+0\\
+-\frac{2\Delta r}{r_{N}}\left(1+\frac{\Delta r}{r_{N}}\right)
+\end{pmatrix}
+\]
+
+    \hypertarget{step-1-initialize-core-pythonnrpy-modules-back-to-top}{%
+\section{\texorpdfstring{Step 1: Initialize core Python/NRPy+ modules
+{[}Back to
+\hyperref[toc]{top}{]}}{Step 1: Initialize core Python/NRPy+ modules {[}Back to {]}}}\label{step-1-initialize-core-pythonnrpy-modules-back-to-top}}
+
+\[\label{initialize_nrpy}\]
+
+Let's start by importing all needed modules from Python and defining the
+quadratic function for error estimates. We also check if the system has
+GPU support.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{1}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Step 1: Initialize core Python/NRPy+ modules}
+\PY{k+kn}{import} \PY{n+nn}{sympy} \PY{k}{as} \PY{n+nn}{sp}           \PY{c+c1}{\PYZsh{} SymPy: a computer algebra system written entirely in Python}
+\PY{k+kn}{import} \PY{n+nn}{os}\PY{o}{,}\PY{n+nn}{sys}\PY{o}{,}\PY{n+nn}{shutil}         \PY{c+c1}{\PYZsh{} Standard Python modules for multiplatform OS\PYZhy{}level functions}
+\PY{n}{sys}\PY{o}{.}\PY{n}{path}\PY{o}{.}\PY{n}{append}\PY{p}{(}\PY{n}{os}\PY{o}{.}\PY{n}{path}\PY{o}{.}\PY{n}{join}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{..}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}\PY{p}{)}
+\PY{k+kn}{import} \PY{n+nn}{outputC} \PY{k}{as} \PY{n+nn}{outC}       \PY{c+c1}{\PYZsh{} NRPy+: C code output functionality}
+\PY{k+kn}{import} \PY{n+nn}{cmdline\PYZus{}helper} \PY{k}{as} \PY{n+nn}{cmd} \PY{c+c1}{\PYZsh{} NRPy+: Multi\PYZhy{}platform Python command\PYZhy{}line interface}
+
+\PY{c+c1}{\PYZsh{} Step 1.a: Create all output directories needed by this tutorial}
+\PY{c+c1}{\PYZsh{}           notebook, removing previous instances if they exist}
+\PY{n}{Ccodesdir} \PY{o}{=} \PY{n}{os}\PY{o}{.}\PY{n}{path}\PY{o}{.}\PY{n}{join}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Scalar\PYZus{}Field\PYZus{}ID}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{Coutdir}   \PY{o}{=} \PY{n}{os}\PY{o}{.}\PY{n}{path}\PY{o}{.}\PY{n}{join}\PY{p}{(}\PY{n}{Ccodesdir}\PY{p}{,}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{out}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{k}{for} \PY{n+nb}{dir} \PY{o+ow}{in} \PY{p}{[}\PY{n}{Ccodesdir}\PY{p}{,}\PY{n}{Coutdir}\PY{p}{]}\PY{p}{:}
+    \PY{k}{if} \PY{n}{os}\PY{o}{.}\PY{n}{path}\PY{o}{.}\PY{n}{exists}\PY{p}{(}\PY{n+nb}{dir}\PY{p}{)}\PY{p}{:}
+        \PY{n}{shutil}\PY{o}{.}\PY{n}{rmtree}\PY{p}{(}\PY{n+nb}{dir}\PY{p}{)}
+    \PY{n}{cmd}\PY{o}{.}\PY{n}{mkdir}\PY{p}{(}\PY{n+nb}{dir}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \hypertarget{step-2-adding-c-functions-to-the-dictionary-back-to-top}{%
+\section{\texorpdfstring{Step 2: Adding C functions to the dictionary
+{[}Back to
+\hyperref[toc]{top}{]}}{Step 2: Adding C functions to the dictionary {[}Back to {]}}}\label{step-2-adding-c-functions-to-the-dictionary-back-to-top}}
+
+\[\label{adding_functions_to_dictionary}\]
+
+We now write all the C functions that we will need to generate initial
+data for a massless scalar field in spherical symmetry.
+
+    \hypertarget{step-2.a-scalar_field_id_spherical-back-to-top}{%
+\subsection{\texorpdfstring{Step 2.a:
+\texttt{scalar\_field\_id\_Spherical} {[}Back to
+\hyperref[toc]{top}{]}}{Step 2.a: scalar\_field\_id\_Spherical {[}Back to {]}}}\label{step-2.a-scalar_field_id_spherical-back-to-top}}
+
+\[\label{scalar_field_id_spherical}\]
+
+We now write the Python function which will add the C function
+\texttt{scalar\_field\_id\_Spherical()} to our C functions dictionary.
+The function \texttt{scalar\_field\_id\_Spherical()} is the one called
+by the user when generating scalar field initial data in Spherical
+coordinates. It solves the tridiagonal system described in the
+\hyperref[introduction]{Introduction} using functions from the
+open-sourced \href{https://www.gnu.org/software/gsl/}{GNU Scientific
+Library (gsl)}.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{2}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Step 2: Adding C functions to the dictionary}
+\PY{c+c1}{\PYZsh{} Step 2.a: scalar\PYZus{}field\PYZus{}id\PYZus{}Spherical}
+\PY{k}{def} \PY{n+nf}{add\PYZus{}to\PYZus{}Cfunction\PYZus{}dict\PYZus{}\PYZus{}scalar\PYZus{}field\PYZus{}id\PYZus{}Spherical}\PY{p}{(}\PY{p}{)}\PY{p}{:}
+    \PY{n}{desc} \PY{o}{=} \PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+\PY{l+s+s2}{(c) 2021 Leo Werneck}
+
+\PY{l+s+s2}{This function sets spherically symmetric scalar field}
+\PY{l+s+s2}{initial data in spherical coordinates by solving the}
+\PY{l+s+s2}{Hamiltonian constraint for the conformal factor}
+
+\PY{l+s+s2}{           psi := exp(\PYZhy{}phi) .}
+
+\PY{l+s+s2}{This is done by solving the elliptic ODE}
+
+\PY{l+s+s2}{    nabla\PYZca{}}\PY{l+s+si}{\PYZob{}2\PYZcb{}}\PY{l+s+s2}{psi = \PYZhy{}2 pi rho psi\PYZca{}}\PY{l+s+si}{\PYZob{}5\PYZcb{}}\PY{l+s+s2}{ ,}
+\PY{l+s+s2}{    }
+\PY{l+s+s2}{where rho := n\PYZus{}}\PY{l+s+si}{\PYZob{}mu\PYZcb{}}\PY{l+s+s2}{n\PYZus{}}\PY{l+s+si}{\PYZob{}nu\PYZcb{}}\PY{l+s+s2}{T\PYZca{}}\PY{l+s+s2}{\PYZob{}}\PY{l+s+s2}{mu nu\PYZcb{} for a massless}
+\PY{l+s+s2}{scalar field is given by}
+
+\PY{l+s+s2}{    rho = psi\PYZca{}}\PY{l+s+s2}{\PYZob{}}\PY{l+s+s2}{\PYZhy{}4\PYZcb{} ( partial\PYZus{}}\PY{l+s+si}{\PYZob{}r\PYZcb{}}\PY{l+s+s2}{phi )\PYZca{}}\PY{l+s+si}{\PYZob{}2\PYZcb{}}\PY{l+s+s2}{ / 2 ,}
+
+\PY{l+s+s2}{where phi := phi(r) is the initial profile of the scalar}
+\PY{l+s+s2}{field. We thus obtain}
+\PY{l+s+s2}{ .\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}.}
+\PY{l+s+s2}{ | partial\PYZus{}}\PY{l+s+si}{\PYZob{}r\PYZcb{}}\PY{l+s+s2}{\PYZca{}}\PY{l+s+si}{\PYZob{}2\PYZcb{}}\PY{l+s+s2}{psi + (2/r)partial\PYZus{}}\PY{l+s+si}{\PYZob{}r\PYZcb{}}\PY{l+s+s2}{psi = \PYZhy{} pi Phi\PYZca{}2 psi | ,}
+\PY{l+s+s2}{ .\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}\PYZhy{}.}
+\PY{l+s+s2}{where we have used the notation Phi := partial\PYZus{}}\PY{l+s+si}{\PYZob{}r\PYZcb{}}\PY{l+s+s2}{phi.}
+
+\PY{l+s+s2}{We obtain psi from the above ODE by writing the problem as a}
+\PY{l+s+s2}{tridiagonal system, which is then solved using the GNU}
+\PY{l+s+s2}{Scientific Library (gsl).}
+
+\PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+    \PY{n}{includes} \PY{o}{=} \PY{p}{[}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZlt{}gsl/gsl\PYZus{}vector.h\PYZgt{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,}
+                \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZlt{}gsl/gsl\PYZus{}linalg.h\PYZgt{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,}
+                \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{NRPy\PYZus{}basic\PYZus{}defines.h}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,}
+                \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{NRPy\PYZus{}function\PYZus{}prototypes.h}\PY{l+s+s2}{\PYZdq{}}\PY{p}{]}
+    \PY{n}{prefunc}  \PY{o}{=} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdq{}}
+    \PY{n}{c\PYZus{}type}   \PY{o}{=} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{void}\PY{l+s+s2}{\PYZdq{}}
+    \PY{n}{name}     \PY{o}{=} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{scalar\PYZus{}field\PYZus{}id\PYZus{}Spherical}\PY{l+s+s2}{\PYZdq{}}
+    \PY{n}{params}   \PY{o}{=} \PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}\PY{l+s+s2}{const int Nr,const REAL eta,const REAL r0,const REAL sigma,const REAL rmax,REAL *restrict psi}\PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+    \PY{n}{body}     \PY{o}{=} \PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+\PY{l+s+s2}{  // Step 1: Declare all needed gsl vectors}
+\PY{l+s+s2}{  gsl\PYZus{}vector *main\PYZus{}diag  = gsl\PYZus{}vector\PYZus{}alloc(Nr);}
+\PY{l+s+s2}{  gsl\PYZus{}vector *upper\PYZus{}diag = gsl\PYZus{}vector\PYZus{}alloc(Nr\PYZhy{}1);}
+\PY{l+s+s2}{  gsl\PYZus{}vector *lower\PYZus{}diag = gsl\PYZus{}vector\PYZus{}alloc(Nr\PYZhy{}1);}
+\PY{l+s+s2}{  gsl\PYZus{}vector *sources    = gsl\PYZus{}vector\PYZus{}alloc(Nr);}
+\PY{l+s+s2}{  gsl\PYZus{}vector *solution   = gsl\PYZus{}vector\PYZus{}alloc(Nr);}
+
+\PY{l+s+s2}{  // Step 2: Build the tridiagonal matrix based on user input}
+\PY{l+s+s2}{  build\PYZus{}tridiagonal\PYZus{}system\PYZus{}from\PYZus{}input\PYZus{}Spherical(Nr,eta,r0,sigma,rmax,}
+\PY{l+s+s2}{                                                main\PYZus{}diag,upper\PYZus{}diag,lower\PYZus{}diag,sources);}
+
+\PY{l+s+s2}{  // Step 3: Solve the tridiagonal system}
+\PY{l+s+s2}{  gsl\PYZus{}linalg\PYZus{}solve\PYZus{}tridiag(main\PYZus{}diag,upper\PYZus{}diag,lower\PYZus{}diag,sources,solution);}
+
+\PY{l+s+s2}{  // Step 4: Copy solution to psi array}
+\PY{l+s+s2}{  for(int i=0;i\PYZlt{}Nr;i++) psi[i] = gsl\PYZus{}vector\PYZus{}get(solution,i);}
+
+\PY{l+s+s2}{  // Step 5: Free memory for all gsl vectors}
+\PY{l+s+s2}{  gsl\PYZus{}vector\PYZus{}free(main\PYZus{}diag);}
+\PY{l+s+s2}{  gsl\PYZus{}vector\PYZus{}free(upper\PYZus{}diag);}
+\PY{l+s+s2}{  gsl\PYZus{}vector\PYZus{}free(lower\PYZus{}diag);}
+\PY{l+s+s2}{  gsl\PYZus{}vector\PYZus{}free(sources);}
+\PY{l+s+s2}{  gsl\PYZus{}vector\PYZus{}free(solution);}
+\PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+    \PY{n}{loopopts} \PY{o}{=} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdq{}}
+    \PY{n}{outC}\PY{o}{.}\PY{n}{add\PYZus{}to\PYZus{}Cfunction\PYZus{}dict}\PY{p}{(}
+        \PY{n}{includes}\PY{o}{=}\PY{n}{includes}\PY{p}{,}
+        \PY{n}{prefunc}\PY{o}{=}\PY{n}{prefunc}\PY{p}{,}
+        \PY{n}{desc}\PY{o}{=}\PY{n}{desc}\PY{p}{,}
+        \PY{n}{c\PYZus{}type}\PY{o}{=}\PY{n}{c\PYZus{}type}\PY{p}{,} \PY{n}{name}\PY{o}{=}\PY{n}{name}\PY{p}{,} \PY{n}{params}\PY{o}{=}\PY{n}{params}\PY{p}{,}
+        \PY{n}{body}\PY{o}{=}\PY{n}{body}\PY{p}{,}\PY{n}{enableCparameters}\PY{o}{=}\PY{k+kc}{False}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \hypertarget{step-2.b-build_tridiagonal_system_from_input_spherical-back-to-top}{%
+\subsection{\texorpdfstring{Step 2.b:
+\texttt{build\_tridiagonal\_system\_from\_input\_Spherical} {[}Back to
+\hyperref[toc]{top}{]}}{Step 2.b: build\_tridiagonal\_system\_from\_input\_Spherical {[}Back to {]}}}\label{step-2.b-build_tridiagonal_system_from_input_spherical-back-to-top}}
+
+\[\label{build_tridiagonal_system_from_input_spherical}\]
+
+We now write the Python function that will add the C function
+\texttt{build\_tridiagonal\_system\_from\_input\_Spherical} to our C
+functions dictonary. For the sake of the reader, we break this task into
+the following subtasks:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  In \hyperref[tridiag_system_aux_vars]{Step 2.b.i} we write the C code
+  for all the auxiliary variables we need.
+\item
+  In \hyperref[tridiag_system_main_diag]{Step 2.b.ii} we write the C
+  code for the main diagonal of the tridiagonal matrix \(A\) defined in
+  \hyperref[introduction]{the Introduction}.
+\item
+  In \hyperref[tridiag_system_upper_diag]{Step 2.b.iii} we write the C
+  code for the upper diagonal of the tridiagonal matrix \(A\) defined in
+  \hyperref[introduction]{the Introduction}.
+\item
+  In \hyperref[tridiag_system_lower_diag]{Step 2.b.iv} we write the C
+  code for the lower diagonal of the tridiagonal matrix \(A\) defined in
+  \hyperref[introduction]{the Introduction}.
+\item
+  In \hyperref[tridiag_system_source_vector]{Step 2.b.v} we write the C
+  code for the vector of source terms \(\vec{s}\) defined in
+  \hyperref[introduction]{the Introduction}.
+\end{enumerate}
+
+    \hypertarget{step-2.b.i-auxiliary-variables-back-to-top}{%
+\subsubsection{\texorpdfstring{Step 2.b.i: Auxiliary variables {[}Back
+to
+\hyperref[toc]{top}{]}}{Step 2.b.i: Auxiliary variables {[}Back to {]}}}\label{step-2.b.i-auxiliary-variables-back-to-top}}
+
+\[\label{tridiag_system_aux_vars}\]
+
+In order to set the elements of the tridiagonal matrix \(A\) and the
+source vector \(\vec{s}\) we need to compute a few auxiliary quantities.
+The most important of these is the initial profile of the scalar field.
+We will implement here a
+\href{https://en.wikipedia.org/wiki/Gaussian_function}{Gaussian} pulse
+of the form
+
+\[
+\varphi(r) = \eta \exp\left[-\left(\frac{r-r_{0}}{\sigma}\right)^{2}\right].
+\]
+
+where \(\eta\) is the amplitude, \(r_{0}\) is the center of the pulse,
+\(\sigma\) its width, and \(r\) is the radial coordinate. The auxiliary
+variable that we need for our tridiagonal system is
+
+\[
+\Phi(r) = \partial_{r}\varphi(r),
+\]
+
+which we will compute below using \href{https://www.sympy.org/}{SymPy}'s
+symbolic differentiation. This provides greater flexibility when
+implementing different initial scalar field profiles, which will be
+added in the future.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{3}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Step 2.b: build\PYZus{}tridiagonal\PYZus{}system\PYZus{}from\PYZus{}input\PYZus{}Spherical}
+\PY{c+c1}{\PYZsh{} Step 2.b.i: auxiliary variables}
+\PY{k}{def} \PY{n+nf}{aux\PYZus{}vars\PYZus{}string}\PY{p}{(}\PY{p}{)}\PY{p}{:}
+
+    \PY{c+c1}{\PYZsh{} Step 2.b.i.A: Declare eta, r, r0, sigma as SymPy variables}
+    \PY{n}{eta}\PY{p}{,}\PY{n}{r}\PY{p}{,}\PY{n}{r0}\PY{p}{,}\PY{n}{sigma} \PY{o}{=} \PY{n}{sp}\PY{o}{.}\PY{n}{symbols}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{eta r r0 sigma}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,}\PY{n}{real}\PY{o}{=}\PY{k+kc}{True}\PY{p}{)}
+
+    \PY{c+c1}{\PYZsh{} Step 2.b.i.B: Implement initial scalar field profile}
+    \PY{n}{phi} \PY{o}{=} \PY{n}{eta} \PY{o}{*} \PY{n}{sp}\PY{o}{.}\PY{n}{exp}\PY{p}{(} \PY{o}{\PYZhy{}} \PY{p}{(}\PY{p}{(}\PY{n}{r}\PY{o}{\PYZhy{}}\PY{n}{r0}\PY{p}{)}\PY{o}{/}\PY{n}{sigma}\PY{p}{)}\PY{o}{*}\PY{o}{*}\PY{l+m+mi}{2} \PY{p}{)}
+
+    \PY{c+c1}{\PYZsh{} Step 2.b.i.C: Compute Phi := partial\PYZus{}\PYZob{}r\PYZcb{}phi}
+    \PY{n}{Phi} \PY{o}{=} \PY{n}{sp}\PY{o}{.}\PY{n}{diff}\PY{p}{(}\PY{n}{phi}\PY{p}{,}\PY{n}{r}\PY{p}{)}
+
+    \PY{c+c1}{\PYZsh{} Step 2.b.i.D: Set a few basic auxiliary variables used by our C code}
+    \PY{n}{string} \PY{o}{=} \PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+\PY{l+s+s2}{        // Auxiliary variables}
+\PY{l+s+s2}{        const REAL r = (i\PYZus{}r+0.5) * dr;}
+\PY{l+s+s2}{        const REAL source\PYZus{}N = \PYZhy{}(2*dr/r) * (1.0+dr/r);}
+\PY{l+s+s2}{    }\PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+
+    \PY{c+c1}{\PYZsh{} Step 2.b.i.E: Output the symbolic expression for Phi to C code}
+    \PY{n}{string} \PY{o}{+}\PY{o}{=} \PY{n}{outC}\PY{o}{.}\PY{n}{outputC}\PY{p}{(}\PY{n}{Phi}\PY{p}{,}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{const REAL Phi}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{returnstring}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,}
+                             \PY{n}{params}\PY{o}{=}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{includebraces=False,outCverbose=False,preindent=2}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}\PY{o}{.}\PY{n}{replace}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{double}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{REAL}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+
+    \PY{c+c1}{\PYZsh{} Step 2.b.i.F: Set other useful auxiliary variables}
+    \PY{n}{string} \PY{o}{+}\PY{o}{=} \PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}\PY{l+s+s2}{    const REAL r2 = r*r;}
+\PY{l+s+s2}{        const REAL dr2  = dr*dr;}
+\PY{l+s+s2}{        const REAL Phi2 = Phi*Phi;}
+\PY{l+s+s2}{    }\PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+    \PY{k}{return} \PY{n}{string}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \hypertarget{step-2.b.ii-main-diagonal-back-to-top}{%
+\subsubsection{\texorpdfstring{Step 2.b.ii: Main diagonal {[}Back to
+\hyperref[toc]{top}{]}}{Step 2.b.ii: Main diagonal {[}Back to {]}}}\label{step-2.b.ii-main-diagonal-back-to-top}}
+
+\[\label{tridiag_system_main_diag}\]
+
+We write the C code which implements the main diagonal of the
+tridiagonal matrix \(A\):
+
+\[
+{\rm diag}_{\rm main}
+=
+\begin{pmatrix}
+\left(\pi\Delta r^{2}\Phi^{2}_{0} - 1 - \frac{\Delta r}{r_{1}}\right)\\
+\left(\pi\Delta r^{2}\Phi^{2}_{1}-2\right)\\
+\vdots\\
+\left(\pi\Delta r^{2}\Phi^{2}_{i}-2\right)\\
+\vdots\\
+\left(\pi\Delta r^{2}\Phi^{2}_{N_{r}-2} - 2\right)\\
+\left[\pi\Delta r^{2}\Phi^{2}_{N_{r}-1} - 2 - \frac{2\Delta r}{r_{N_{r}-1}}\left(1+\frac{\Delta r}{r_{N_{r}-1}}\right)\right]\\
+\end{pmatrix}
+=
+\begin{pmatrix}
+\left(\pi\Delta r^{2}\Phi^{2}_{0} - 2\right)\\
+\left(\pi\Delta r^{2}\Phi^{2}_{1} - 2\right)\\
+\vdots\\
+\left(\pi\Delta r^{2}\Phi^{2}_{i} - 2\right)\\
+\vdots\\
+\left(\pi\Delta r^{2}\Phi^{2}_{N_{r}-2}-2\right)\\
+\left(\pi\Delta r^{2}\Phi^{2}_{N_{r}-1} - 2\right)\\
+\end{pmatrix}
++
+\left.\begin{pmatrix}
+1 - \frac{\Delta r}{r_{0}}\\
+0\\
+\vdots\\
+0\\
+\vdots\\
+0\\
+- \frac{2\Delta r}{r_{N_{r}-1}}\left(1+\frac{\Delta r}{r_{N_{r}-1}}\right)
+\end{pmatrix}\quad \right\}N_{r}\text{ elements}
+\]
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{4}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Step 2.b.ii: Main diagonal}
+\PY{k}{def} \PY{n+nf}{main\PYZus{}diag\PYZus{}string}\PY{p}{(}\PY{p}{)}\PY{p}{:}
+    \PY{n}{string} \PY{o}{=} \PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+\PY{l+s+s2}{    // Set main diagonal element}
+\PY{l+s+s2}{    const REAL main\PYZus{}diag\PYZus{}elem = (M\PYZus{}PI * dr2 * Phi2 \PYZhy{} 2.0) + (i\PYZus{}r==0)*(1.0 \PYZhy{} dr/r) + (i\PYZus{}r==Nr\PYZhy{}1)*( source\PYZus{}N );}
+\PY{l+s+s2}{    gsl\PYZus{}vector\PYZus{}set(main\PYZus{}diag,i\PYZus{}r,main\PYZus{}diag\PYZus{}elem);}
+\PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+    \PY{k}{return} \PY{n}{string}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \hypertarget{step-2.b.iii-upper-diagonal-back-to-top}{%
+\subsubsection{\texorpdfstring{Step 2.b.iii: Upper diagonal {[}Back to
+\hyperref[toc]{top}{]}}{Step 2.b.iii: Upper diagonal {[}Back to {]}}}\label{step-2.b.iii-upper-diagonal-back-to-top}}
+
+\[\label{tridiag_system_upper_diag}\]
+
+Next we write the C code which implements the upper diagonal of the
+tridiagonal matrix \(A\):
+
+\[
+{\rm diag}_{\rm upper}
+=
+\left.\begin{pmatrix}
+1+\frac{\Delta r}{r_{0}}\\
+1+\frac{\Delta r}{r_{1}}\\
+\vdots\\
+1+\frac{\Delta r}{r_{i}}\\
+\vdots\\
+1+\frac{\Delta r}{r_{N_{r}-3}}\\
+1+\frac{\Delta r}{r_{N_{r}-2}}
+\end{pmatrix}\quad\right\}N_{r}-1\text{ elements}
+\]
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{5}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Step 2.b.iii: Upper diagonal}
+\PY{k}{def} \PY{n+nf}{upper\PYZus{}diag\PYZus{}string}\PY{p}{(}\PY{p}{)}\PY{p}{:}
+    \PY{n}{string} \PY{o}{=} \PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+\PY{l+s+s2}{    // Set upper diagonal element}
+\PY{l+s+s2}{    if( i\PYZus{}r \PYZlt{} Nr\PYZhy{}1 ) }\PY{l+s+s2}{\PYZob{}}
+\PY{l+s+s2}{      const REAL upper\PYZus{}diag\PYZus{}elem = 1.0 + dr/r;}
+\PY{l+s+s2}{      gsl\PYZus{}vector\PYZus{}set(upper\PYZus{}diag,i\PYZus{}r,upper\PYZus{}diag\PYZus{}elem);}
+\PY{l+s+s2}{    \PYZcb{}}
+\PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+    \PY{k}{return} \PY{n}{string}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \hypertarget{step-2.b.iv-lower-diagonal-back-to-top}{%
+\subsubsection{\texorpdfstring{Step 2.b.iv: Lower diagonal {[}Back to
+\hyperref[toc]{top}{]}}{Step 2.b.iv: Lower diagonal {[}Back to {]}}}\label{step-2.b.iv-lower-diagonal-back-to-top}}
+
+\[\label{tridiag_system_lower_diag}\]
+
+We then write the C code which implements the lower diagonal of the
+tridiagonal matrix \(A\):
+
+\[
+{\rm diag}_{\rm lower}
+=
+\left.\begin{pmatrix}
+1-\frac{\Delta r}{r_{1}}\\
+1-\frac{\Delta r}{r_{2}}\\
+\vdots\\
+1-\frac{\Delta r}{r_{i}}\\
+\vdots\\
+1-\frac{\Delta r}{r_{N_{r}-2}}\\
+2
+\end{pmatrix}\quad\right\}N_{r}-1\text{ elements}
+\]
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{6}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Step 2.b.iv: Lower diagonal}
+\PY{k}{def} \PY{n+nf}{lower\PYZus{}diag\PYZus{}string}\PY{p}{(}\PY{p}{)}\PY{p}{:}
+    \PY{n}{string} \PY{o}{=} \PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+\PY{l+s+s2}{    // Set lower diagonal element}
+\PY{l+s+s2}{    if( i\PYZus{}r \PYZlt{} Nr\PYZhy{}1 ) }\PY{l+s+s2}{\PYZob{}}
+\PY{l+s+s2}{      const REAL rp              = r + dr;}
+\PY{l+s+s2}{      const REAL tmp             = dr/rp;}
+\PY{l+s+s2}{      const REAL lower\PYZus{}diag\PYZus{}elem = 1.0 \PYZhy{} tmp + (i\PYZus{}r==Nr\PYZhy{}2)*( 1.0 + tmp ) ;}
+\PY{l+s+s2}{      gsl\PYZus{}vector\PYZus{}set(lower\PYZus{}diag,i\PYZus{}r,lower\PYZus{}diag\PYZus{}elem);}
+\PY{l+s+s2}{    \PYZcb{}}
+\PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+    \PY{k}{return} \PY{n}{string}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \hypertarget{step-2.b.v-source-vector-vecs-back-to-top}{%
+\subsubsection{\texorpdfstring{Step 2.b.v: Source vector \(\vec{s}\)
+{[}Back to
+\hyperref[toc]{top}{]}}{Step 2.b.v: Source vector \textbackslash vec\{s\} {[}Back to {]}}}\label{step-2.b.v-source-vector-vecs-back-to-top}}
+
+\[\label{tridiag_system_source_vector}\]
+
+Finally, we write the C code which implements the source vector
+\(\vec{s}\):
+
+\[
+\vec{s} = 
+\begin{pmatrix}
+0\\
+0\\
+\vdots\\
+0\\
+\vdots\\
+0\\
+-\frac{2\Delta r}{r_{N}}\left(1+\frac{\Delta r}{r_{N}}\right)
+\end{pmatrix}
+\]
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{7}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Step 2.b.vi: Source vector}
+\PY{k}{def} \PY{n+nf}{sources\PYZus{}string}\PY{p}{(}\PY{p}{)}\PY{p}{:}
+    \PY{n}{string} \PY{o}{=} \PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+\PY{l+s+s2}{    // Set source vector element}
+\PY{l+s+s2}{    const REAL source\PYZus{}elem = 0.0 + (i\PYZus{}r==Nr\PYZhy{}1)*( source\PYZus{}N );}
+\PY{l+s+s2}{    gsl\PYZus{}vector\PYZus{}set(sources,i\PYZus{}r,source\PYZus{}elem);}
+\PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+    \PY{k}{return} \PY{n}{string}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \hypertarget{step-2.b.vi-writing-the-functions-body-back-to-top}{%
+\subsubsection{\texorpdfstring{Step 2.b.vi: Writing the function's body
+{[}Back to
+\hyperref[toc]{top}{]}}{Step 2.b.vi: Writing the function's body {[}Back to {]}}}\label{step-2.b.vi-writing-the-functions-body-back-to-top}}
+
+\[\label{tridiag_system_func_body}\]
+
+We now combine all the previous functions we have defined in Step 2.b
+into a single function which is responsible for generating the body of
+the function
+\texttt{build\_tridiagonal\_system\_from\_input\_Spherical}.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{8}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Step 2.b.vi: Function body}
+\PY{k}{def} \PY{n+nf}{tridiagonal\PYZus{}system\PYZus{}body}\PY{p}{(}\PY{p}{)}\PY{p}{:}
+    \PY{n}{body}  \PY{o}{=} \PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+\PY{l+s+s2}{  // Compute the step size from input}
+\PY{l+s+s2}{  const REAL dr = rmax / Nr;}
+
+\PY{l+s+s2}{  // Initialize the tridiagonal system}
+\PY{l+s+s2}{  for(int i\PYZus{}r=0;i\PYZus{}r\PYZlt{}Nr;i\PYZus{}r++) }\PY{l+s+s2}{\PYZob{}}
+\PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+    \PY{n}{body} \PY{o}{+}\PY{o}{=} \PY{n}{aux\PYZus{}vars\PYZus{}string}\PY{p}{(}\PY{p}{)}\PY{o}{+}\PY{n}{main\PYZus{}diag\PYZus{}string}\PY{p}{(}\PY{p}{)}\PY{o}{+}\PY{n}{upper\PYZus{}diag\PYZus{}string}\PY{p}{(}\PY{p}{)}\PY{o}{+}\PY{n}{lower\PYZus{}diag\PYZus{}string}\PY{p}{(}\PY{p}{)}\PY{o}{+}\PY{n}{sources\PYZus{}string}\PY{p}{(}\PY{p}{)}
+    \PY{n}{body} \PY{o}{+}\PY{o}{=} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+se}{\PYZbs{}n}\PY{l+s+s2}{  \PYZcb{}}\PY{l+s+se}{\PYZbs{}n}\PY{l+s+s2}{\PYZdq{}}
+    
+    \PY{k}{return} \PY{n}{body}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \hypertarget{step-2.b.vii-adding-to-dictionary-back-to-top}{%
+\subsubsection{\texorpdfstring{Step 2.b.vii: Adding to dictionary
+{[}Back to
+\hyperref[toc]{top}{]}}{Step 2.b.vii: Adding to dictionary {[}Back to {]}}}\label{step-2.b.vii-adding-to-dictionary-back-to-top}}
+
+\[\label{tridiag_system_add_to_dict}\]
+
+Armed with everything that we need, we now write the Python function
+that adds the C function
+\texttt{build\_tridiagonal\_system\_from\_input\_Spherical} to our C
+functions dictionary.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{9}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Step 2.b.vii: Add build\PYZus{}tridiagonal\PYZus{}system\PYZus{}from\PYZus{}input\PYZus{}Spherical to C functions dictionary}
+\PY{k}{def} \PY{n+nf}{add\PYZus{}to\PYZus{}Cfunction\PYZus{}dict\PYZus{}\PYZus{}build\PYZus{}tridiagonal\PYZus{}system\PYZus{}from\PYZus{}input\PYZus{}Spherical}\PY{p}{(}\PY{p}{)}\PY{p}{:}
+    \PY{n}{desc} \PY{o}{=} \PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+\PY{l+s+s2}{(c) 2021 Leo Werneck}
+
+\PY{l+s+s2}{This function builds the tridiagonal system we need}
+\PY{l+s+s2}{to solve to obtain the scalar field initial data.}
+
+\PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+    \PY{n}{includes} \PY{o}{=} \PY{p}{[}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZlt{}gsl/gsl\PYZus{}vector.h\PYZgt{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{NRPy\PYZus{}basic\PYZus{}defines.h}\PY{l+s+s2}{\PYZdq{}}\PY{p}{]}
+    \PY{n}{prefunc}  \PY{o}{=} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdq{}}
+    \PY{n}{c\PYZus{}type}   \PY{o}{=} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{void}\PY{l+s+s2}{\PYZdq{}}
+    \PY{n}{name}     \PY{o}{=} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{build\PYZus{}tridiagonal\PYZus{}system\PYZus{}from\PYZus{}input\PYZus{}Spherical}\PY{l+s+s2}{\PYZdq{}}
+    \PY{n}{params}   \PY{o}{=} \PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}\PY{l+s+s2}{const int Nr,const REAL eta,const REAL r0,const REAL sigma,const REAL rmax,}
+\PY{l+s+s2}{                  gsl\PYZus{}vector *restrict main\PYZus{}diag,gsl\PYZus{}vector *restrict upper\PYZus{}diag,}
+\PY{l+s+s2}{                  gsl\PYZus{}vector *restrict lower\PYZus{}diag,gsl\PYZus{}vector *restrict sources}\PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+    \PY{n}{body}     \PY{o}{=} \PY{n}{tridiagonal\PYZus{}system\PYZus{}body}\PY{p}{(}\PY{p}{)}
+    \PY{n}{loopopts} \PY{o}{=} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdq{}}
+    \PY{n}{outC}\PY{o}{.}\PY{n}{add\PYZus{}to\PYZus{}Cfunction\PYZus{}dict}\PY{p}{(}
+        \PY{n}{includes}\PY{o}{=}\PY{n}{includes}\PY{p}{,}
+        \PY{n}{prefunc}\PY{o}{=}\PY{n}{prefunc}\PY{p}{,}
+        \PY{n}{desc}\PY{o}{=}\PY{n}{desc}\PY{p}{,}
+        \PY{n}{c\PYZus{}type}\PY{o}{=}\PY{n}{c\PYZus{}type}\PY{p}{,} \PY{n}{name}\PY{o}{=}\PY{n}{name}\PY{p}{,} \PY{n}{params}\PY{o}{=}\PY{n}{params}\PY{p}{,}
+        \PY{n}{body}\PY{o}{=}\PY{n}{body}\PY{p}{,}\PY{n}{enableCparameters}\PY{o}{=}\PY{k+kc}{False}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \hypertarget{step-2.c-example-usage-the-main-function-of-a-standalone-code-back-to-top}{%
+\subsection{\texorpdfstring{Step 2.c: Example usage: The \texttt{main}
+function of a standalone code {[}Back to
+\hyperref[toc]{top}{]}}{Step 2.c: Example usage: The main function of a standalone code {[}Back to {]}}}\label{step-2.c-example-usage-the-main-function-of-a-standalone-code-back-to-top}}
+
+\[\label{main_standalone}\]
+
+We now write the \texttt{main} function of a standalone code which
+generates the scalar field initial data and outputs this data to a text
+file. To simplify the validation of our results with the
+\href{../ScalarField/ScalarField_Initial_Data.py}{ScalarField/ScalarField\_Initial\_Data.py}
+NRPy+ module, the text file will contain 4 data columns on which we will
+write, from left-to-right,
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  The radius \(r\);
+\item
+  The initial scalar field profile \(\varphi\);
+\item
+  The conformal factor \(\psi^{4}\);
+\item
+  The pre-collapsed lapse function \(\alpha = \psi^{-2}\).
+\end{enumerate}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{10}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Step 2.c: Standalone main fuction}
+\PY{k}{def} \PY{n+nf}{add\PYZus{}to\PYZus{}Cfunction\PYZus{}dict\PYZus{}\PYZus{}scalar\PYZus{}field\PYZus{}id\PYZus{}standalone}\PY{p}{(}\PY{p}{)}\PY{p}{:}
+    \PY{n}{desc} \PY{o}{=} \PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+\PY{l+s+s2}{(c) 2021 Leo Werneck}
+
+\PY{l+s+s2}{Standalone scalar field initial data code.}
+\PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+    \PY{n}{includes} \PY{o}{=} \PY{p}{[}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZlt{}gsl/gsl\PYZus{}vector.h\PYZgt{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,}
+                \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{NRPy\PYZus{}basic\PYZus{}defines.h}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,}
+                \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{NRPy\PYZus{}function\PYZus{}prototypes.h}\PY{l+s+s2}{\PYZdq{}}\PY{p}{]}
+    \PY{n}{prefunc}  \PY{o}{=} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdq{}}
+    \PY{n}{c\PYZus{}type}   \PY{o}{=} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{int}\PY{l+s+s2}{\PYZdq{}}
+    \PY{n}{name}     \PY{o}{=} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{main}\PY{l+s+s2}{\PYZdq{}}
+    \PY{n}{params}   \PY{o}{=} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{int argc, char ** argv}\PY{l+s+s2}{\PYZdq{}}
+    \PY{n}{body}     \PY{o}{=} \PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+\PY{l+s+s2}{    // Step 1: Check correct usage}
+\PY{l+s+s2}{    if( argc != 7 ) }\PY{l+s+s2}{\PYZob{}}
+\PY{l+s+s2}{      fprintf(stderr,}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{ERROR! Correct usage is: ./scalar\PYZus{}field\PYZus{}id\PYZus{}standalone Nr eta r0 sigma rmax outfile}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{);}
+\PY{l+s+s2}{    \PYZcb{}}
+\PY{l+s+s2}{    // Step 2: Set parameters}
+\PY{l+s+s2}{    const int Nr     = atoi(  argv[1]);}
+\PY{l+s+s2}{    const REAL eta   = strtod(argv[2],NULL);}
+\PY{l+s+s2}{    const REAL r0    = strtod(argv[3],NULL);}
+\PY{l+s+s2}{    const REAL sigma = strtod(argv[4],NULL);}
+\PY{l+s+s2}{    const REAL rmax  = strtod(argv[5],NULL);}
+\PY{l+s+s2}{    char filename[256];}
+\PY{l+s+s2}{    sprintf(filename,}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+si}{\PYZpc{}s}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{,argv[6]);}
+\PY{l+s+s2}{    }
+\PY{l+s+s2}{    // Step 3: Allocate memory for the solution vector}
+\PY{l+s+s2}{    REAL *psi = (REAL *)malloc(sizeof(REAL)*Nr);}
+
+\PY{l+s+s2}{    // Step 4: Get the initial data}
+\PY{l+s+s2}{    scalar\PYZus{}field\PYZus{}id\PYZus{}Spherical(Nr,eta,r0,sigma,rmax,psi);}
+\PY{l+s+s2}{    }
+\PY{l+s+s2}{    // Step 5: Output initial data to file}
+\PY{l+s+s2}{    const REAL dr = rmax / Nr;}
+\PY{l+s+s2}{    FILE *fp = fopen(filename,}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{w}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{);}
+\PY{l+s+s2}{    for(int i\PYZus{}r=0;i\PYZus{}r\PYZlt{}Nr;i\PYZus{}r++) }\PY{l+s+s2}{\PYZob{}}
+\PY{l+s+s2}{      const REAL r     = (i\PYZus{}r+0.5) * dr;}
+\PY{l+s+s2}{      const REAL tmp\PYZus{}0 = (r \PYZhy{} r0)*(r \PYZhy{} r0);}
+\PY{l+s+s2}{      const REAL tmp\PYZus{}1 = tmp\PYZus{}0/(sigma*sigma);}
+\PY{l+s+s2}{      const REAL phi   = eta * exp( \PYZhy{}tmp\PYZus{}1 );}
+\PY{l+s+s2}{      const REAL psiL  = psi[i\PYZus{}r];}
+\PY{l+s+s2}{      const REAL psi2  = psiL*psiL;}
+\PY{l+s+s2}{      const REAL psi4  = psi2*psi2;}
+\PY{l+s+s2}{      const REAL alp   = 1.0/psi2;}
+\PY{l+s+s2}{      fprintf(fp,}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+si}{\PYZpc{}.15e}\PY{l+s+s2}{ }\PY{l+s+si}{\PYZpc{}.15e}\PY{l+s+s2}{ }\PY{l+s+si}{\PYZpc{}.15e}\PY{l+s+s2}{ }\PY{l+s+si}{\PYZpc{}.15e}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{n}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{,r,phi,psi4,alp);}
+\PY{l+s+s2}{    \PYZcb{}}
+\PY{l+s+s2}{    fclose(fp);}
+\PY{l+s+s2}{    }
+\PY{l+s+s2}{    // Step 6: Free memory for the solution vector}
+\PY{l+s+s2}{    free(psi);}
+\PY{l+s+s2}{    }
+\PY{l+s+s2}{    // All done!}
+\PY{l+s+s2}{    return 0;}
+\PY{l+s+s2}{\PYZdq{}\PYZdq{}\PYZdq{}}
+    \PY{n}{loopopts} \PY{o}{=} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdq{}}
+    \PY{n}{outC}\PY{o}{.}\PY{n}{add\PYZus{}to\PYZus{}Cfunction\PYZus{}dict}\PY{p}{(}
+        \PY{n}{includes}\PY{o}{=}\PY{n}{includes}\PY{p}{,}
+        \PY{n}{prefunc}\PY{o}{=}\PY{n}{prefunc}\PY{p}{,}
+        \PY{n}{desc}\PY{o}{=}\PY{n}{desc}\PY{p}{,}
+        \PY{n}{c\PYZus{}type}\PY{o}{=}\PY{n}{c\PYZus{}type}\PY{p}{,} \PY{n}{name}\PY{o}{=}\PY{n}{name}\PY{p}{,} \PY{n}{params}\PY{o}{=}\PY{n}{params}\PY{p}{,}
+        \PY{n}{body}\PY{o}{=}\PY{n}{body}\PY{p}{,}\PY{n}{enableCparameters}\PY{o}{=}\PY{k+kc}{False}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \hypertarget{step-2.d-add-all-functions-in-this-notebook-to-the-dictionary-back-to-top}{%
+\subsection{\texorpdfstring{Step 2.d: Add all functions in this notebook
+to the dictionary {[}Back to
+\hyperref[toc]{top}{]}}{Step 2.d: Add all functions in this notebook to the dictionary {[}Back to {]}}}\label{step-2.d-add-all-functions-in-this-notebook-to-the-dictionary-back-to-top}}
+
+\[\label{add_all_to_dict}\]
+
+The function below calls all the Python functions we have defined in
+this tutorial notebook, adding all the C functions we will need to our C
+functions dictionary.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{11}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Step 2.d: Add all scalar field ID C functions to dictionary}
+\PY{k}{def} \PY{n+nf}{ScalarField\PYZus{}ID\PYZus{}register\PYZus{}C\PYZus{}functions}\PY{p}{(}\PY{p}{)}\PY{p}{:}
+    \PY{n}{add\PYZus{}to\PYZus{}Cfunction\PYZus{}dict\PYZus{}\PYZus{}scalar\PYZus{}field\PYZus{}id\PYZus{}Spherical}\PY{p}{(}\PY{p}{)}
+    \PY{n}{add\PYZus{}to\PYZus{}Cfunction\PYZus{}dict\PYZus{}\PYZus{}build\PYZus{}tridiagonal\PYZus{}system\PYZus{}from\PYZus{}input\PYZus{}Spherical}\PY{p}{(}\PY{p}{)}
+    \PY{n}{add\PYZus{}to\PYZus{}Cfunction\PYZus{}dict\PYZus{}\PYZus{}scalar\PYZus{}field\PYZus{}id\PYZus{}standalone}\PY{p}{(}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \hypertarget{step-3-compiling-and-running-the-c-code-back-to-top}{%
+\section{\texorpdfstring{Step 3: Compiling and running the C code
+{[}Back to
+\hyperref[toc]{top}{]}}{Step 3: Compiling and running the C code {[}Back to {]}}}\label{step-3-compiling-and-running-the-c-code-back-to-top}}
+
+\[\label{compiling_and_running}\]
+
+We now compile and run the standalone C code that will generate scalar
+field initial data and output it to an
+\href{https://en.wikipedia.org/wiki/ASCII}{ASCII} file.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{12}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Step 3: Compiling and running the C code}
+\PY{c+c1}{\PYZsh{} Step 3.a: Add all C functions defined in this notebook to the dictionary}
+\PY{n}{ScalarField\PYZus{}ID\PYZus{}register\PYZus{}C\PYZus{}functions}\PY{p}{(}\PY{p}{)}
+
+\PY{c+c1}{\PYZsh{} Step 3.b: Add core NRPy+ C functions and NRPy\PYZus{}basic\PYZus{}defines to dictionary}
+\PY{n}{outC}\PY{o}{.}\PY{n}{outputC\PYZus{}register\PYZus{}C\PYZus{}functions\PYZus{}and\PYZus{}NRPy\PYZus{}basic\PYZus{}defines}\PY{p}{(}\PY{p}{)}
+
+\PY{c+c1}{\PYZsh{} Step 3.c: Generate NRPy\PYZus{}basic\PYZus{}defines.h}
+\PY{n}{outC}\PY{o}{.}\PY{n}{construct\PYZus{}NRPy\PYZus{}basic\PYZus{}defines\PYZus{}h}\PY{p}{(}\PY{n}{Ccodesdir}\PY{p}{,}\PY{n}{enable\PYZus{}SIMD}\PY{o}{=}\PY{k+kc}{False}\PY{p}{)}
+
+\PY{c+c1}{\PYZsh{} Step 3.d: Generate NRPy\PYZus{}function\PYZus{}prototypes.h}
+\PY{n}{outC}\PY{o}{.}\PY{n}{construct\PYZus{}NRPy\PYZus{}function\PYZus{}prototypes\PYZus{}h}\PY{p}{(}\PY{n}{Ccodesdir}\PY{p}{)}
+
+\PY{c+c1}{\PYZsh{} Step 3.e: Set executable path}
+\PY{n}{exec\PYZus{}name} \PY{o}{=} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{scalar\PYZus{}field\PYZus{}id\PYZus{}standalone}\PY{l+s+s2}{\PYZdq{}}
+\PY{n}{exec\PYZus{}path} \PY{o}{=} \PY{n}{os}\PY{o}{.}\PY{n}{path}\PY{o}{.}\PY{n}{join}\PY{p}{(}\PY{n}{Ccodesdir}\PY{p}{,}\PY{n}{exec\PYZus{}name}\PY{p}{)}
+
+\PY{c+c1}{\PYZsh{} Step 3.f: Compile the C code}
+\PY{n}{cmd}\PY{o}{.}\PY{n}{new\PYZus{}C\PYZus{}compile}\PY{p}{(}\PY{n}{Ccodesdir}\PY{p}{,}\PY{n}{exec\PYZus{}name}\PY{p}{,}\PY{n}{addl\PYZus{}libraries}\PY{o}{=}\PY{p}{[}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZhy{}lgsl}\PY{l+s+s2}{\PYZdq{}}\PY{p}{]}\PY{p}{)}
+
+\PY{c+c1}{\PYZsh{} Step 3.g: Run the C code}
+\PY{n}{cmd}\PY{o}{.}\PY{n}{Execute}\PY{p}{(}\PY{n}{exec\PYZus{}path}\PY{p}{,} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{20000 0.33 0 1 70 SFID.txt}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{Verbatim}[commandchars=\\\{\}]
+(EXEC): Executing `make -j10`{\ldots}
+ld: warning: dylib (/usr/local/opt/gsl/lib/libgsl.dylib) was built for newer
+macOS version (11.0) than being linked (10.16)
+(BENCH): Finished executing in 0.6180169582366943 seconds.
+Finished compilation.
+(EXEC): Executing `./Scalar\_Field\_ID/scalar\_field\_id\_standalone 20000 0.33 0 1
+70 SFID.txt`{\ldots}
+(BENCH): Finished executing in 0.21640300750732422 seconds.
+    \end{Verbatim}
+
+    \hypertarget{step-4-validation-against-trusted-solver-back-to-top}{%
+\section{\texorpdfstring{Step 4: Validation against trusted solver
+{[}Back to
+\hyperref[toc]{top}{]}}{Step 4: Validation against trusted solver {[}Back to {]}}}\label{step-4-validation-against-trusted-solver-back-to-top}}
+
+\[\label{validation}\]
+
+We now validate the results of our standalone code against the trusted
+solver implemented in the
+\href{../ScalarField/ScalarField_InitialData.py}{ScalarField/ScalarField\_InitialData.py}
+NRPy+ module.
+
+    \hypertarget{step-4.a-generating-initial-with-scalarfieldscalarfield_initialdata.pyback-to-top}{%
+\subsection{\texorpdfstring{Step 4.a: Generating initial with
+\href{../ScalarField/ScalarField_InitialData.py}{ScalarField/ScalarField\_InitialData.py}{[}Back
+to
+\hyperref[toc]{top}{]}}{Step 4.a: Generating initial with ScalarField/ScalarField\_InitialData.py{[}Back to {]}}}\label{step-4.a-generating-initial-with-scalarfieldscalarfield_initialdata.pyback-to-top}}
+
+\[\label{generate_trusted_id}\]
+
+Generate the same initial data we have generated with the C code using
+our trusted solver
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{13}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Step 4.a: Generating trusted initial data}
+\PY{c+c1}{\PYZsh{} Step 4.a.i: Import the ScalarField/ScalarField\PYZus{}InitialData.py}
+\PY{k+kn}{import} \PY{n+nn}{ScalarField}\PY{n+nn}{.}\PY{n+nn}{ScalarField\PYZus{}InitialData} \PY{k}{as} \PY{n+nn}{SFID}
+
+\PY{c+c1}{\PYZsh{} Step 4.a.ii: Generate the initial data}
+\PY{n}{outfile}   \PY{o}{=} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{SFID\PYZhy{}trusted.txt}\PY{l+s+s2}{\PYZdq{}}
+\PY{n}{ID\PYZus{}family} \PY{o}{=} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Gaussian\PYZus{}pulse}\PY{l+s+s2}{\PYZdq{}}
+\PY{n}{eta}       \PY{o}{=} \PY{l+m+mf}{0.33}
+\PY{n}{Nr}        \PY{o}{=} \PY{l+m+mi}{20000}
+\PY{n}{r0}        \PY{o}{=} \PY{l+m+mi}{0}
+\PY{n}{sigma}     \PY{o}{=} \PY{l+m+mi}{1}
+\PY{n}{rmax}      \PY{o}{=} \PY{l+m+mi}{70}
+\PY{n}{SFID}\PY{o}{.}\PY{n}{ScalarField\PYZus{}InitialData}\PY{p}{(}\PY{n}{outfile}\PY{p}{,}\PY{n}{Ccodesdir}\PY{p}{,}\PY{n}{ID\PYZus{}family}\PY{p}{,}
+                            \PY{n}{eta}\PY{p}{,}\PY{n}{r0}\PY{p}{,}\PY{n}{sigma}\PY{p}{,}\PY{n}{Nr}\PY{p}{,}\PY{n}{rmax}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{Verbatim}[commandchars=\\\{\}]
+Generated the ADM initial data for the gravitational collapse
+of a massless scalar field in Spherical coordinates.
+
+Type of initial condition: Scalar field: "Gaussian" Shell
+                         ADM quantities: Time-symmetric
+                        Lapse condition: Pre-collapsed
+Parameters: amplitude         = 0.33,
+            center            = 0,
+            width             = 1,
+            domain size       = 70,
+            number of points  = 20000,
+            Initial data file = SFID-trusted.txt.
+
+Wrote to file Scalar\_Field\_ID/ID\_scalar\_field\_ADM\_quantities.h
+Wrote to file Scalar\_Field\_ID/ID\_scalar\_field\_spherical.h
+Appended to file "Scalar\_Field\_ID/ID\_scalarfield\_xx0xx1xx2\_to\_BSSN\_xx0xx1xx2.h"
+Appended to file "Scalar\_Field\_ID/ID\_scalarfield\_xx0xx1xx2\_to\_BSSN\_xx0xx1xx2.h"
+    \end{Verbatim}
+
+    \hypertarget{step-4.b-plotting-the-relative-error-between-the-two-initial-data-back-to-top}{%
+\subsection{\texorpdfstring{Step 4.b: Plotting the relative error
+between the two initial data {[}Back to
+\hyperref[toc]{top}{]}}{Step 4.b: Plotting the relative error between the two initial data {[}Back to {]}}}\label{step-4.b-plotting-the-relative-error-between-the-two-initial-data-back-to-top}}
+
+\[\label{relative_error}\]
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{16}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Step 4.b: Plotting the relative error between the two initial data}
+\PY{c+c1}{\PYZsh{} Step 4.b.i: Import required Python modules}
+\PY{k+kn}{import} \PY{n+nn}{numpy} \PY{k}{as} \PY{n+nn}{np}                \PY{c+c1}{\PYZsh{} NumPy:}
+\PY{k+kn}{import} \PY{n+nn}{matplotlib}\PY{n+nn}{.}\PY{n+nn}{pyplot} \PY{k}{as} \PY{n+nn}{plt}   \PY{c+c1}{\PYZsh{} Matplotlib: }
+\PY{k+kn}{from} \PY{n+nn}{IPython}\PY{n+nn}{.}\PY{n+nn}{display} \PY{k+kn}{import} \PY{n}{Image} \PY{c+c1}{\PYZsh{} Image: Display images on Jupyter notebooks}
+
+\PY{n}{rPy}\PY{p}{,}\PY{n}{sfPy}\PY{p}{,}\PY{n}{psi4Py}\PY{p}{,}\PY{n}{alpPy} \PY{o}{=} \PY{n}{np}\PY{o}{.}\PY{n}{loadtxt}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{SFID\PYZhy{}trusted.txt}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}\PY{o}{.}\PY{n}{T}
+\PY{n}{rC} \PY{p}{,}\PY{n}{sfC} \PY{p}{,}\PY{n}{psi4C} \PY{p}{,}\PY{n}{alpC}  \PY{o}{=} \PY{n}{np}\PY{o}{.}\PY{n}{loadtxt}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{SFID.txt}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}\PY{o}{.}\PY{n}{T}
+
+\PY{n}{fig} \PY{o}{=} \PY{n}{plt}\PY{o}{.}\PY{n}{figure}\PY{p}{(}\PY{p}{)}
+
+\PY{n}{plt}\PY{o}{.}\PY{n}{grid}\PY{p}{(}\PY{p}{)}
+\PY{n}{plt}\PY{o}{.}\PY{n}{xlabel}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}r\PYZdl{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,}\PY{n}{fontsize}\PY{o}{=}\PY{l+m+mi}{14}\PY{p}{)}
+\PY{n}{plt}\PY{o}{.}\PY{n}{ylabel}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{log\PYZus{}}\PY{l+s+si}{\PYZob{}10\PYZcb{}}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{left|1 \PYZhy{} }\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{psi\PYZca{}}\PY{l+s+si}{\PYZob{}4\PYZcb{}}\PY{l+s+s2}{/}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{psi\PYZca{}}\PY{l+s+si}{\PYZob{}4\PYZcb{}}\PY{l+s+s2}{\PYZus{}}\PY{l+s+s2}{\PYZob{}}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{rm trusted\PYZcb{}}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{right|\PYZdl{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,}\PY{n}{fontsize}\PY{o}{=}\PY{l+m+mi}{14}\PY{p}{)}
+\PY{n}{plt}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{rC}\PY{p}{,}\PY{n}{np}\PY{o}{.}\PY{n}{log10}\PY{p}{(}\PY{n}{np}\PY{o}{.}\PY{n}{abs}\PY{p}{(}\PY{l+m+mi}{1}\PY{o}{\PYZhy{}}\PY{n}{psi4C}\PY{o}{/}\PY{n}{psi4Py}\PY{p}{)}\PY{p}{)}\PY{p}{)}
+\PY{n}{plt}\PY{o}{.}\PY{n}{tight\PYZus{}layout}\PY{p}{(}\PY{p}{)}
+
+\PY{n}{outfig} \PY{o}{=} \PY{n}{os}\PY{o}{.}\PY{n}{path}\PY{o}{.}\PY{n}{join}\PY{p}{(}\PY{n}{Coutdir}\PY{p}{,}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{validation.png}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{plt}\PY{o}{.}\PY{n}{savefig}\PY{p}{(}\PY{n}{outfig}\PY{p}{,}\PY{n}{dpi}\PY{o}{=}\PY{l+m+mi}{150}\PY{p}{,}\PY{n}{facecolor}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{white}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{plt}\PY{o}{.}\PY{n}{close}\PY{p}{(}\PY{n}{fig}\PY{p}{)}
+\PY{n}{Image}\PY{p}{(}\PY{n}{outfig}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+ 
+            
+\prompt{Out}{outcolor}{16}{}
+    
+    \begin{center}
+    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{Tutorial-ADM_Initial_Data-ScalarField_Ccode_files/Tutorial-ADM_Initial_Data-ScalarField_Ccode_33_0.png}
+    \end{center}
+    { \hspace*{\fill} \\}
+    
+
+    \hypertarget{step-5-output-this-module-as-latex-formatted-pdf-file-back-to-top}{%
+\section{\texorpdfstring{Step 5: Output this module as
+\(\LaTeX\)-formatted PDF file {[}Back to
+\hyperref[toc]{top}{]}}{Step 5: Output this module as \textbackslash LaTeX-formatted PDF file {[}Back to {]}}}\label{step-5-output-this-module-as-latex-formatted-pdf-file-back-to-top}}
+
+\[\label{output_to_pdf}\]
+
+The following code cell converts this Jupyter notebook into a proper,
+clickable \(\LaTeX\)-formatted PDF file. After the cell is successfully
+run, the generated PDF may be found in the root NRPy+ tutorial
+directory, with filename
+\url{Tutorial-ADM_Initial_Data-ScalarField_Ccode.pdf} (Note that
+clicking on this link may not work; you may need to open the PDF file
+through another means.)
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{15}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{cmd}\PY{o}{.}\PY{n}{output\PYZus{}Jupyter\PYZus{}notebook\PYZus{}to\PYZus{}LaTeXed\PYZus{}PDF}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Tutorial\PYZhy{}ADM\PYZus{}Initial\PYZus{}Data\PYZhy{}ScalarField\PYZus{}Ccode}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{Verbatim}[commandchars=\\\{\}]
+[NbConvertApp] WARNING | pattern 'Tutorial-ADM\_Initial\_Data-ScalarField.ipynb'
+matched no files
+Created Tutorial-ADM\_Initial\_Data-ScalarField.tex, and compiled LaTeX file
+    to PDF file Tutorial-ADM\_Initial\_Data-ScalarField.pdf
+    \end{Verbatim}
+
+
+    % Add a bibliography block to the postdoc
+    
+    
+    
+\end{document}
