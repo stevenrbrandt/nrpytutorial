@@ -962,6 +962,13 @@ def basis_transform_vectorU_from_Cartesian_to_rfmbasis(Jac_dUrfm_dDCartUD, Cart_
             rfm_dst_vectorU[i] += Jac_dUrfm_dDCartUD[i][l] * Cart_src_vectorU[l]
     return rfm_dst_vectorU
 
+def basis_transform_vectorD_from_Cartesian_to_rfmbasis(Jac_dUCart_dDrfmUD, Cart_src_vectorD):
+    rfm_dst_vectorD = ixp.zerorank1()
+    for i in range(3):
+        for l in range(3):
+            rfm_dst_vectorD[i] += Jac_dUCart_dDrfmUD[l][i] * Cart_src_vectorD[l]
+    return rfm_dst_vectorD
+
 def basis_transform_tensorDD_from_Cartesian_to_rfmbasis(Jac_dUCart_dDrfmUD, Cart_src_tensorDD):
     rfm_dst_tensorDD = ixp.zerorank2()
     for i in range(3):
