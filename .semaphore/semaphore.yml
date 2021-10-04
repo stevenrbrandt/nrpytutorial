@@ -44,26 +44,26 @@ blocks:
             - git clone https://github.com/zachetienne/nrpytutorial.git
             - cd nrpytutorial
             - ./UnitTesting/core_Jupyter_notebook_testsuite.sh
-  - name: "JUPYTER NOTEBOOK TESTS: Ubuntu Linux Focal CPython 3.8.5 (Default Python 3 in Ubuntu Focal + latest stable SymPy)"
-    dependencies: []
-    task:
-      agent:
-        machine:
-          type: e1-standard-2
-          os_image: ubuntu2004
-      jobs:
-        - name: "JUPYTER NOTEBOOK TESTS: Ubuntu Linux Focal CPython 3.8.5 (Default Python 3 in Ubuntu Focal + latest stable SymPy)"
-          commands:
-            # - sudo apt-get update
-            - sudo apt-get -y install texlive-latex-base pandoc colordiff gcc libgsl-dev ffmpeg
-            - python3 --version
-            - export PATH=$PATH:/home/semaphore/.local/bin
-            - pip3 install -U pip setuptools
-            - pip3 install testfixtures sympy mpmath jupyter matplotlib scipy nrpylatex
-            - git clone https://github.com/zachetienne/nrpytutorial.git
-            - cd nrpytutorial
-            - ./UnitTesting/core_Jupyter_notebook_testsuite.sh
-  - name: "JUPYTER NOTEBOOK TESTS: Ubuntu Linux Focal CPython 3.8.5 (Default Python 3 in Ubuntu Focal + latest DEVEL SymPy)"
+  # - name: "JUPYTER NOTEBOOK TESTS: Ubuntu Linux Focal CPython 3.8.5 (Default Python 3 in Ubuntu Focal + latest stable SymPy)"
+  #   dependencies: []
+  #   task:
+  #     agent:
+  #       machine:
+  #         type: e1-standard-2
+  #         os_image: ubuntu2004
+  #     jobs:
+  #       - name: "JUPYTER NOTEBOOK TESTS: Ubuntu Linux Focal CPython 3.8.5 (Default Python 3 in Ubuntu Focal + latest stable SymPy)"
+  #         commands:
+  #           - sudo apt-get update
+  #           - sudo apt-get -y install texlive-latex-base pandoc colordiff gcc libgsl-dev ffmpeg
+  #           - python3 --version
+  #           - export PATH=$PATH:/home/semaphore/.local/bin
+  #           - pip3 install -U pip setuptools
+  #           - pip3 install testfixtures sympy mpmath jupyter matplotlib scipy nrpylatex
+  #           - git clone https://github.com/zachetienne/nrpytutorial.git
+  #           - cd nrpytutorial
+  #           - ./UnitTesting/core_Jupyter_notebook_testsuite.sh
+  - name: "JUPYTER NOTEBOOK TESTS: Ubuntu Linux Focal CPython 3.8.5 (Default Python 3 in Ubuntu BIONIC + latest DEVEL SymPy)"
     dependencies: []
     task:
       # agent:
@@ -71,10 +71,10 @@ blocks:
       #     type: e1-standard-2
       #     os_image: ubuntu2004
       jobs:
-        - name: "JUPYTER NOTEBOOK TESTS: Ubuntu Linux Focal CPython 3.8.5 (Default Python 3 in Ubuntu Focal + latest DEVEL SymPy)"
+        - name: "JUPYTER NOTEBOOK TESTS: Ubuntu Linux BIONIC CPython 3.8.5 (Default Python 3 in Ubuntu BIONIC + latest DEVEL SymPy)"
           commands:
-            # - sudo apt-get update
-            - sudo apt-get -y install texlive-latex-base pandoc colordiff gcc libgsl-dev ffmpeg
+            - sudo apt-get update
+            - sudo apt-get -y install texlive-latex-base pandoc colordiff gcc libgsl-dev ffmpeg python3
             - python3 --version
             - export PATH=$PATH:/home/semaphore/.local/bin
             - pip3 install -U pip setuptools
