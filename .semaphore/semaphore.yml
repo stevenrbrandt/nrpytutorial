@@ -71,10 +71,11 @@ blocks:
       #     type: e1-standard-2
       #     os_image: ubuntu2004
       jobs:
-        - name: "JUPYTER NOTEBOOK TESTS: Ubuntu Linux BIONIC CPython 3.6.9 (Default Python 3 in Ubuntu BIONIC + latest DEVEL SymPy)"
+        - name: "JUPYTER NOTEBOOK TESTS: Ubuntu Linux BIONIC CPython 3.9.x (Python 3.9.x in Ubuntu BIONIC + latest DEVEL SymPy)"
           commands:
             - sudo apt-get update
             - sudo apt-get -y install texlive-latex-base pandoc colordiff gcc libgsl-dev ffmpeg python3
+            - sem-version python 3.9
             - python3 --version
             - export PATH=$PATH:/home/semaphore/.local/bin
             - pip3 install -U pip setuptools
