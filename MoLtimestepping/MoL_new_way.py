@@ -11,7 +11,7 @@
 import sympy as sp  # Import SymPy, a computer algebra system written entirely in Python
 import os, sys      # Standard Python modules for multiplatform OS-level functions
 from MoLtimestepping.RK_Butcher_Table_Dictionary import Butcher_dict
-from outputC import add_to_Cfunction_dict, indent_Ccode, outC_NRPy_basic_defines_h_dict  # NRPy+: Basic C code output functionality
+from outputC import add_to_Cfunction_dict, indent_Ccode, outC_NRPy_basic_defines_h_dict, outputC, superfast_uniq  # NRPy+: Basic C code output functionality
 
 
 # Check if Butcher Table is diagonal
@@ -114,11 +114,11 @@ def add_to_Cfunction_dict_MoL_malloc(MoL_method, which_gfs):
         body=indent_Ccode(body, "  "),
         rel_path_to_Cparams=os.path.join("."))
 
-# single_RK_substep() performs necessary replacements to
+# single_RK_substep_input_symbolic() performs necessary replacements to
 #   define C code for a single RK substep
 #   (e.g., computing k_1 and then updating the outer boundaries)
-def single_RK_substep(commentblock, RHS_str, RHS_input_str, RHS_output_str, RK_lhss_list, RK_rhss_list,
-                      post_RHS_list, post_RHS_output_list, indent="  "):
+def single_RK_substep_input_symbolic(commentblock, RHS_str, RHS_input_str, RHS_output_str, RK_lhss_list, RK_rhss_list,
+                                     post_RHS_list, post_RHS_output_list, indent="  ", enable_SIMD=False):
     addl_indent = ""
     return_str  = commentblock + "\n"
     if not isinstance(RK_lhss_list, list):
@@ -132,18 +132,51 @@ def single_RK_substep(commentblock, RHS_str, RHS_input_str, RHS_output_str, RK_l
         post_RHS_output_list = [post_RHS_output_list]
 
     # Part 1: RHS evaluation:
-    return_str += indent_Ccode(RHS_str.replace("RK_INPUT_GFS",  RHS_input_str).
-                                       replace("RK_OUTPUT_GFS", RHS_output_str)+"\n", indent=addl_indent)
+    return_str += indent_Ccode(str(RHS_str).replace("RK_INPUT_GFS",  str(RHS_input_str).replace("gfsL", "gfs")).
+                               replace("RK_OUTPUT_GFS", str(RHS_output_str).replace("gfsL", "gfs"))+"\n", indent=addl_indent)
 
     # Part 2: RK update
-    return_str += addl_indent + "LOOP_ALL_GFS_GPS(i) {\n"
-    for lhs, rhs in zip(RK_lhss_list, RK_rhss_list):
-        return_str += addl_indent + indent + lhs + "[i] = " + rhs + ";\n"
-    return_str += addl_indent + "}\n"
+    if enable_SIMD:
+        return_str += "#pragma omp parallel for\n"
+        return_str += addl_indent + "for(int i=0;i<Nxx_plus_2NGHOSTS0*Nxx_plus_2NGHOSTS1*Nxx_plus_2NGHOSTS2*NUM_EVOL_GFS;i+=SIMD_width) {\n"
+    else:
+        return_str += addl_indent + "LOOP_ALL_GFS_GPS(i) {\n"
+    type = "REAL"
+    if enable_SIMD:
+        type = "REAL_SIMD_ARRAY"
+    RK_lhss_str_list = []
+    for i, el in enumerate(RK_lhss_list):
+        if enable_SIMD:
+            RK_lhss_str_list.append("const REAL_SIMD_ARRAY __RHS_exp_" + str(i))
+        else:
+            RK_lhss_str_list.append(str(el).replace("gfsL", "gfs[i]"))
+    read_list = []
+    for el in RK_rhss_list:
+        for read in list(el.free_symbols):
+            read_list.append(read)
+    read_list_uniq = superfast_uniq(read_list)
+    for el in read_list_uniq:
+        if str(el) != "dt":
+            if enable_SIMD:
+                return_str += "  const " + type + " " + str(el) + " = ReadSIMD(&" + str(el).replace("gfsL", "gfs[i]") + ");\n"
+            else:
+                return_str += "  const " + type + " " + str(el) + " = " + str(el).replace("gfsL", "gfs[i]") + ";\n"
+    if enable_SIMD:
+        return_str += "  const REAL_SIMD_ARRAY DT = ConstSIMD(dt);\n"
+    kernel = outputC(RK_rhss_list, RK_lhss_str_list, filename="returnstring",
+                          params="includebraces=False,preindent=1,outCverbose=False,enable_SIMD="+str(enable_SIMD))
+    if enable_SIMD:
+        return_str += kernel.replace("dt", "DT")
+        for i, el in enumerate(RK_lhss_list):
+            return_str += "  WriteSIMD(&" + str(el).replace("gfsL", "gfs[i]") + ", __RHS_exp_" + str(i) + ");\n"
+    else:
+        return_str += kernel
+
+    return_str += "}\n"
 
     # Part 3: Call post-RHS functions
     for post_RHS, post_RHS_output in zip(post_RHS_list, post_RHS_output_list):
-        return_str += indent_Ccode(post_RHS.replace("RK_OUTPUT_GFS", post_RHS_output), indent=addl_indent)
+        return_str += indent_Ccode(post_RHS.replace("RK_OUTPUT_GFS", str(post_RHS_output).replace("gfsL", "gfs")), indent=addl_indent)
 
     return return_str
 
@@ -174,8 +207,10 @@ def single_RK_substep(commentblock, RHS_str, RHS_input_str, RHS_output_str, RK_l
 # y_nplus1 += 1/3*k_even
 ########################################################################################################################
 def add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string = "", post_RHS_string = "",
-                                                  enable_rfm=False, enable_curviBCs=False):
+                                                  enable_rfm=False, enable_curviBCs=False, enable_SIMD=False):
     includes = ["NRPy_basic_defines.h", "NRPy_function_prototypes.h"]
+    if enable_SIMD:
+        includes += [os.path.join("SIMD", "SIMD_intrinsics.h")]
     desc  = "Method of Lines (MoL) for \"" + MoL_method + "\" method: Step forward one full timestep.\n"
     c_type = "void"
     name = "MoL_step_forward_in_time"
@@ -208,160 +243,269 @@ def add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string = "", 
     num_steps = len(Butcher)-1 # Specify the number of required steps to update solution
 
     # Diagonal RK3 only!!!
+    dt = sp.Symbol("dt", real=True)
     if diagonal(MoL_method) and "RK3" in MoL_method:
         #  In a diagonal RK3 method, only 3 gridfunctions need be defined. Below implements this approach.
-
+        y_n_gfs = sp.Symbol("y_n_gfsL", real=True)
+        k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs = sp.Symbol("k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfsL", real=True)
+        k2_or_y_nplus_a32_k2_gfs = sp.Symbol("k2_or_y_nplus_a32_k2_gfsL", real=True)
         # k_1
         body += """
-// In a diagonal RK3 method like this one, only 3 gridfunctions need be defined. Below implements this approach.
-// Using y_n_gfs as input, k1 and apply boundary conditions\n"""
-
-        body += single_RK_substep(
-            commentblock = """// -={ START k1 substep }=-
-// RHS evaluation:
-//  1. We will store k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs now as
-//     ...  the update for the next rhs evaluation y_n + a21*k1*dt
-// Post-RHS evaluation:
-//  1. Apply post-RHS to y_n + a21*k1*dt""",
-            RHS_str = RHS_string,
-            RHS_input_str = "y_n_gfs", RHS_output_str = "k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs",
-            RK_lhss_list = ["k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs"],
-            RK_rhss_list = ["("+sp.ccode(Butcher[1][1]).replace("L","")+")*k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs[i]*dt + y_n_gfs[i]"],
-            post_RHS_list = [post_RHS_string], post_RHS_output_list = ["k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs"]) + "// -={ END k1 substep }=-\n\n"
+    // In a diagonal RK3 method like this one, only 3 gridfunctions need be defined. Below implements this approach.
+    // Using y_n_gfs as input, k1 and apply boundary conditions\n"""
+        body += single_RK_substep_input_symbolic(
+            commentblock="""// -={ START k1 substep }=-
+    // RHS evaluation:
+    //  1. We will store k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs now as
+    //     ...  the update for the next rhs evaluation y_n + a21*k1*dt
+    // Post-RHS evaluation:
+    //  1. Apply post-RHS to y_n + a21*k1*dt""",
+            RHS_str=RHS_string,
+            RHS_input_str=y_n_gfs,
+            RHS_output_str=k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs,
+            RK_lhss_list=[k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs],
+            RK_rhss_list=[Butcher[1][1]*k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs*dt + y_n_gfs],
+            post_RHS_list=[post_RHS_string], post_RHS_output_list=[k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs],
+            enable_SIMD=enable_SIMD) + "// -={ END k1 substep }=-\n\n"
 
         # k_2
-        body += single_RK_substep(
+        body += single_RK_substep_input_symbolic(
             commentblock="""// -={ START k2 substep }=-
-// RHS evaluation:
-//    1. Reassign k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs to be the running total y_{n+1}; a32*k2*dt to the running total
-//    2. Store k2_or_y_nplus_a32_k2_gfs now as y_n + a32*k2*dt
-// Post-RHS evaluation:
-//    1. Apply post-RHS to both y_n + a32*k2 (stored in k2_or_y_nplus_a32_k2_gfs)
-//       ... and the y_{n+1} running total, as they have not been applied yet to k2-related gridfunctions""",
+    // RHS evaluation:
+    //    1. Reassign k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs to be the running total y_{n+1}; a32*k2*dt to the running total
+    //    2. Store k2_or_y_nplus_a32_k2_gfs now as y_n + a32*k2*dt
+    // Post-RHS evaluation:
+    //    1. Apply post-RHS to both y_n + a32*k2 (stored in k2_or_y_nplus_a32_k2_gfs)
+    //       ... and the y_{n+1} running total, as they have not been applied yet to k2-related gridfunctions""",
             RHS_str=RHS_string,
-            RHS_input_str="k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs", RHS_output_str="k2_or_y_nplus_a32_k2_gfs",
-            RK_lhss_list=["k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs","k2_or_y_nplus_a32_k2_gfs"],
-            RK_rhss_list=["("+sp.ccode(Butcher[3][1]).replace("L","")+")*(k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs[i] - y_n_gfs[i])/("+sp.ccode(Butcher[1][1]).replace("L","")+") + y_n_gfs[i] + ("+sp.ccode(Butcher[3][2]).replace("L","")+")*k2_or_y_nplus_a32_k2_gfs[i]*dt",
-                          "("+sp.ccode(Butcher[2][2]).replace("L","")+")*k2_or_y_nplus_a32_k2_gfs[i]*dt + y_n_gfs[i]"],
-            post_RHS_list=[post_RHS_string,post_RHS_string],
-            post_RHS_output_list=["k2_or_y_nplus_a32_k2_gfs","k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs"]) + "// -={ END k2 substep }=-\n\n"
+            RHS_input_str=k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs,
+            RHS_output_str=k2_or_y_nplus_a32_k2_gfs,
+            RK_lhss_list=[k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs, k2_or_y_nplus_a32_k2_gfs],
+            RK_rhss_list=[Butcher[3][1]*(k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs - y_n_gfs)/Butcher[1][1] + y_n_gfs + Butcher[3][2]*k2_or_y_nplus_a32_k2_gfs*dt,
+                          Butcher[2][2]*k2_or_y_nplus_a32_k2_gfs*dt + y_n_gfs],
+            post_RHS_list=[post_RHS_string, post_RHS_string],
+            post_RHS_output_list=[k2_or_y_nplus_a32_k2_gfs,
+                                  k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs],
+            enable_SIMD=enable_SIMD) + "// -={ END k2 substep }=-\n\n"
 
         # k_3
-        body += single_RK_substep(
+        body += single_RK_substep_input_symbolic(
             commentblock="""// -={ START k3 substep }=-
-// RHS evaluation:
-//    1. Add k3 to the running total and save to y_n
-// Post-RHS evaluation:
-//    1. Apply post-RHS to y_n""",
+        // RHS evaluation:
+        //    1. Add k3 to the running total and save to y_n
+        // Post-RHS evaluation:
+        //    1. Apply post-RHS to y_n""",
             RHS_str=RHS_string,
-            RHS_input_str="k2_or_y_nplus_a32_k2_gfs", RHS_output_str="y_n_gfs",
-            RK_lhss_list=["y_n_gfs","k2_or_y_nplus_a32_k2_gfs"],
-            RK_rhss_list=["k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs[i] + ("+sp.ccode(Butcher[3][3]).replace("L","")+")*y_n_gfs[i]*dt"],
+            RHS_input_str=k2_or_y_nplus_a32_k2_gfs, RHS_output_str=y_n_gfs,
+            RK_lhss_list=[y_n_gfs],
+            RK_rhss_list=[k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs + Butcher[3][3]*y_n_gfs*dt],
             post_RHS_list=[post_RHS_string],
-            post_RHS_output_list=["y_n_gfs"]) + "// -={ END k3 substep }=-\n\n"
+            post_RHS_output_list=[y_n_gfs], enable_SIMD=enable_SIMD) + "// -={ END k3 substep }=-\n\n"
     else:
-        y_n = "y_n_gfs"
+        y_n = sp.Symbol("y_n_gfsL", real=True)
         if not diagonal(MoL_method):
             for s in range(num_steps):
-                next_y_input = "next_y_input_gfs"
+                next_y_input = sp.Symbol("next_y_input_gfsL", real=True)
 
                 # If we're on the first step (s=0), we use y_n gridfunction as input.
                 #      Otherwise next_y_input is input. Output is just the reverse.
                 if s == 0:  # If on first step:
                     RHS_input = y_n
-                else:    # If on second step or later:
+                else:  # If on second step or later:
                     RHS_input = next_y_input
-                RHS_output = "k" + str(s + 1) + "_gfs"
-                if s == num_steps-1: # If on final step:
+                RHS_output = sp.Symbol("k" + str(s + 1) + "_gfs", real=True)
+                if s == num_steps - 1:  # If on final step:
                     RK_lhs = y_n
-                    RK_rhs = y_n + "[i] + dt*("
-                else:                # If on anything but the final step:
+                else:  # If on anything but the final step:
                     RK_lhs = next_y_input
-                    RK_rhs = y_n + "[i] + dt*("
-                for m in range(s+1):
-                    if Butcher[s+1][m+1] != 0:
-                        if Butcher[s+1][m+1] != 1:
-                            RK_rhs += " + k"+str(m+1)+"_gfs[i]*("+sp.ccode(Butcher[s+1][m+1]).replace("L","")+")"
+                RK_rhs = y_n
+                for m in range(s + 1):
+                    k_mp1_gfs = sp.Symbol("k" + str(m + 1) + "_gfsL")
+                    if Butcher[s + 1][m + 1] != 0:
+                        if Butcher[s + 1][m + 1] != 1:
+                            RK_rhs += dt * k_mp1_gfs*Butcher[s + 1][m + 1]
                         else:
-                            RK_rhs += " + k"+str(m+1)+"_gfs[i]"
-                RK_rhs += " )"
+                            RK_rhs += dt * k_mp1_gfs
 
                 post_RHS = post_RHS_string
-                if s == num_steps-1: # If on final step:
+                if s == num_steps - 1:  # If on final step:
                     post_RHS_output = y_n
-                else:                # If on anything but the final step:
+                else:  # If on anything but the final step:
                     post_RHS_output = next_y_input
 
-                body += single_RK_substep(
+                body += single_RK_substep_input_symbolic(
                     commentblock="// -={ START k" + str(s + 1) + " substep }=-",
                     RHS_str=RHS_string,
                     RHS_input_str=RHS_input, RHS_output_str=RHS_output,
-                    RK_lhss_list=[RK_lhs],   RK_rhss_list=[RK_rhs],
+                    RK_lhss_list=[RK_lhs], RK_rhss_list=[RK_rhs],
                     post_RHS_list=[post_RHS],
-                    post_RHS_output_list=[post_RHS_output]) + "// -={ END k" + str(s + 1) + " substep }=-\n\n"
-        else:  # diagonal case:
-            y_nplus1_running_total = "y_nplus1_running_total_gfs"
-            if MoL_method == 'Euler': # Euler's method doesn't require any k_i, and gets its own unique algorithm
-                body += single_RK_substep(
+                    post_RHS_output_list=[post_RHS_output], enable_SIMD=enable_SIMD) + "// -={ END k" + str(s + 1) + " substep }=-\n\n"
+        else:
+            y_n = sp.Symbol("y_n_gfsL", real=True)
+            y_nplus1_running_total = sp.Symbol("y_nplus1_running_total_gfsL", real=True)
+            if MoL_method == 'Euler':  # Euler's method doesn't require any k_i, and gets its own unique algorithm
+                body += single_RK_substep_input_symbolic(
                     commentblock=indent + "// ***Euler timestepping only requires one RHS evaluation***",
                     RHS_str=RHS_string,
                     RHS_input_str=y_n, RHS_output_str=y_nplus1_running_total,
-                    RK_lhss_list=[y_n],   RK_rhss_list=[y_n+"[i] + "+y_nplus1_running_total+"[i]*dt"],
+                    RK_lhss_list=[y_n], RK_rhss_list=[y_n + y_nplus1_running_total*dt],
                     post_RHS_list=[post_RHS_string],
-                    post_RHS_output_list=[y_n])
+                    post_RHS_output_list=[y_n], enable_SIMD=enable_SIMD)
             else:
                 for s in range(num_steps):
                     # If we're on the first step (s=0), we use y_n gridfunction as input.
                     # and k_odd as output.
                     if s == 0:
-                        RHS_input  = "y_n_gfs"
-                        RHS_output = "k_odd_gfs"
+                        RHS_input  = sp.Symbol("y_n_gfsL", real=True)
+                        RHS_output = sp.Symbol("k_odd_gfsL", real=True)
                     # For the remaining steps the inputs and ouputs alternate between k_odd and k_even
                     elif s % 2 == 0:
-                        RHS_input = "k_even_gfs"
-                        RHS_output = "k_odd_gfs"
+                        RHS_input = sp.Symbol("k_even_gfsL", real=True)
+                        RHS_output = sp.Symbol("k_odd_gfsL", real=True)
                     else:
-                        RHS_input = "k_odd_gfs"
-                        RHS_output = "k_even_gfs"
-
+                        RHS_input = sp.Symbol("k_odd_gfsL", real=True)
+                        RHS_output = sp.Symbol("k_even_gfsL", real=True)
                     RK_lhs_list = []
                     RK_rhs_list = []
                     if s != num_steps-1:  # For anything besides the final step
                         if s == 0:  # The first RK step
                             RK_lhs_list.append(y_nplus1_running_total)
-                            RK_rhs_list.append(RHS_output+"[i]*dt*("+sp.ccode(Butcher[num_steps][s+1]).replace("L","")+")")
+                            RK_rhs_list.append(RHS_output*dt*Butcher[num_steps][s+1])
 
                             RK_lhs_list.append(RHS_output)
-                            RK_rhs_list.append(y_n+"[i] + "+RHS_output+"[i]*dt*("+sp.ccode(Butcher[s+1][s+1]).replace("L","")+")")
+                            RK_rhs_list.append(y_n + RHS_output*dt*Butcher[s+1][s+1])
                         else:
                             if Butcher[num_steps][s+1] != 0:
                                 RK_lhs_list.append(y_nplus1_running_total)
                                 if Butcher[num_steps][s+1] != 1:
-                                    RK_rhs_list.append(y_nplus1_running_total+"[i] + "+RHS_output+"[i]*dt*("+sp.ccode(Butcher[num_steps][s+1]).replace("L","")+")")
+                                    RK_rhs_list.append(y_nplus1_running_total + RHS_output*dt*Butcher[num_steps][s+1])
                                 else:
-                                    RK_rhs_list.append(y_nplus1_running_total+"[i] + "+RHS_output+"[i]*dt")
+                                    RK_rhs_list.append(y_nplus1_running_total + RHS_output*dt)
                             if Butcher[s+1][s+1] != 0:
                                 RK_lhs_list.append(RHS_output)
                                 if Butcher[s+1][s+1] != 1:
-                                    RK_rhs_list.append(y_n+"[i] + "+RHS_output+"[i]*dt*("+sp.ccode(Butcher[s+1][s+1]).replace("L","")+")")
+                                    RK_rhs_list.append(y_n + RHS_output*dt*Butcher[s+1][s+1])
                                 else:
-                                    RK_rhs_list.append(y_n+"[i] + "+RHS_output+"[i]*dt")
+                                    RK_rhs_list.append(y_n + RHS_output*dt)
                         post_RHS_output = RHS_output
                     if s == num_steps-1:  # If on the final step
                         if Butcher[num_steps][s+1] != 0:
                             RK_lhs_list.append(y_n)
                             if Butcher[num_steps][s+1] != 1:
-                                RK_rhs_list.append(y_n+"[i] + "+y_nplus1_running_total+"[i] + "+RHS_output+"[i]*dt*("+sp.ccode(Butcher[num_steps][s+1]).replace("L","")+")")
+                                RK_rhs_list.append(y_n + y_nplus1_running_total + RHS_output*dt*Butcher[num_steps][s+1])
                             else:
-                                RK_rhs_list.append(y_n+"[i] + "+y_nplus1_running_total+"[i] + "+RHS_output+"[i]*dt)")
+                                RK_rhs_list.append(y_n + y_nplus1_running_total + RHS_output*dt)
                         post_RHS_output = y_n
-                    body += single_RK_substep(
+                    body += single_RK_substep_input_symbolic(
                         commentblock=indent + "// -={ START k" + str(s + 1) + " substep }=-",
                         RHS_str=RHS_string,
                         RHS_input_str=RHS_input, RHS_output_str=RHS_output,
                         RK_lhss_list=RK_lhs_list, RK_rhss_list=RK_rhs_list,
                         post_RHS_list=[post_RHS_string],
-                        post_RHS_output_list=[post_RHS_output]) + "// -={ END k" + str(s + 1) + " substep }=-\n\n"
+                        post_RHS_output_list=[post_RHS_output], enable_SIMD=enable_SIMD) + "// -={ END k" + str(s + 1) + " substep }=-\n\n"
+    # else:
+    #     y_n = "y_n_gfs"
+    #     if not diagonal(MoL_method):
+    #         for s in range(num_steps):
+    #             next_y_input = "next_y_input_gfs"
+    #
+    #             # If we're on the first step (s=0), we use y_n gridfunction as input.
+    #             #      Otherwise next_y_input is input. Output is just the reverse.
+    #             if s == 0:  # If on first step:
+    #                 RHS_input = y_n
+    #             else:    # If on second step or later:
+    #                 RHS_input = next_y_input
+    #             RHS_output = "k" + str(s + 1) + "_gfs"
+    #             if s == num_steps-1: # If on final step:
+    #                 RK_lhs = y_n
+    #                 RK_rhs = y_n + "[i] + dt*("
+    #             else:                # If on anything but the final step:
+    #                 RK_lhs = next_y_input
+    #                 RK_rhs = y_n + "[i] + dt*("
+    #             for m in range(s+1):
+    #                 if Butcher[s+1][m+1] != 0:
+    #                     if Butcher[s+1][m+1] != 1:
+    #                         RK_rhs += " + k"+str(m+1)+"_gfs[i]*("+sp.ccode(Butcher[s+1][m+1]).replace("L","")+")"
+    #                     else:
+    #                         RK_rhs += " + k"+str(m+1)+"_gfs[i]"
+    #             RK_rhs += " )"
+    #
+    #             post_RHS = post_RHS_string
+    #             if s == num_steps-1: # If on final step:
+    #                 post_RHS_output = y_n
+    #             else:                # If on anything but the final step:
+    #                 post_RHS_output = next_y_input
+    #
+    #             body += single_RK_substep(
+    #                 commentblock="// -={ START k" + str(s + 1) + " substep }=-",
+    #                 RHS_str=RHS_string,
+    #                 RHS_input_str=RHS_input, RHS_output_str=RHS_output,
+    #                 RK_lhss_list=[RK_lhs],   RK_rhss_list=[RK_rhs],
+    #                 post_RHS_list=[post_RHS],
+    #                 post_RHS_output_list=[post_RHS_output]) + "// -={ END k" + str(s + 1) + " substep }=-\n\n"
+    #     else:  # diagonal case:
+    #         y_nplus1_running_total = "y_nplus1_running_total_gfs"
+    #         if MoL_method == 'Euler': # Euler's method doesn't require any k_i, and gets its own unique algorithm
+    #             body += single_RK_substep(
+    #                 commentblock=indent + "// ***Euler timestepping only requires one RHS evaluation***",
+    #                 RHS_str=RHS_string,
+    #                 RHS_input_str=y_n, RHS_output_str=y_nplus1_running_total,
+    #                 RK_lhss_list=[y_n],   RK_rhss_list=[y_n+"[i] + "+y_nplus1_running_total+"[i]*dt"],
+    #                 post_RHS_list=[post_RHS_string],
+    #                 post_RHS_output_list=[y_n])
+    #         else:
+    #             for s in range(num_steps):
+    #                 # If we're on the first step (s=0), we use y_n gridfunction as input.
+    #                 # and k_odd as output.
+    #                 if s == 0:
+    #                     RHS_input  = "y_n_gfs"
+    #                     RHS_output = "k_odd_gfs"
+    #                 # For the remaining steps the inputs and ouputs alternate between k_odd and k_even
+    #                 elif s % 2 == 0:
+    #                     RHS_input = "k_even_gfs"
+    #                     RHS_output = "k_odd_gfs"
+    #                 else:
+    #                     RHS_input = "k_odd_gfs"
+    #                     RHS_output = "k_even_gfs"
+    #
+    #                 RK_lhs_list = []
+    #                 RK_rhs_list = []
+    #                 if s != num_steps-1:  # For anything besides the final step
+    #                     if s == 0:  # The first RK step
+    #                         RK_lhs_list.append(y_nplus1_running_total)
+    #                         RK_rhs_list.append(RHS_output+"[i]*dt*("+sp.ccode(Butcher[num_steps][s+1]).replace("L","")+")")
+    #
+    #                         RK_lhs_list.append(RHS_output)
+    #                         RK_rhs_list.append(y_n+"[i] + "+RHS_output+"[i]*dt*("+sp.ccode(Butcher[s+1][s+1]).replace("L","")+")")
+    #                     else:
+    #                         if Butcher[num_steps][s+1] != 0:
+    #                             RK_lhs_list.append(y_nplus1_running_total)
+    #                             if Butcher[num_steps][s+1] != 1:
+    #                                 RK_rhs_list.append(y_nplus1_running_total+"[i] + "+RHS_output+"[i]*dt*("+sp.ccode(Butcher[num_steps][s+1]).replace("L","")+")")
+    #                             else:
+    #                                 RK_rhs_list.append(y_nplus1_running_total+"[i] + "+RHS_output+"[i]*dt")
+    #                         if Butcher[s+1][s+1] != 0:
+    #                             RK_lhs_list.append(RHS_output)
+    #                             if Butcher[s+1][s+1] != 1:
+    #                                 RK_rhs_list.append(y_n+"[i] + "+RHS_output+"[i]*dt*("+sp.ccode(Butcher[s+1][s+1]).replace("L","")+")")
+    #                             else:
+    #                                 RK_rhs_list.append(y_n+"[i] + "+RHS_output+"[i]*dt")
+    #                     post_RHS_output = RHS_output
+    #                 if s == num_steps-1:  # If on the final step
+    #                     if Butcher[num_steps][s+1] != 0:
+    #                         RK_lhs_list.append(y_n)
+    #                         if Butcher[num_steps][s+1] != 1:
+    #                             RK_rhs_list.append(y_n+"[i] + "+y_nplus1_running_total+"[i] + "+RHS_output+"[i]*dt*("+sp.ccode(Butcher[num_steps][s+1]).replace("L","")+")")
+    #                         else:
+    #                             RK_rhs_list.append(y_n+"[i] + "+y_nplus1_running_total+"[i] + "+RHS_output+"[i]*dt)")
+    #                     post_RHS_output = y_n
+    #                 body += single_RK_substep(
+    #                     commentblock=indent + "// -={ START k" + str(s + 1) + " substep }=-",
+    #                     RHS_str=RHS_string,
+    #                     RHS_input_str=RHS_input, RHS_output_str=RHS_output,
+    #                     RK_lhss_list=RK_lhs_list, RK_rhss_list=RK_rhs_list,
+    #                     post_RHS_list=[post_RHS_string],
+    #                     post_RHS_output_list=[post_RHS_output]) + "// -={ END k" + str(s + 1) + " substep }=-\n\n"
 
     add_to_Cfunction_dict(
         includes=includes,
@@ -428,10 +572,11 @@ def NRPy_basic_defines_MoL_timestepping_struct(MoL_method="RK4"):
 def register_C_functions_and_NRPy_basic_defines(MoL_method = "RK4",
             RHS_string =  "rhs_eval(Nxx,Nxx_plus_2NGHOSTS,dxx, RK_INPUT_GFS, RK_OUTPUT_GFS);",
        post_RHS_string = "apply_bcs(Nxx,Nxx_plus_2NGHOSTS, RK_OUTPUT_GFS);",
-       enable_rfm=False, enable_curviBCs=False):
+       enable_rfm=False, enable_curviBCs=False, enable_SIMD=False):
     for which_gfs in ["y_n_gfs", "non_y_n_gfs"]:
         add_to_Cfunction_dict_MoL_malloc(MoL_method, which_gfs)
         add_to_Cfunction_dict_MoL_free_memory(MoL_method, which_gfs)
     add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string, post_RHS_string,
-                                                   enable_rfm=enable_rfm, enable_curviBCs=enable_curviBCs)
-    NRPy_basic_defines_MoL_timestepping_struct(MoL_method = MoL_method)
+                                                   enable_rfm=enable_rfm, enable_curviBCs=enable_curviBCs,
+                                                   enable_SIMD=enable_SIMD)
+    NRPy_basic_defines_MoL_timestepping_struct(MoL_method=MoL_method)
