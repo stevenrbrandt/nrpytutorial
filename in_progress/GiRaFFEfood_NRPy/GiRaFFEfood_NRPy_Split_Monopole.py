@@ -101,7 +101,7 @@ def ValenciavU_func_SM(**params):
                betaU[0]*sqrtgammaDET*a*split_C_SM*sp.Rational(1,8)/(r*r)*(sp.sympify(1)+sp.sympify(4)*M/r)
     EsphD[2] = betaU[0]/(alpha*M)*split_C_SM*a*a*fp_of_r(r,M)*sp.cos(theta)*sp.sin(theta)**2
 
-    ED = gfcf.change_basis_spherical_to_Cartesian_D(EsphD)
-    BU = gfcf.change_basis_spherical_to_Cartesian_U(BsphU)
+    ED = rfm.basis_transform_vectorD_from_rfmbasis_to_Cartesian(gfcf.Jac_dUrfm_dDCartUD, EsphD)
+    BU = rfm.basis_transform_vectorU_from_rfmbasis_to_Cartesian(gfcf.Jac_dUCart_dDrfmUD, BsphU)
 
     return gfcf.compute_ValenciavU_from_ED_and_BU(ED, BU, gammaDD)

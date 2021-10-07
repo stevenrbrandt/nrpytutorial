@@ -17,8 +17,23 @@ import grid as gri               # NRPy+: Functions having to do with numerical 
 import indexedexp as ixp         # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
 import sympy as sp               # SymPy: The Python computer algebra package upon which NRPy+ depends
 import reference_metric as rfm   # NRPy+: Reference metric support
+
+# Use the Jacobian matrix to transform the vectors to Cartesian coordinates.
+# Construct Jacobian & Inverse Jacobians:
+par.set_parval_from_str("reference_metric::CoordSystem","Spherical")
+rfm.reference_metric()
+Jac_dUCart_dDrfmUD,Jac_dUrfm_dDCartUD = rfm.compute_Jacobian_and_inverseJacobian_tofrom_Cartesian()
+# Transform the coordinates of the Jacobian matrix from spherical to Cartesian:
 par.set_parval_from_str("reference_metric::CoordSystem","Cartesian")
 rfm.reference_metric()
+tmpa,tmpb,tmpc = sp.symbols("tmpa,tmpb,tmpc")
+for i in range(3):
+    for j in range(3):
+        Jac_dUCart_dDrfmUD[i][j] = Jac_dUCart_dDrfmUD[i][j].subs([(rfm.xx[0],tmpa),(rfm.xx[1],tmpb),(rfm.xx[2],tmpc)])
+        Jac_dUCart_dDrfmUD[i][j] = Jac_dUCart_dDrfmUD[i][j].subs([(tmpa,rfm.xxSph[0]),(tmpb,rfm.xxSph[1]),(tmpc,rfm.xxSph[2])])
+        Jac_dUrfm_dDCartUD[i][j] = Jac_dUrfm_dDCartUD[i][j].subs([(rfm.xx[0],tmpa),(rfm.xx[1],tmpb),(rfm.xx[2],tmpc)])
+        Jac_dUrfm_dDCartUD[i][j] = Jac_dUrfm_dDCartUD[i][j].subs([(tmpa,rfm.xxSph[0]),(tmpb,rfm.xxSph[1]),(tmpc,rfm.xxSph[2])])
+
 
 # Step 1a: Set commonly used parameters.
 thismodule = __name__
@@ -47,32 +62,6 @@ def Axyz_func_Cartesian(Ax_func,Ay_func,Az_func, stagger_enable, **params):
 
     return AD
 
-# Use the Jacobian matrix to transform the vectors to Cartesian coordinates.
-drrefmetric__dx_0UDmatrix = sp.Matrix([[sp.diff(rfm.xxSph[0],rfm.xx[0]), sp.diff(rfm.xxSph[0],rfm.xx[1]), sp.diff(rfm.xxSph[0],rfm.xx[2])],
-                                       [sp.diff(rfm.xxSph[1],rfm.xx[0]), sp.diff(rfm.xxSph[1],rfm.xx[1]), sp.diff(rfm.xxSph[1],rfm.xx[2])],
-                                       [sp.diff(rfm.xxSph[2],rfm.xx[0]), sp.diff(rfm.xxSph[2],rfm.xx[1]), sp.diff(rfm.xxSph[2],rfm.xx[2])]])
-dx__drrefmetric_0UDmatrix = drrefmetric__dx_0UDmatrix.inv()
-
-# Generic function to convert contravariant vectors from a spherical to Cartesian basis.
-def change_basis_spherical_to_Cartesian_D(somevector_sphD):
-    somevectorD = ixp.zerorank1()
-
-    for i in range(3):
-        for j in range(3):
-            somevectorD[i] += drrefmetric__dx_0UDmatrix[(j,i)]*somevector_sphD[j]
-
-    return somevectorD
-
-# Generic function to convert covariant vectors from a spherical to Cartesian basis.
-def change_basis_spherical_to_Cartesian_U(somevector_sphU):
-    somevectorU = ixp.zerorank1()
-
-    for i in range(3):
-        for j in range(3):
-            somevectorU[i] += dx__drrefmetric_0UDmatrix[(i,j)]*somevector_sphU[j]
-
-    return somevectorU
-
 # Generic function for all 1D tests: Compute Ax,Ay,Az
 def Axyz_func_spherical(Ar_func,At_func,Ap_func, stagger_enable, **params):
     if "KerrSchild_radial_shift" in params:
@@ -91,7 +80,7 @@ def Axyz_func_spherical(Ar_func,At_func,Ap_func, stagger_enable, **params):
     AsphD[2] = Ap_func(r,theta,phi, **params)
 
     # Use the Jacobian matrix to transform the vectors to Cartesian coordinates.
-    AD = change_basis_spherical_to_Cartesian_D(AsphD)
+    AD = rfm.basis_transform_vectorD_from_rfmbasis_to_Cartesian(Jac_dUrfm_dDCartUD, AsphD)
 #     M = params["M"]
 #     AD[2] = fp_of_r(rfm.xxSph[0] + KerrSchild_radial_shift,M)
     if stagger_enable:

@@ -64,6 +64,6 @@ def ValenciavU_func_EW(**params):
     # 2 M ( 1+ 2M/r )^{-1/2} \sin^2 \theta
     EsphD[2] = 2 * M * sp.sin(theta)**2 / sp.sqrt(1+2*M/r)
 
-    ED = gfcf.change_basis_spherical_to_Cartesian_D(EsphD)
+    ED = rfm.basis_transform_vectorD_from_rfmbasis_to_Cartesian(gfcf.Jac_dUrfm_dDCartUD, EsphD)
 
     return gfcf.compute_ValenciavU_from_ED_and_BU(ED, BU, gammaDD)
