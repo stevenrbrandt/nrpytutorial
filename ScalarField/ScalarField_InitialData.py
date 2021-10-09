@@ -12,15 +12,14 @@ import numpy as np                      # NumPy: A large collection of mathemati
 from scipy.sparse import spdiags        # SciPy: Sparse, tri-diagonal matrix setup function
 from scipy.sparse import csc_matrix     # SciPy: Sparse matrix optimization function
 from scipy.sparse.linalg import spsolve # SciPy: Solver of linear systems involving sparse matrices
-from outputC import outputC             # NRPy+: Core C code output module
-import loop as lp                       # NRPy+: C loops module
+import outputC as outC                  # NRPy+: Core C code output module
 import reference_metric as rfm          # NRPy+: Reference metric support
 
-def ScalarField_InitialData(outputname,Ccodesdir,ID_Family,
+def ScalarField_InitialData(outputname,ID_Family,
                             pulse_amplitude,pulse_center,pulse_width,NR,rmax,
                             lapse_condition="Pre-collapsed",CoordSystem="Spherical",
                             sinhA=None,sinhW=None):
-    
+
     if CoordSystem == "Spherical":
         r  = np.linspace(0,rmax,NR+1) # Set the r array
         dr = np.zeros(NR)
@@ -137,7 +136,7 @@ def ScalarField_InitialData(outputname,Ccodesdir,ID_Family,
         return
 
     print("Generated the ADM initial data for the gravitational collapse \n" \
-          "of a massless scalar field in %s coordinates.\n"%CoordSystem)
+          f"of a massless scalar field in {CoordSystem} coordinates.\n")
     print("Type of initial condition: Scalar field: \"Gaussian\" Shell\n"\
           "                         ADM quantities: Time-symmetric\n"\
           "                        Lapse condition: "+lapse_condition)
@@ -148,149 +147,173 @@ def ScalarField_InitialData(outputname,Ccodesdir,ID_Family,
           "            number of points  = "+str(NR)+",\n"
           "            Initial data file = "+str(outputname)+".\n")
 
-    with open(os.path.join(Ccodesdir,"ID_scalar_field_ADM_quantities.h"), "w") as file:
-        file.write("""
-// This function takes as input either (x,y,z) or (r,th,ph) and outputs
-//   all ADM quantities in the Cartesian or Spherical basis, respectively.
-void ID_scalar_field_ADM_quantities(
-                     const REAL xyz_or_rthph[3],
+def ID_scalarfield_ADM_quantities(Ccodesdir=".",new_way=False):
+    includes = ["NRPy_basic_defines.h", "NRPy_function_prototypes.h"]
+    desc = """(c) 2021 Leo Werneck
+This function takes as input either (x,y,z) or (r,th,ph) and outputs
+all ADM quantities in the Cartesian or Spherical basis, respectively.
+"""
+    c_type = "void"
+    name   = "ID_scalarfield_ADM_quantities"
+    params = """const REAL xyz_or_rthph[3],const ID_inputs other_inputs,
+                REAL *restrict gammaDD00,REAL *restrict gammaDD01,REAL *restrict gammaDD02,
+                REAL *restrict gammaDD11,REAL *restrict gammaDD12,REAL *restrict gammaDD22,
+                REAL *restrict KDD00,REAL *restrict KDD01,REAL *restrict KDD02,
+                REAL *restrict KDD11,REAL *restrict KDD12,REAL *restrict KDD22,
+                REAL *restrict alpha,
+                REAL *restrict betaU0,REAL *restrict betaU1,REAL *restrict betaU2,
+                REAL *restrict BU0,REAL *restrict BU1,REAL *restrict BU2"""
+    body   = """
+  const REAL r  = xyz_or_rthph[0];
+  const REAL th = xyz_or_rthph[1];
+  const REAL ph = xyz_or_rthph[2];
 
-                     const ID_inputs other_inputs,
+  REAL sf_star,psi4_star,alpha_star;
 
-                     REAL *gammaDD00,REAL *gammaDD01,REAL *gammaDD02,REAL *gammaDD11,REAL *gammaDD12,REAL *gammaDD22,
-                     REAL *KDD00,REAL *KDD01,REAL *KDD02,REAL *KDD11,REAL *KDD12,REAL *KDD22,
-                     REAL *alpha,
-                     REAL *betaU0,REAL *betaU1,REAL *betaU2,
-                     REAL *BU0,REAL *BU1,REAL *BU2) {
+  scalarfield_interpolate_1D(r,
+                             other_inputs.interp_stencil_size,
+                             other_inputs.numlines_in_file,
+                             other_inputs.r_arr,
+                             other_inputs.sf_arr,
+                             other_inputs.psi4_arr,
+                             other_inputs.alpha_arr,
+                             &sf_star,&psi4_star,&alpha_star);
 
-      const REAL r  = xyz_or_rthph[0];
-      const REAL th = xyz_or_rthph[1];
-      const REAL ph = xyz_or_rthph[2];
+  // Update alpha
+  *alpha = alpha_star;
+  // gamma_{rr} = psi^4
+  *gammaDD00 = psi4_star;
+  // gamma_{thth} = psi^4 r^2
+  *gammaDD11 = psi4_star*r*r;
+  // gamma_{phph} = psi^4 r^2 sin^2(th)
+  *gammaDD22 = psi4_star*r*r*sin(th)*sin(th);
 
-      REAL sf_star,psi4_star,alpha_star;
+  // All other quantities ARE ZERO:
+  *gammaDD01 = 0.0; *gammaDD02 = 0.0;
+  /**/              *gammaDD12 = 0.0;
 
-      scalar_field_interpolate_1D(r,
-                                  other_inputs.interp_stencil_size,
-                                  other_inputs.numlines_in_file,
-                                  other_inputs.r_arr,
-                                  other_inputs.sf_arr,
-                                  other_inputs.psi4_arr,
-                                  other_inputs.alpha_arr,
-                                  &sf_star,&psi4_star,&alpha_star);
+  *KDD00 = 0.0; *KDD01 = 0.0; *KDD02 = 0.0;
+  /**/          *KDD11 = 0.0; *KDD12 = 0.0;
+  /**/                        *KDD22 = 0.0;
 
-      // Update alpha
-      *alpha = alpha_star;
-      // gamma_{rr} = psi^4
-      *gammaDD00 = psi4_star;
-      // gamma_{thth} = psi^4 r^2
-      *gammaDD11 = psi4_star*r*r;
-      // gamma_{phph} = psi^4 r^2 sin^2(th)
-      *gammaDD22 = psi4_star*r*r*sin(th)*sin(th);
+  *betaU0 = 0.0; *betaU1 = 0.0; *betaU2 = 0.0;
 
-      // All other quantities ARE ZERO:
-      *gammaDD01 = 0.0; *gammaDD02 = 0.0;
-      /**/              *gammaDD12 = 0.0;
+  *BU0 = 0.0; *BU1 = 0.0; *BU2 = 0.0;
+"""
+    if new_way == True:
+        outC.add_to_Cfunction_dict(includes=includes,desc=desc,c_type=c_type,name=name,
+                                   params=params,body=body,enableCparameters=False)
+    else:
+        outfile = os.path.join(Ccodesdir,"ID_scalarfield_ADM_quantities.h")
+        outC.outCfunction(outfile=outfile,
+                          includes=None,desc=desc,c_type=c_type,name=name,
+                          params=params,body=body,enableCparameters=False)
 
-      *KDD00 = 0.0; *KDD01 = 0.0; *KDD02 = 0.0;
-      /**/          *KDD11 = 0.0; *KDD12 = 0.0;
-      /**/                        *KDD22 = 0.0;
+def ID_scalarfield_spherical(Ccodesdir=".",new_way=False):
+    includes = ["NRPy_basic_defines.h", "NRPy_function_prototypes.h"]
+    desc = """(c) 2021 Leo Werneck
+This function takes as input either (x,y,z) or (r,th,ph) and outputs all
+scalar field quantities in the Cartesian or Spherical basis, respectively.
+"""
+    c_type = "void"
+    name   = "ID_scalarfield_spherical"
+    params = "const REAL xyz_or_rthph[3],const ID_inputs other_inputs,REAL *restrict sf,REAL *restrict sfM"
+    body   = """
+  const REAL r  = xyz_or_rthph[0];
+  const REAL th = xyz_or_rthph[1];
+  const REAL ph = xyz_or_rthph[2];
 
-      *betaU0 = 0.0; *betaU1 = 0.0; *betaU2 = 0.0;
+  REAL sf_star,psi4_star,alpha_star;
 
-      *BU0 = 0.0; *BU1 = 0.0; *BU2 = 0.0;
-}\n""")
+  scalarfield_interpolate_1D(r,
+                             other_inputs.interp_stencil_size,
+                             other_inputs.numlines_in_file,
+                             other_inputs.r_arr,
+                             other_inputs.sf_arr,
+                             other_inputs.psi4_arr,
+                             other_inputs.alpha_arr,
+                             &sf_star,&psi4_star,&alpha_star);
 
-    print("Wrote to file "+os.path.join(Ccodesdir,"ID_scalar_field_ADM_quantities.h"))
+  // Update varphi
+  *sf  = sf_star;
+  // Update Pi
+  *sfM = 0;
+"""
+    if new_way == True:
+        outC.add_to_Cfunction_dict(includes=includes,desc=desc,c_type=c_type,name=name,
+                                   params=params,body=body,enableCparameters=False)
+    else:
+        outfile = os.path.join(Ccodesdir,"ID_scalarfield_spherical.h")
+        outC.outCfunction(outfile=outfile,
+                          includes=None,desc=desc,c_type=c_type,name=name,
+                          params=params,body=body,enableCparameters=False)
 
-    with open(os.path.join(Ccodesdir,"ID_scalar_field_spherical.h"), "w") as file:
-        file.write("""
-    void ID_scalarfield_spherical(
-                     const REAL xyz_or_rthph[3],
-                     const ID_inputs other_inputs,
-                     REAL *sf, REAL *sfM) {
+def ID_scalarfield_xx0xx1xx2_to_BSSN_xx0xx1xx2(Ccodesdir=".",pointer_to_ID_inputs=False,new_way=False):
 
-      const REAL r  = xyz_or_rthph[0];
-      const REAL th = xyz_or_rthph[1];
-      const REAL ph = xyz_or_rthph[2];
-
-      REAL sf_star,psi4_star,alpha_star;
-
-      scalar_field_interpolate_1D(r,
-                                  other_inputs.interp_stencil_size,
-                                  other_inputs.numlines_in_file,
-                                  other_inputs.r_arr,
-                                  other_inputs.sf_arr,
-                                  other_inputs.psi4_arr,
-                                  other_inputs.alpha_arr,
-                                  &sf_star,&psi4_star,&alpha_star);
-
-      // Update varphi
-      *sf  = sf_star;
-      // Update Pi
-      *sfM = 0;
-
-}\n""")
-
-    print("Wrote to file "+os.path.join(Ccodesdir,"ID_scalar_field_spherical.h"))
-
-    # Make sure that rfm.reference_metric() has been called.
-    #    We'll need the variables it defines throughout this module.
     rfm.reference_metric()
 
-    CoordType_in = "Spherical"
-    pointer_to_ID_inputs=False
+    rthph = outC.outputC(rfm.xxSph[0:3],["rthph[0]", "rthph[1]", "rthph[2]"],
+                         "returnstring", "includebraces=False,outCverbose=False,preindent=1")
 
-    sf, sfM = sp.symbols("sfSphorCart sfMSphorCart")
-
-    r_th_ph_or_Cart_xyz_oID_xx = []
-    if CoordType_in == "Spherical":
-        r_th_ph_or_Cart_xyz_oID_xx = rfm.xxSph
+    includes = ["NRPy_basic_defines.h", "NRPy_function_prototypes.h"]
+    desc = """(c) 2021 Leo Werneck
+This function takes as input either (x,y,z) or (r,th,ph) and outputs all
+scalar field quantities in the Cartesian or Spherical basis, respectively.
+"""
+    c_type = "void"
+    name   = "ID_scalarfield_xx0xx1xx2_to_BSSN_xx0xx1xx2"
+    params = "const paramstruct *restrict params,const REAL xx0xx1xx2[3],\n"
+    if pointer_to_ID_inputs == True:
+        params += "ID_inputs *other_inputs,\n"
     else:
-        print("Error: Can only convert scalar field Spherical initial data to BSSN Curvilinear coords.")
-        sys.exit(1)
+        params += "ID_inputs other_inputs,\n"
+    params += "REAL *restrict sf, REAL *restrict sfM"
+    body   = """
+  const REAL xx0 = xx0xx1xx2[0];
+  const REAL xx1 = xx0xx1xx2[1];
+  const REAL xx2 = xx0xx1xx2[2];
+  REAL rthph[3];
+"""+rthph+"""
+  ID_scalarfield_spherical(rthph,other_inputs,sf,sfM);
+"""
 
-    with open(os.path.join(Ccodesdir,"ID_scalarfield_xx0xx1xx2_to_BSSN_xx0xx1xx2.h"), "w") as file:
-        file.write("void ID_scalarfield_xx0xx1xx2_to_BSSN_xx0xx1xx2(const paramstruct *restrict params,const REAL xx0xx1xx2[3],")
-        if pointer_to_ID_inputs == True:
-            file.write("ID_inputs *other_inputs,")
-        else:
-            file.write("ID_inputs other_inputs,")
-        file.write("""
-                    REAL *restrict sf, REAL *restrict sfM ) {
-#include \"set_Cparameters.h\"
+    if new_way == True:
+        outC.add_to_Cfunction_dict(includes=includes,desc=desc,c_type=c_type,name=name,
+                                   params=params,body=body)
+    else:
+        outfile = os.path.join(Ccodesdir,"ID_scalarfield_xx0xx1xx2_to_BSSN_xx0xx1xx2.h")
+        outC.outCfunction(outfile=outfile,
+                          includes=None,desc=desc,c_type=c_type,name=name,
+                          params=params,body=body)
 
-      REAL sfSphorCart,sfMSphorCart;
-      const REAL xx0 = xx0xx1xx2[0];
-      const REAL xx1 = xx0xx1xx2[1];
-      const REAL xx2 = xx0xx1xx2[2];
-      REAL xyz_or_rthph[3];\n""")
-    outCparams = "preindent=1,outCfileaccess=a,outCverbose=False,includebraces=False"
-    outputC(r_th_ph_or_Cart_xyz_oID_xx[0:3], ["xyz_or_rthph[0]", "xyz_or_rthph[1]", "xyz_or_rthph[2]"],
-            os.path.join(Ccodesdir,"ID_scalarfield_xx0xx1xx2_to_BSSN_xx0xx1xx2.h"), outCparams + ",CSE_enable=False")
+def ID_scalarfield(Ccodesdir=".",new_way=False):
+    includes = ["NRPy_basic_defines.h", "NRPy_function_prototypes.h"]
+    desc = """(c) 2021 Leo Werneck
+This is the scalar field initial data driver functiono.
+"""
+    c_type = "void"
+    name   = "ID_scalarfield"
+    params = """const paramstruct *restrict params,REAL *restrict xx[3],
+                ID_inputs other_inputs,REAL *restrict in_gfs"""
+    body   = """
+  const int idx = IDX3S(i0,i1,i2);
+  const REAL xx0xx1xx2[3] = {xx0,xx1,xx2};
+  ID_scalarfield_xx0xx1xx2_to_BSSN_xx0xx1xx2(params,xx0xx1xx2,other_inputs,
+                                             &in_gfs[IDX4ptS(SFGF,idx)],
+                                             &in_gfs[IDX4ptS(SFMGF,idx)]);
+"""
+    loopopts = "AllPoints,Read_xxs"
+    if new_way == True:
+        outC.add_to_Cfunction_dict(includes=includes,desc=desc,c_type=c_type,name=name,
+                                   params=params,body=body,loopopts=loopopts)
+    else:
+        outfile = os.path.join(Ccodesdir,"ID_scalarfield.h")
+        outC.outCfunction(outfile=outfile,
+                          includes=None,desc=desc,c_type=c_type,name=name,
+                          params=params,body=body,loopopts=loopopts)
 
-    with open(os.path.join(Ccodesdir,"ID_scalarfield_xx0xx1xx2_to_BSSN_xx0xx1xx2.h"), "a") as file:
-        file.write("""ID_scalarfield_spherical(xyz_or_rthph, other_inputs,
-                      &sfSphorCart, &sfMSphorCart);
-        // Next compute all rescaled BSSN curvilinear quantities:\n""")
-    outCparams = "preindent=1,outCfileaccess=a,outCverbose=False,includebraces=False"
-    outputC([sf, sfM], ["*sf", "*sfM"],
-            os.path.join(Ccodesdir,"ID_scalarfield_xx0xx1xx2_to_BSSN_xx0xx1xx2.h"), params=outCparams)
-
-    with open(os.path.join(Ccodesdir,"ID_scalarfield_xx0xx1xx2_to_BSSN_xx0xx1xx2.h"), "a") as file:
-        file.write("}\n")
-
-    # Driver
-    with open(os.path.join(Ccodesdir,"ID_scalarfield.h"), "w") as file:
-        file.write("""void ID_scalarfield(const paramstruct *restrict params,REAL *restrict xx[3],
-                                          ID_inputs other_inputs,REAL *restrict in_gfs) {
-#include \"set_Cparameters.h\"\n""")
-        file.write(lp.loop(["i2", "i1", "i0"], ["0", "0", "0"],
-                           ["Nxx_plus_2NGHOSTS2", "Nxx_plus_2NGHOSTS1", "Nxx_plus_2NGHOSTS0"],
-                           ["1", "1", "1"], ["#pragma omp parallel for",
-                                             "    const REAL xx2 = xx[2][i2];",
-                                             "        const REAL xx1 = xx[1][i1];"], "",
-                           """const REAL xx0 = xx[0][i0];
-const int idx = IDX3S(i0,i1,i2);
-const REAL xx0xx1xx2[3] = {xx0,xx1,xx2};
-ID_scalarfield_xx0xx1xx2_to_BSSN_xx0xx1xx2(params,xx0xx1xx2,other_inputs,
-                    &in_gfs[IDX4ptS(SFGF,idx)],&in_gfs[IDX4ptS(SFMGF,idx)]);\n}\n"""))
+def NRPy_param_funcs_register_C_functions_and_NRPy_basic_defines(Ccodesdir=".",pointer_to_ID_inputs=False,new_way=False):
+    ID_scalarfield_ADM_quantities(Ccodesdir=Ccodesdir,new_way=new_way)
+    ID_scalarfield_spherical(Ccodesdir=Ccodesdir,new_way=new_way)
+    ID_scalarfield_xx0xx1xx2_to_BSSN_xx0xx1xx2(Ccodesdir=Ccodesdir,pointer_to_ID_inputs=pointer_to_ID_inputs,new_way=new_way)
+    ID_scalarfield(Ccodesdir=Ccodesdir,new_way=new_way)
