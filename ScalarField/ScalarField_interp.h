@@ -116,19 +116,20 @@ int bisection_idx_finder(const REAL r_star, const int numlines_in_file, const RE
   exit(1);
 }
 
-void scalar_field_interpolate_1D( REAL r_star,                       // Point of interest for interpolation
-                                  const int interp_stencil_size,     // Number of points used to interpolate
-                                  const int numlines_in_file,        // Number of lines in initial data file
-                                  const REAL *r_arr,                 // Initial data array for r
-                                  const REAL *sf_arr,                // Initial data array for varphi
-                                  const REAL *gammaDD00_or_psi4_arr, // Initial data array for gamma_{rr}
-                                  const REAL *alpha_arr,             // Initial data array for alpha
-                                  REAL *sf_star,                     // "Output": varphi(t=0,r_star)
-                                  REAL *gammaDD00_or_psi4_star,      // "Output": gamma_{rr}(t=0,r_star) or psi^{4}(t=0,r_star)
-                                  REAL *alpha_star) {                // "Output": alpha(t=0,r_star)
+void scalarfield_interpolate_1D( REAL const  r_star_in,                       // Point of interest for interpolation
+                                 int  const interp_stencil_size,              // Number of points used to interpolate
+                                 int  const numlines_in_file,                 // Number of lines in initial data file
+                                 REAL const *restrict r_arr,                  // Initial data array for r
+                                 REAL const *restrict sf_arr,                 // Initial data array for varphi
+                                 REAL const *restrict gammaDD00_or_psi4_arr,  // Initial data array for gamma_{rr}
+                                 REAL const *restrict alpha_arr,              // Initial data array for alpha
+                                 REAL       *restrict sf_star,                // "Output": varphi(t=0,r_star)
+                                 REAL       *restrict gammaDD00_or_psi4_star, // "Output": gamma_{rr}(t=0,r_star) or psi^{4}(t=0,r_star)
+                                 REAL       *restrict alpha_star) {           // "Output": alpha(t=0,r_star)
     
     
   // For this case, we know that for all functions, f(r) = f(-r)
+  REAL r_star = r_star_in;
   if ( r_star < 0 ) r_star = -r_star;
     
   // First we find the central interpolation stencil index:
