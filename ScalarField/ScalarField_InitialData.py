@@ -136,7 +136,7 @@ def ScalarField_InitialData(outputname,ID_Family,
         return
 
     print("Generated the ADM initial data for the gravitational collapse \n" \
-          f"of a massless scalar field in {CoordSystem} coordinates.\n")
+          "of a massless scalar field in "+CoordSystem+" coordinates.\n")
     print("Type of initial condition: Scalar field: \"Gaussian\" Shell\n"\
           "                         ADM quantities: Time-symmetric\n"\
           "                        Lapse condition: "+lapse_condition)
