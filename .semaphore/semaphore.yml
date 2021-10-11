@@ -35,7 +35,7 @@ blocks:
         - name: "JUPYTER NOTEBOOK TESTS: SymPy-1.2 Ubuntu Linux Bionic Python 2.7.17 (oldest SymPy version tested/supported by NRPy+ [ref metric])"
           commands:
             - sudo apt-get update
-            - sudo apt-get -y install texlive-latex-base pandoc colordiff gcc libgsl-dev ffmpeg
+            - sudo apt-get -y install texlive-latex-base pandoc colordiff gcc libgsl-dev ffmpeg python-tk
             - sem-version python 2.7
             - python2 --version
             - export PATH=$PATH:/home/semaphore/.local/bin
