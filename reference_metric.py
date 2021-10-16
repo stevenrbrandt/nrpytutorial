@@ -369,8 +369,30 @@ def reference_metric(SymPySimplifyExpressions=True): #, enable_compute_hatted_qu
             Cart_to_xx[2] = phSph
 
         elif CoordSystem == "SinhSymTP":
-            pass
-            # Closed form expression for Cart_to_xx in SinhSymTP may exist, but has not yet been found
+            rSph  = sp.sqrt(Cartx ** 2 + Carty ** 2 + Cartz ** 2)
+            thSph = sp.acos(Cartz / rSph)
+            phSph = sp.atan2(Carty, Cartx)
+
+            # Mathematica script to compute Cart_to_xx[]
+#             AA = x1;
+#             var2 = Sqrt[AA^2 + bScale^2];
+#             RHOSYMTP = AA*Sin[x2];
+#             ZSYMTP = var2*Cos[x2];
+#             Solve[{rSph == Sqrt[RHOSYMTP^2 + ZSYMTP^2],
+#                    thSph == ArcCos[ZSYMTP/Sqrt[RHOSYMTP^2 + ZSYMTP^2]],
+#                    phSph == x3},
+#                   {x1, x2, x3}]
+            Cart_to_xx[0] = sp.sqrt(-bScale**2 + rSph**2 +
+                                    sp.sqrt(bScale**4 + 2*bScale**2*rSph**2 + rSph**4 -
+                                            4*bScale**2*rSph**2*sp.cos(thSph)**2))*M_SQRT1_2 # M_SQRT1_2 = 1/sqrt(2); define this way for UnitTesting
+
+            # The sign() function in the following expression ensures the correct root is taken.
+            Cart_to_xx[1] = sp.acos(sp.sign(Cartz)*(
+                                      sp.sqrt(1 + rSph**2/bScale**2 -
+                                              sp.sqrt(bScale**4 + 2*bScale**2*rSph**2 + rSph**4 -
+                                                      4*bScale**2*rSph**2*sp.cos(thSph)**2)/bScale**2)*M_SQRT1_2)) # M_SQRT1_2 = 1/sqrt(2); define this way for UnitTesting
+
+            Cart_to_xx[2] = phSph
 
         scalefactor_orthog[0] = sp.diff(AA,xx[0]) * var1 / var2
         scalefactor_orthog[1] = var1
