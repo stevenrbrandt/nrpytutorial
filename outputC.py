@@ -65,7 +65,10 @@ def indent_Ccode(Ccode, indent="  "):
     Ccodesplit = Ccode.splitlines()
     outstring = ""
     for i in range(len(Ccodesplit)):
-        outstring += indent + Ccodesplit[i] + '\n'
+        if Ccodesplit[i] != "":
+            outstring += str(indent + Ccodesplit[i] + '\n')
+        else:
+            outstring += '\n'  # Avoid adding trailing whitespace
     return outstring
 
 
