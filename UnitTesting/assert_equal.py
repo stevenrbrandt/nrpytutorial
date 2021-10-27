@@ -108,6 +108,62 @@ def assert_equal(vardict_1, vardict_2, suppress_message=False):
     if not suppress_message:
         print('Assertion Passed!')
 
+
+# This function checks whether an expression evaluates to zero.
+import hashlib
+from outputC import cse_postprocess
+from UnitTesting.cse_simplify_and_evaluate_sympy_expressions import calculate_value
+def check_zero(expression, verbose=False):
+    # Setting precision
+    precision = 30 # 30 sig digits
+    mp.dps = precision
+
+    free_symbols_dict = dict()
+
+    # Setting each variable in free_symbols_set to a random number in [0, 1) according to the hashed string
+    # representation of each variable.
+    for var in expression.free_symbols:
+        # Make sure M_PI is set to its correct value, pi
+        if str(var) == "M_PI":
+            free_symbols_dict[var] = mp.mpf(pi)
+        # Then make sure M_SQRT1_2 is set to its correct value, 1/sqrt(2)
+        elif str(var) == "M_SQRT1_2":
+            free_symbols_dict[var] = mp.mpf(1.0/sqrt(2.0))
+        # All other free variables are set to random numbers
+        else:
+            # Take the variable [var], turn it into a string, encode the string, hash the string using the md5
+            # algorithm, turn the hash into a hex number, turn the hex number into an int, set the random seed to
+            # that int. This ensures each variable gets a unique but consistent value.
+            random.seed(int(hashlib.md5(str(var).encode()).hexdigest(), 16))
+            # Store the random value in free_symbols_dict as a mpf
+            free_symbols_dict[var] = mp.mpf(random.random())
+            # Warning: might slow Travis CI too much: logging.debug(' ...Setting '+str(var)+' to the random value: '+str(free_symbols_dict[var]))
+
+    # Using SymPy's cse algorithm to optimize our value substitution
+    replaced, reduced = cse_postprocess(sp.cse(expression, order='none'))
+
+    # Warning: might slow Travis CI too much: logging.debug(' var = '+str(var)+' |||| replaced = '+str(replaced))
+
+    # Calculate our result_value
+    result_value = calculate_value(free_symbols_dict, replaced, reduced)
+
+    # Check if result_value is near-zero, and double checking if it should be zero
+    if mp.fabs(result_value) != mp.mpf('0.0') and mp.fabs(result_value) < 10 ** ((-2.0/3)*precision):
+        if verbose:
+            print("Found |result| (" + str(mp.fabs(result_value)) + ") close to zero. "
+                         "Checking if indeed it should be zero.")
+        new_result_value = calculate_value(free_symbols_dict, replaced, reduced, precision_factor=2)
+        if mp.fabs(new_result_value) < 10 ** (-(4.0/3) * precision):
+            if verbose:
+                print("After re-evaluating with twice the digits of precision, |result| dropped to " +
+                             str(new_result_value) + ". Setting value to zero")
+            result_value = mp.mpf('0.0')
+
+    # Store result_value in calculated_dict
+    if result_value == mp.mpf('0.0'):
+        return True
+    return False
+
 if __name__ == "__main__":
     import doctest
     sys.exit(doctest.testmod()[0])
