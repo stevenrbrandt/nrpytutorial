@@ -1,6 +1,6 @@
 # Step 1: The StildeD RHS *source* term
 import os
-from outputC import outputC, outCfunction # NRPy+: Core C code output module
+from outputC import outputC, outCfunction, add_to_Cfunction_dict # NRPy+: Core C code output module
 import indexedexp as ixp         # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
 import GRHD.equations as GRHD    # NRPy+: Generate general relativistic hydrodynamics equations
 import GRFFE.equations as GRFFE  # NRPy+: Generate general relativistic force-free electrodynamics equations
@@ -83,3 +83,37 @@ def write_out_functions_for_StildeD_source_term(outdir,outCparams,gammaDD,betaU,
                       +write_final_quantity[i],
             loopopts ="InteriorPoints",
             rel_path_to_Cparams=os.path.join("../"))
+
+def add_to_Cfunction_dict__functions_for_StildeD_source_term(outCparams,gammaDD,betaU,alpha,ValenciavU,BU,sqrt4pi,
+                                                             includes=None, rel_path_to_Cparams=os.path.join("../"),
+                                                             path_from_rootsrcdir_to_this_Cfunc=os.path.join("RHSs/")):
+    generate_memory_access_code()
+    # First, we declare some dummy tensors that we will use for the codegen.
+    gammaDDdD  = ixp.declarerank3("gammaDDdD","sym01",DIM=3)
+    betaUdD = ixp.declarerank2("betaUdD","nosym",DIM=3)
+    alphadD = ixp.declarerank1("alphadD",DIM=3)
+
+    # We need to rerun a few of these functions with the reset lists to make sure these functions
+    # don't cheat by using analytic expressions
+    GRHD.compute_sqrtgammaDET(gammaDD)
+    GRHD.u4U_in_terms_of_ValenciavU__rescale_ValenciavU_by_applying_speed_limit(alpha, betaU, gammaDD, ValenciavU)
+    GRFFE.compute_smallb4U(gammaDD, betaU, alpha, GRHD.u4U_ito_ValenciavU, BU, sqrt4pi)
+    GRFFE.compute_smallbsquared(gammaDD, betaU, alpha, GRFFE.smallb4U)
+    GRFFE.compute_TEM4UU(gammaDD,betaU,alpha, GRFFE.smallb4U, GRFFE.smallbsquared,GRHD.u4U_ito_ValenciavU)
+    GRHD.compute_g4DD_zerotimederiv_dD(gammaDD,betaU,alpha, gammaDDdD,betaUdD,alphadD)
+    GRHD.compute_S_tilde_source_termD(alpha, GRHD.sqrtgammaDET,GRHD.g4DD_zerotimederiv_dD, GRFFE.TEM4UU)
+    for i in range(3):
+        desc = "Adds the source term to StildeD"+str(i)+"."
+        name = "calculate_StildeD"+str(i)+"_source_term"
+        params   ="const paramstruct *params,const REAL *auxevol_gfs, REAL *rhs_gfs"
+        body     = general_access \
+                  +metric_deriv_access[i]\
+                  +outputC(GRHD.S_tilde_source_termD[i],"Stilde_rhsD"+str(i),"returnstring",params=outCparams)\
+                  +write_final_quantity[i]
+        loopopts ="InteriorPoints"
+        add_to_Cfunction_dict(
+            includes=includes,
+            desc=desc,
+            name=name, params=params,
+            body=body, loopopts=loopopts,
+            rel_path_to_Cparams=rel_path_to_Cparams)

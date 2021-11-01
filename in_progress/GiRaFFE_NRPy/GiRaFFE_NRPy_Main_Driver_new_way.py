@@ -5,7 +5,7 @@ nrpy_dir_path = os.path.join("..")
 if nrpy_dir_path not in sys.path:
     sys.path.append(nrpy_dir_path)
 
-from outputC import outCfunction, lhrh # NRPy+: Core C code output module
+from outputC import outCfunction, lhrh, add_to_Cfunction_dict, outC_function_outdir_dict, outC_function_dict, outC_function_prototype_dict # NRPy+: Core C code output module
 import finite_difference as fin  # NRPy+: Finite difference C code generation module
 import NRPy_param_funcs as par   # NRPy+: Parameter interface
 import grid as gri               # NRPy+: Functions having to do with numerical grids
@@ -21,7 +21,11 @@ par.set_parval_from_str("finite_difference::FD_CENTDERIVS_ORDER",2)
 out_dir = os.path.join("GiRaFFE_standalone_Ccodes")
 cmd.mkdir(out_dir)
 cmd.mkdir(os.path.join(out_dir, "RHSs"))
+cmd.mkdir(os.path.join(out_dir, "FCVAL"))
+cmd.mkdir(os.path.join(out_dir, "PPM"))
 cmd.mkdir(os.path.join(out_dir, "C2P"))
+cmd.mkdir(os.path.join(out_dir, "A2B"))
+cmd.mkdir(os.path.join(out_dir, "BCs"))
 
 CoordSystem = "Cartesian"
 
@@ -46,9 +50,26 @@ ValenciavU = ixp.register_gridfunctions_for_single_rank1("AUXEVOL","ValenciavU")
 psi6Phi = gri.register_gridfunctions("EVOL","psi6Phi")
 StildeD = ixp.register_gridfunctions_for_single_rank1("EVOL","StildeD")
 
+# We will pass values of the gridfunction on the cell faces into the function. This requires us
+# to declare them as C parameters in NRPy+. We will denote this with the _face infix/suffix.
+alpha_face = gri.register_gridfunctions("AUXEVOL","alpha_face")
+gamma_faceDD = ixp.register_gridfunctions_for_single_rank2("AUXEVOL","gamma_faceDD","sym01")
+beta_faceU = ixp.register_gridfunctions_for_single_rank1("AUXEVOL","beta_faceU")
+
+# We'll need some more gridfunctions, now, to represent the reconstructions of BU and ValenciavU
+# on the right and left faces
+Valenciav_rU = ixp.register_gridfunctions_for_single_rank1("AUXEVOL","Valenciav_rU",DIM=3)
+B_rU = ixp.register_gridfunctions_for_single_rank1("AUXEVOL","B_rU",DIM=3)
+Valenciav_lU = ixp.register_gridfunctions_for_single_rank1("AUXEVOL","Valenciav_lU",DIM=3)
+B_lU = ixp.register_gridfunctions_for_single_rank1("AUXEVOL","B_lU",DIM=3)
+
+ixp.register_gridfunctions_for_single_rank1("AUXEVOL","Stilde_flux_HLLED")
+
 ixp.register_gridfunctions_for_single_rank1("AUXEVOL","PhievolParenU",DIM=3)
 gri.register_gridfunctions("AUXEVOL","AevolParen")
 
+# Declare this symbol
+sqrt4pi = par.Cparameters("REAL",thismodule,"sqrt4pi","sqrt(4.0*M_PI)")
 
 def add_to_Cfunction_dict__AD_gauge_term_psi6Phi_flux_term(includes=None, rel_path_to_Cparams=os.path.join("../"),
                                                            path_from_rootsrcdir_to_this_Cfunc=os.path.join("RHSs/")):
@@ -76,7 +97,7 @@ def add_to_Cfunction_dict__AD_gauge_term_psi6Phi_flux_term(includes=None, rel_pa
         body=body, loopopts=loopopts,
         path_from_rootsrcdir_to_this_Cfunc = path_from_rootsrcdir_to_this_Cfunc,
         rel_path_to_Cparams=rel_path_to_Cparams)
-    return pickle_NRPy_env()
+#     return pickle_NRPy_env()
 
 def add_to_Cfunction_dict__AD_gauge_term_psi6Phi_fin_diff(includes=None, rel_path_to_Cparams=os.path.join("../"),
                                    path_from_rootsrcdir_to_this_Cfunc=os.path.join("RHSs/")):
@@ -110,14 +131,14 @@ def add_to_Cfunction_dict__AD_gauge_term_psi6Phi_fin_diff(includes=None, rel_pat
 
     desc = "Calculate AD gauge term and psi6Phi RHSs"
     name = "calculate_AD_gauge_psi6Phi_RHSs"
-    params ="const paramstruct *params,const REAL *in_gfs,const REAL *auxevol_gfs,REAL *rhs_gfs",
-    body     = fin.FD_outputC("returnstring",RHSs_to_print,params=outCparams),
-    loopopts ="InteriorPoints",
+    params ="const paramstruct *params,const REAL *in_gfs,const REAL *auxevol_gfs,REAL *rhs_gfs"
+    body     = fin.FD_outputC("returnstring",RHSs_to_print,params=outCparams)
+    loopopts ="InteriorPoints"
     add_to_Cfunction_dict(
         includes=includes,
         desc=desc,
         name=name, params=params,
-        body=body, loopopts=loopopts, postloop=postloop,
+        body=body, loopopts=loopopts,
         path_from_rootsrcdir_to_this_Cfunc = path_from_rootsrcdir_to_this_Cfunc,
         rel_path_to_Cparams=rel_path_to_Cparams)
     outC_function_dict[name] = outC_function_dict[name].replace("= NGHOSTS","= NGHOSTS_A2B").replace("NGHOSTS+Nxx0","Nxx_plus_2NGHOSTS0-NGHOSTS_A2B").replace("NGHOSTS+Nxx1","Nxx_plus_2NGHOSTS1-NGHOSTS_A2B").replace("NGHOSTS+Nxx2","Nxx_plus_2NGHOSTS2-NGHOSTS_A2B")
@@ -141,9 +162,9 @@ def add_to_Cfunction_dict__cons_to_prims(StildeD,BU,gammaDD,betaU,alpha,
 
     desc = "Apply fixes to \tilde{S}_i and recompute the velocity to match with current sheet prescription."
     name = "GiRaFFE_NRPy_cons_to_prims"
-    params   ="const paramstruct *params,REAL *xx[3],REAL *auxevol_gfs,REAL *in_gfs",
-    body     = fin.FD_outputC("returnstring",values_to_print,params=outCparams),
-    loopopts ="AllPoints,Read_xxs",
+    params   ="const paramstruct *params,REAL *xx[3],REAL *auxevol_gfs,REAL *in_gfs"
+    body     = fin.FD_outputC("returnstring",values_to_print,params=outCparams)
+    loopopts ="AllPoints,Read_xxs"
     add_to_Cfunction_dict(
         includes=includes,
         desc=desc,
@@ -167,10 +188,10 @@ def add_to_Cfunction_dict__prims_to_cons(gammaDD,betaU,alpha,  ValenciavU,BU, sq
 
     desc = "Recompute StildeD after current sheet fix to Valencia 3-velocity to ensure consistency between conservative & primitive variables."
     name = "GiRaFFE_NRPy_prims_to_cons"
-    params   ="const paramstruct *params,REAL *auxevol_gfs,REAL *in_gfs",
-    body     = fin.FD_outputC("returnstring",values_to_print,params=outCparams),
-    loopopts ="AllPoints",
-    rel_path_to_Cparams=os.path.join("../"))
+    params   ="const paramstruct *params,REAL *auxevol_gfs,REAL *in_gfs"
+    body     = fin.FD_outputC("returnstring",values_to_print,params=outCparams)
+    loopopts ="AllPoints"
+    rel_path_to_Cparams=os.path.join("../")
     add_to_Cfunction_dict(
         includes=includes,
         desc=desc,
@@ -337,10 +358,10 @@ post_step_func = """void GiRaFFE_NRPy_post_step(const paramstruct *restrict para
 }"""
 
 def add_to_Cfunction_dict__driver_function():
-outC_function_outdir_dict["GiRaFFE_NRPy_RHSs"] = os.path.join("./")
-outC_function_dict["GiRaFFE_NRPy_RHSs"] = main_evolution_func
-outC_function_prototype_dict["GiRaFFE_NRPy_RHSs"] = main_evolution_prototype
+    outC_function_outdir_dict["GiRaFFE_NRPy_RHSs"] = os.path.join("./")
+    outC_function_dict["GiRaFFE_NRPy_RHSs"] = main_evolution_func
+    outC_function_prototype_dict["GiRaFFE_NRPy_RHSs"] = main_evolution_prototype
 
-outC_function_outdir_dict["GiRaFFE_NRPy_post_step"] = os.path.join("./")
-outC_function_dict["GiRaFFE_NRPy_post_step"] = post_step_func
-outC_function_prototype_dict["GiRaFFE_NRPy_post_step"] = post_step_prototype
+    outC_function_outdir_dict["GiRaFFE_NRPy_post_step"] = os.path.join("./")
+    outC_function_dict["GiRaFFE_NRPy_post_step"] = post_step_func
+    outC_function_prototype_dict["GiRaFFE_NRPy_post_step"] = post_step_prototype

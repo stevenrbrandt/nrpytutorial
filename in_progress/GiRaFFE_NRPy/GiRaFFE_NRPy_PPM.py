@@ -6,18 +6,19 @@ nrpy_dir_path = os.path.join("..")
 if nrpy_dir_path not in sys.path:
     sys.path.append(nrpy_dir_path)
 
-def GiRaFFE_NRPy_PPM(Ccodesdir):
-    cmd.mkdir(Ccodesdir)
-    # Write out the code to a file.
-    with open(os.path.join(Ccodesdir,"reconstruct_set_of_prims_PPM_GRFFE_NRPy.c"),"w") as file:
-        file.write("""/*****************************************
+name = "reconstruct_set_of_prims_PPM_GRFFE_NRPy.c"
+prototype = """static void reconstruct_set_of_prims_PPM_GRFFE_NRPy(const paramstruct *params,REAL *auxevol_gfs,const int flux_dirn,
+                                               const int num_prims_to_reconstruct,const int *which_prims_to_reconstruct,
+                                               const gf_and_gz_struct *in_prims,gf_and_gz_struct *out_prims_r,
+                                               gf_and_gz_struct *out_prims_l,REAL *temporary)"""
+body = """/*****************************************
  * PPM Reconstruction Interface.
  * Zachariah B. Etienne (2013)
  *
  * This version of PPM implements the standard
  * Colella & Woodward PPM, but in the GRFFE
  * limit, where P=rho=0. Thus, e.g., ftilde=0.
- *****************************************/
+ *****************************************/prototype
 
 #define MINUS2 0
 #define MINUS1 1
@@ -221,10 +222,11 @@ static inline void monotonize_NRPy(const REAL *U,REAL *Ur,REAL *Ul) {
     return;
   }
 }
-""")
+"""
 
-    with open(os.path.join(Ccodesdir,"loop_defines_reconstruction_NRPy.h"),"w") as file:
-        file.write("""#ifndef loop_defines_reconstruction_NRPy_H_
+# The following defines are only used in the PPM module
+loops_name = "loop_defines_reconstruction_NRPy.h"
+loops_body = """#ifndef loop_defines_reconstruction_NRPy_H_
 #define loop_defines_reconstruction_NRPy_H_
 
 #define LOOP_DEFINE(gz_shift_lo,gz_shift_hi,  ext,flux_dirn,  ijkgz_lo_hi,gz_lo,gz_hi) \\
@@ -263,4 +265,23 @@ static inline void monotonize_NRPy(const REAL *U,REAL *Ur,REAL *Ul) {
       }
 
 #endif /* loop_defines_reconstruction_NRPy_H_ */
-""")
+"""
+def GiRaFFE_NRPy_PPM(Ccodesdir):
+    cmd.mkdir(Ccodesdir)
+    # Write out the code to a file.
+    with open(os.path.join(Ccodesdir,name),"w") as file:
+        file.write(body)
+
+    with open(os.path.join(Ccodesdir,loops_name),"w") as file:
+        file.write(loops_body)
+
+from outputC import outC_function_outdir_dict, outC_function_dict, outC_function_prototype_dict
+
+def add_to_Cfunction_dict__GiRaFFE_NRPy_PPM():
+    outC_function_outdir_dict[name] = os.path.join("./PPM/")
+    outC_function_dict[name] = body
+    outC_function_prototype_dict[name] = prototype
+
+    outC_function_outdir_dict[loops_name] = os.path.join("./PPM/")
+    outC_function_dict[loops_name] = loops_body
+    outC_function_prototype_dict[loops_name] = ""

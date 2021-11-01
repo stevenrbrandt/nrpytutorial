@@ -6,11 +6,8 @@ nrpy_dir_path = os.path.join("..")
 if nrpy_dir_path not in sys.path:
     sys.path.append(nrpy_dir_path)
 
-def GiRaFFE_NRPy_BCs(Ccodesdir):
-    cmd.mkdir(Ccodesdir)
-    # Write out the code to a file.
-    with open(os.path.join(Ccodesdir,"GiRaFFE_boundary_conditions.h"),"w") as file:
-        file.write("""// Currently, we're using basic Cartesian boundary conditions, pending fixes by Zach.
+name = "GiRaFFE_boundary_conditions.h"
+body = """// Currently, we're using basic Cartesian boundary conditions, pending fixes by Zach.
 // Part P8a: Declare boundary condition FACE_UPDATE macro,
 //          which updates a single face of the 3D grid cube
 //          using quadratic polynomial extrapolation.
@@ -209,4 +206,15 @@ void apply_bcs_EXACT_StildeD(const paramstruct *restrict params,REAL *restrict x
       imax[2]++;
     }
 }*/
-""")
+"""
+
+def GiRaFFE_NRPy_BCs(Ccodesdir):
+    cmd.mkdir(Ccodesdir)
+    # Write out the code to a file.
+    with open(os.path.join(Ccodesdir,name),"w") as file:
+        file.write(body)
+
+def add_to_Cfunction_dict__GiRaFFE_NRPy_BCs():
+    outC_function_outdir_dict[name] = os.path.join("./BCs/")
+    outC_function_dict[name] = body
+    outC_function_prototype_dict[name] = prototype

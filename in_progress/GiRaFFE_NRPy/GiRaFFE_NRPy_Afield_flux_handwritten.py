@@ -14,25 +14,7 @@ import sympy as sp               # SymPy: The Python computer algebra package up
 import indexedexp as ixp         # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
 import GiRaFFE_NRPy.GiRaFFE_NRPy_Characteristic_Speeds as chsp
 
-def GiRaFFE_NRPy_Afield_flux(Ccodesdir):
-    cmd.mkdir(Ccodesdir)
-    # Write out the code to a file.
-
-    gammaDD = ixp.declarerank2("gammaDD","sym01",DIM=3)
-    betaU = ixp.declarerank1("betaU",DIM=3)
-    alpha = sp.sympify("alpha")
-
-    for flux_dirn in range(3):
-        chsp.find_cmax_cmin(flux_dirn,gammaDD,betaU,alpha)
-        Ccode_kernel = outputC([chsp.cmax,chsp.cmin],["cmax","cmin"],"returnstring",params="outCverbose=False,CSE_sorting=none")
-        Ccode_kernel = Ccode_kernel.replace("cmax","*cmax").replace("cmin","*cmin")
-        Ccode_kernel = Ccode_kernel.replace("betaU0","betaUi").replace("betaU1","betaUi").replace("betaU2","betaUi")
-
-        with open(os.path.join(Ccodesdir,"compute_cmax_cmin_dirn"+str(flux_dirn)+".h"),"w") as file:
-            file.write(Ccode_kernel)
-
-    with open(os.path.join(Ccodesdir,"calculate_E_field_flat_all_in_one.h"),"w") as file:
-        file.write(r"""void find_cmax_cmin(const REAL gammaDD00, const REAL gammaDD01, const REAL gammaDD02,
+body = r"""void find_cmax_cmin(const REAL gammaDD00, const REAL gammaDD01, const REAL gammaDD02,
                     const REAL gammaDD11, const REAL gammaDD12, const REAL gammaDD22,
                     const REAL betaUi, const REAL alpha, const int flux_dirn,
                     REAL *cmax, REAL *cmin) {
@@ -240,4 +222,36 @@ void calculate_E_field_flat_all_in_one(const paramstruct *params,
         } // END LOOP: for(int i1=NGHOSTS; i1<NGHOSTS+Nxx1; i1++)
     } // END LOOP: for(int i2=NGHOSTS; i2<NGHOSTS+Nxx2; i2++)
 }
-""")
+"""
+
+def GiRaFFE_NRPy_Afield_flux(Ccodesdir):
+    cmd.mkdir(Ccodesdir)
+    # Write out the code to a file.
+
+    gammaDD = ixp.declarerank2("gammaDD","sym01",DIM=3)
+    betaU = ixp.declarerank1("betaU",DIM=3)
+    alpha = sp.sympify("alpha")
+
+    for flux_dirn in range(3):
+        chsp.find_cmax_cmin(flux_dirn,gammaDD,betaU,alpha)
+        Ccode_kernel = outputC([chsp.cmax,chsp.cmin],["cmax","cmin"],"returnstring",params="outCverbose=False,CSE_sorting=none")
+        Ccode_kernel = Ccode_kernel.replace("cmax","*cmax").replace("cmin","*cmin")
+        Ccode_kernel = Ccode_kernel.replace("betaU0","betaUi").replace("betaU1","betaUi").replace("betaU2","betaUi")
+
+        with open(os.path.join(Ccodesdir,"compute_cmax_cmin_dirn"+str(flux_dirn)+".h"),"w") as file:
+            file.write(Ccode_kernel)
+
+    with open(os.path.join(Ccodesdir,"calculate_E_field_flat_all_in_one.h"),"w") as file:
+        file.write(body)
+
+def add_to_Cfunction_dict__GiRaFFE_NRPy_Afield_flux(gammaDD, betaU, alpha,
+                                                    includes=None, rel_path_to_Cparams=os.path.join("../"),
+                                                    path_from_rootsrcdir_to_this_Cfunc=os.path.join("RHSs/")):
+    for flux_dirn in range(3):
+        chsp.find_cmax_cmin(flux_dirn,gammaDD,betaU,alpha)
+        Ccode_kernel = outputC([chsp.cmax,chsp.cmin],["cmax","cmin"],"returnstring",params="outCverbose=False,CSE_sorting=none")
+        Ccode_kernel = Ccode_kernel.replace("cmax","*cmax").replace("cmin","*cmin")
+        Ccode_kernel = Ccode_kernel.replace("betaU0","betaUi").replace("betaU1","betaUi").replace("betaU2","betaUi")
+
+        with open(os.path.join(Ccodesdir,"compute_cmax_cmin_dirn"+str(flux_dirn)+".h"),"w") as file:
+            file.write(Ccode_kernel)
