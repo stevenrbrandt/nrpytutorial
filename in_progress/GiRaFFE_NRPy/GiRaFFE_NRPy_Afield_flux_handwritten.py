@@ -9,11 +9,13 @@ import cmdline_helper as cmd     # NRPy+: Multi-platform Python command-line int
 Ccodesdir = "GiRaFFE_standalone_Ccodes/RHSs"
 cmd.mkdir(os.path.join(Ccodesdir))
 
-from outputC import outputC # NRPy+: Core C code output module
+from outputC import outputC, outC_function_outdir_dict, outC_function_dict, outC_function_prototype_dict # NRPy+: Core C code output module
 import sympy as sp               # SymPy: The Python computer algebra package upon which NRPy+ depends
 import indexedexp as ixp         # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
 import GiRaFFE_NRPy.GiRaFFE_NRPy_Characteristic_Speeds as chsp
 
+name = "calculate_E_field_flat_all_in_one.h"
+prototype = "REAL HLLE_solve(REAL F0B1_r, REAL F0B1_l, REAL U_r, REAL U_l, REAL cmin, REAL cmax)"
 body = r"""void find_cmax_cmin(const REAL gammaDD00, const REAL gammaDD01, const REAL gammaDD02,
                     const REAL gammaDD11, const REAL gammaDD12, const REAL gammaDD22,
                     const REAL betaUi, const REAL alpha, const int flux_dirn,
@@ -253,5 +255,12 @@ def add_to_Cfunction_dict__GiRaFFE_NRPy_Afield_flux(gammaDD, betaU, alpha,
         Ccode_kernel = Ccode_kernel.replace("cmax","*cmax").replace("cmin","*cmin")
         Ccode_kernel = Ccode_kernel.replace("betaU0","betaUi").replace("betaU1","betaUi").replace("betaU2","betaUi")
 
-        with open(os.path.join(Ccodesdir,"compute_cmax_cmin_dirn"+str(flux_dirn)+".h"),"w") as file:
-            file.write(Ccode_kernel)
+#         with open(os.path.join(path_from_rootsrcdir_to_this_Cfunc,"compute_cmax_cmin_dirn"+str(flux_dirn)+".h"),"w") as file:
+#             file.write(Ccode_kernel)
+        outC_function_outdir_dict[name] = path_from_rootsrcdir_to_this_Cfunc
+        outC_function_dict[name] = Ccode_kernel
+        outC_function_prototype_dict[name] = ""
+
+    outC_function_outdir_dict[name] = path_from_rootsrcdir_to_this_Cfunc
+    outC_function_dict[name] = body
+    outC_function_prototype_dict[name] = prototype

@@ -8,7 +8,7 @@ if nrpy_dir_path not in sys.path:
 import cmdline_helper as cmd     # NRPy+: Multi-platform Python command-line interface
 
 # Step 1: The A-to-B driver
-from outputC import outCfunction, lhrh # NRPy+: Core C code output module
+from outputC import outCfunction, lhrh, add_to_Cfunction_dict, outC_function_dict # NRPy+: Core C code output module
 import finite_difference as fin  # NRPy+: Finite difference C code generation module
 import NRPy_param_funcs as par   # NRPy+: Parameter interface
 import grid as gri               # NRPy+: Functions having to do with numerical grids
@@ -291,7 +291,7 @@ def add_to_Cfunction_dict__GiRaFFE_NRPy_A2B(gammaDD,AD,BU,includes=None, rel_pat
     params   = "const paramstruct *restrict params,REAL *restrict in_gfs,REAL *restrict auxevol_gfs"
     body     = fin.FD_outputC("returnstring",[lhrh(lhs=gri.gfaccess("out_gfs","BU0"),rhs=BU[0]),
                                               lhrh(lhs=gri.gfaccess("out_gfs","BU1"),rhs=BU[1]),
-                                              lhrh(lhs=gri.gfaccess("out_gfs","BU2"),rhs=BU[2])]),
+                                              lhrh(lhs=gri.gfaccess("out_gfs","BU2"),rhs=BU[2])])
     postloop = """
 int imin[3] = { NGHOSTS_A2B, NGHOSTS_A2B, NGHOSTS_A2B };
 int imax[3] = { NGHOSTS+Nxx0, NGHOSTS+Nxx1, NGHOSTS+Nxx2 };
@@ -314,10 +314,7 @@ for(int which_gz = 0; which_gz < NGHOSTS_A2B; which_gz++) {
         includes=includes,
         desc=desc,
         name=name, prefunc=prefunc, params=params,
-        body=body, loopopts=loopopts, postloop=postloop
+        body=body, loopopts=loopopts, postloop=postloop,
         path_from_rootsrcdir_to_this_Cfunc = path_from_rootsrcdir_to_this_Cfunc,
         rel_path_to_Cparams=rel_path_to_Cparams)
     outC_function_dict[name] = outC_function_dict[name].replace("= NGHOSTS","= NGHOSTS_A2B").replace("NGHOSTS+Nxx0","Nxx_plus_2NGHOSTS0-NGHOSTS_A2B").replace("NGHOSTS+Nxx1","Nxx_plus_2NGHOSTS1-NGHOSTS_A2B").replace("NGHOSTS+Nxx2","Nxx_plus_2NGHOSTS2-NGHOSTS_A2B")
-
-
-    .replace("= NGHOSTS","= NGHOSTS_A2B").replace("NGHOSTS+Nxx0","Nxx_plus_2NGHOSTS0-NGHOSTS_A2B").replace("NGHOSTS+Nxx1","Nxx_plus_2NGHOSTS1-NGHOSTS_A2B").replace("NGHOSTS+Nxx2","Nxx_plus_2NGHOSTS2-NGHOSTS_A2B")

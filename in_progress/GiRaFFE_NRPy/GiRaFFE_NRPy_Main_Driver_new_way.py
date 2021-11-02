@@ -25,7 +25,7 @@ cmd.mkdir(os.path.join(out_dir, "FCVAL"))
 cmd.mkdir(os.path.join(out_dir, "PPM"))
 cmd.mkdir(os.path.join(out_dir, "C2P"))
 cmd.mkdir(os.path.join(out_dir, "A2B"))
-cmd.mkdir(os.path.join(out_dir, "BCs"))
+cmd.mkdir(os.path.join(out_dir, "boundary_conditions"))
 
 CoordSystem = "Cartesian"
 
