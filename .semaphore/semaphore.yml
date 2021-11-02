@@ -168,6 +168,7 @@ blocks:
       jobs:
         - name: "Ubuntu Linux Bionic Python 3.8.3 (default Python 3 in Ubuntu Bionic)"
           commands:
+            - sem-version python 3.8
             - python3 --version
             - pip3 install -U pip setuptools mpmath testfixtures
             - pip3 install pip install -U git+https://github.com/sympy/sympy/ nrpylatex
