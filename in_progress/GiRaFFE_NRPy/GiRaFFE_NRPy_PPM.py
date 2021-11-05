@@ -10,7 +10,7 @@ name = "reconstruct_set_of_prims_PPM_GRFFE_NRPy.c"
 prototype = """static void reconstruct_set_of_prims_PPM_GRFFE_NRPy(const paramstruct *params,REAL *auxevol_gfs,const int flux_dirn,
                                                const int num_prims_to_reconstruct,const int *which_prims_to_reconstruct,
                                                const gf_and_gz_struct *in_prims,gf_and_gz_struct *out_prims_r,
-                                               gf_and_gz_struct *out_prims_l,REAL *temporary)"""
+                                               gf_and_gz_struct *out_prims_l,REAL *temporary);"""
 body = """/*****************************************
  * PPM Reconstruction Interface.
  * Zachariah B. Etienne (2013)
@@ -18,7 +18,7 @@ body = """/*****************************************
  * This version of PPM implements the standard
  * Colella & Woodward PPM, but in the GRFFE
  * limit, where P=rho=0. Thus, e.g., ftilde=0.
- *****************************************/prototype
+ *****************************************/
 
 #define MINUS2 0
 #define MINUS1 1
