@@ -318,12 +318,12 @@ schedule BaikalETK_NewRad in MoL_CalcRHS after BaikalETK_RHS
   LANG: C
 } "NewRad boundary conditions, scheduled right after RHS eval."
 
-schedule BaikalETK_floor_the_lapse in MoL_PostStep before BaikalETK_enforce_detgammabar_constraint before BC_Update
+schedule BaikalETK_floor_the_lapse in MoL_PostStep before BaikalETK_enforce_detgammahat_constraint before BC_Update
 {
   LANG: C
 } "Set lapse = max(lapse_floor, lapse)"
 
-schedule BaikalETK_enforce_detgammabar_constraint in MoL_PostStep before BC_Update
+schedule BaikalETK_enforce_detgammahat_constraint in MoL_PostStep before BC_Update
 {
   LANG: C
 } "Enforce detgammabar = detgammahat (= 1 in Cartesian)"

@@ -24,8 +24,8 @@ void Convert_to_HydroBase(CCTK_ARGUMENTS) {
    */
   eos_struct eos;
   initialize_EOS_struct_from_input(eos);
-  
-#pragma omp parallel for 
+
+#pragma omp parallel for
   for(int k=0;k<cctk_lsh[2];k++)
     for(int j=0;j<cctk_lsh[1];j++)
       for(int i=0;i<cctk_lsh[0];i++) {
@@ -62,8 +62,8 @@ void Convert_to_HydroBase(CCTK_ARGUMENTS) {
         eps[index] = (PRIMS[PRESSURE]-P_cold)/PRIMS[RHOB]/(Gamma_th-1.0);
 
         // IllinoisGRMHD defines v^i = u^i/u^0.
-        
-        // Meanwhile, the ET/HydroBase formalism, called the Valencia 
+
+        // Meanwhile, the ET/HydroBase formalism, called the Valencia
         // formalism, splits the 4 velocity into a purely spatial part
         // and a part that is normal to the spatial hypersurface:
         // u^a = G (n^a + U^a), (Eq. 14 of arXiv:1304.5544; G=W, U^a=v^a)
@@ -74,8 +74,8 @@ void Convert_to_HydroBase(CCTK_ARGUMENTS) {
         // of course \alpha u^0 = 1/sqrt(1+γ^ij u_i u_j) = \Gamma,
         // the standard Lorentz factor.
 
-        // Note that n^i = - \beta^i / \alpha, so 
-        // u^a = \Gamma (n^a + U^a) 
+        // Note that n^i = - \beta^i / \alpha, so
+        // u^a = \Gamma (n^a + U^a)
         // -> u^i = \Gamma ( U^i - \beta^i / \alpha )
         // which implies
         // v^i = u^i/u^0
@@ -91,7 +91,7 @@ void Convert_to_HydroBase(CCTK_ARGUMENTS) {
         // \alpha u^0 = 1/sqrt(1+γ^ij u_i u_j) = \Gamma = w_lorentz
         // First compute u^0:
         // Derivation of first equation:
-        // \gamma_{ij} (v^i + \beta^i)(v^j + \beta^j)/(\alpha)^2 
+        // \gamma_{ij} (v^i + \beta^i)(v^j + \beta^j)/(\alpha)^2
         //   = \gamma_{ij} 1/(u^0)^2 ( \gamma^{ik} u_k \gamma^{jl} u_l /(\alpha)^2 <- Using Eq. 53 of arXiv:astro-ph/0503420
         //   = 1/(u^0 \alpha)^2 u_j u_l \gamma^{jl}  <- Since \gamma_{ij} \gamma^{ik} = \delta^k_j
         //   = 1/(u^0 \alpha)^2 ( (u^0 \alpha)^2 - 1 ) <- Using Eq. 56 of arXiv:astro-ph/0503420

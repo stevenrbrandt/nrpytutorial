@@ -1,6 +1,6 @@
 # Deprecated: See jupyter notebook
 
-# NRPy Unit Testing: Functions In-Depth 
+# NRPy Unit Testing: Functions In-Depth
 If you have not already, please read through the Jupyter notebook
 tutorial for unit testing `Tutorial-UnitTesting.ipynb` This will contain
 in-depth information on all functions used for unit testing, not a
@@ -49,7 +49,7 @@ The script is run with the following syntax:
 This of course assumes that the user is in the nrpy directory; the user
 simply has to specify the path from their current directory to the bash
 file.
- 
+
 Examples of `python interpreter` are `python` and `python3`.
 
 The script first lets the user know if they forgot to pass a python
@@ -204,14 +204,14 @@ module being tested; since `setup_trusted_values_dict` is called before
 
 `run_test` then determines if the current function/module is being done
 for the first time based off the existence of the proper entry in
-`trusted_values_dict`. 
+`trusted_values_dict`.
 
 [evaluate_globals](#evaluate_globals) is then run in order to generate
-the SymPy expressions for each global being tested. 
+the SymPy expressions for each global being tested.
 
 Next,
 [cse_simplify_and_evaluate_sympy_expressions](#cse_simplify_and_evaluate_sympy_expressions)
-is 
+is
 
 
 

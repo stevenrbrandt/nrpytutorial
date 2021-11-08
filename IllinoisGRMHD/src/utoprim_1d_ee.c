@@ -1,29 +1,29 @@
 #ifndef __HARM_UTOPRIM_1D_EE__C__
 #define __HARM_UTOPRIM_1D_EE__C__
 /***********************************************************************************
-    Copyright 2006 Charles F. Gammie, Jonathan C. McKinney, Scott C. Noble, 
+    Copyright 2006 Charles F. Gammie, Jonathan C. McKinney, Scott C. Noble,
                    Gabor Toth, and Luca Del Zanna
 
                         HARM  version 1.0   (released May 1, 2006)
 
-    This file is part of HARM.  HARM is a program that solves hyperbolic 
+    This file is part of HARM.  HARM is a program that solves hyperbolic
     partial differential equations in conservative form using high-resolution
-    shock-capturing techniques.  This version of HARM has been configured to 
-    solve the relativistic magnetohydrodynamic equations of motion on a 
+    shock-capturing techniques.  This version of HARM has been configured to
+    solve the relativistic magnetohydrodynamic equations of motion on a
     stationary black hole spacetime in Kerr-Schild coordinates to evolve
-    an accretion disk model. 
+    an accretion disk model.
 
-    You are morally obligated to cite the following two papers in his/her 
+    You are morally obligated to cite the following two papers in his/her
     scientific literature that results from use of any part of HARM:
 
-    [1] Gammie, C. F., McKinney, J. C., \& Toth, G.\ 2003, 
+    [1] Gammie, C. F., McKinney, J. C., \& Toth, G.\ 2003,
         Astrophysical Journal, 589, 444.
 
-    [2] Noble, S. C., Gammie, C. F., McKinney, J. C., \& Del Zanna, L. \ 2006, 
+    [2] Noble, S. C., Gammie, C. F., McKinney, J. C., \& Del Zanna, L. \ 2006,
         Astrophysical Journal, 641, 626.
 
-   
-    Further, we strongly encourage you to obtain the latest version of 
+
+    Further, we strongly encourage you to obtain the latest version of
     HARM directly from our distribution website:
     http://rainman.astro.uiuc.edu/codelib/
 
@@ -57,27 +57,27 @@
 /*************************************************************************************/
 /*************************************************************************************
 
-utoprim_1d_ee.c: 
+utoprim_1d_ee.c:
 ---------------
 
   -- uses eq. (27) of Noble  et al. or the "momentum equation" and ignores
-        the energy equation (29) in order to use the additional EOS, which 
-        is  
+        the energy equation (29) in order to use the additional EOS, which
+        is
 
              P = Sc rho^(GAMMA-1) / gamma
-  
-    Uses the 1D_W method: 
-       -- solves for one independent variable (W) via a 1D
-          Newton-Raphson method 
-       -- solves for rho using Newton-Raphson using the definition of W : 
-          W = Dc ( Dc + GAMMA Sc rho^(GAMMA-1) / (GAMMA-1) ) / rho 
 
-       -- can be used (in principle) with a general equation of state. 
+    Uses the 1D_W method:
+       -- solves for one independent variable (W) via a 1D
+          Newton-Raphson method
+       -- solves for rho using Newton-Raphson using the definition of W :
+          W = Dc ( Dc + GAMMA Sc rho^(GAMMA-1) / (GAMMA-1) ) / rho
+
+       -- can be used (in principle) with a general equation of state.
 
   -- Currently returns with an error state (>0) if a negative rest-mass
-      density or internal energy density is calculated.  You may want 
-      to change this aspect of the code so that it still calculates the 
-      velocity and so that you can floor the densities.  If you want to 
+      density or internal energy density is calculated.  You may want
+      to change this aspect of the code so that it still calculates the
+      velocity and so that you can floor the densities.  If you want to
       change this aspect of the code please comment out the "return(retval)"
       statement after "retval = 5;" statement in Utoprim_new_body();
 
@@ -90,19 +90,19 @@ utoprim_1d_ee.c:
 
 #define LTRACE 0
 
-// Declarations: 
+// Declarations:
 static int Utoprim_new_body(CCTK_REAL U[], struct of_geom *geom, CCTK_REAL prim[], CCTK_REAL *gamma);
-static void func_W(CCTK_REAL x[], CCTK_REAL dx[], CCTK_REAL resid[], 
+static void func_W(CCTK_REAL x[], CCTK_REAL dx[], CCTK_REAL resid[],
 		   CCTK_REAL jac[][NEWT_DIM], CCTK_REAL *f, CCTK_REAL *df, int n);
 
-static int general_newton_raphson( CCTK_REAL x[], int n, 
-				   void (*funcd) (CCTK_REAL [], CCTK_REAL [], CCTK_REAL [], 
-						  CCTK_REAL [][NEWT_DIM], CCTK_REAL *, 
+static int general_newton_raphson( CCTK_REAL x[], int n,
+				   void (*funcd) (CCTK_REAL [], CCTK_REAL [], CCTK_REAL [],
+						  CCTK_REAL [][NEWT_DIM], CCTK_REAL *,
 						  CCTK_REAL *, int) );
-static int gnr2( CCTK_REAL x[], int n, 
-			    void (*funcd) (CCTK_REAL [], CCTK_REAL [], CCTK_REAL [], 
+static int gnr2( CCTK_REAL x[], int n,
+			    void (*funcd) (CCTK_REAL [], CCTK_REAL [], CCTK_REAL [],
 					   CCTK_REAL [][NEWT_DIM],CCTK_REAL *,CCTK_REAL *,int) );
-static void func_rho(CCTK_REAL x[], CCTK_REAL dx[], CCTK_REAL resid[], 
+static void func_rho(CCTK_REAL x[], CCTK_REAL dx[], CCTK_REAL resid[],
 		     CCTK_REAL jac[][NEWT_DIM], CCTK_REAL *f, CCTK_REAL *df, int n);
 
 /**********************************************************************/
@@ -111,15 +111,15 @@ static void func_rho(CCTK_REAL x[], CCTK_REAL dx[], CCTK_REAL resid[],
   Utoprim_1d_ee():
 
   -- Driver for new prim. var. solver.  The driver just translates
-     between the two sets of definitions for U and P.  The user may 
-     wish to alter the translation as they see fit.  
+     between the two sets of definitions for U and P.  The user may
+     wish to alter the translation as they see fit.
 
      It assumes that on input/output:
 
 
               /  rho u^t           \
          U =  |  T^t_t   + rho u^t |  sqrt(-det(g_{\mu\nu}))
-              |  T^t_\mu           |  
+              |  T^t_\mu           |
               \   B^i              /
 
 
@@ -131,7 +131,7 @@ static void func_rho(CCTK_REAL x[], CCTK_REAL dx[], CCTK_REAL resid[],
 
          S = sqrt(-det(g_{a b})) u^t P / rho^(GAMMA-1)
 
-     ala HARM. 
+     ala HARM.
 
    Arguments:
        U[NPR]    = conserved variables (current values on input/output);
@@ -139,11 +139,11 @@ static void func_rho(CCTK_REAL x[], CCTK_REAL dx[], CCTK_REAL resid[],
        gcov[NDIM][NDIM] = covariant form of the metric ;
        gcon[NDIM][NDIM] = contravariant form of the metric ;
        gdet             = sqrt( - determinant of the metric) ;
-       prim[NPR] = primitive variables (guess on input, calculated values on 
+       prim[NPR] = primitive variables (guess on input, calculated values on
                                         output if there are no problems);
-  
+
    -- NOTE: for those using this routine for special relativistic MHD and are
-            unfamiliar with metrics, merely set 
+            unfamiliar with metrics, merely set
               gcov = gcon = diag(-1,1,1,1)  and gdet = 1.  ;
 
 ******************************************************************/
@@ -153,7 +153,7 @@ int Utoprim_1d_ee(eos_struct eos, CCTK_REAL U[NPR], CCTK_REAL gcov[NDIM][NDIM], 
 {
 
   if( U[0] <= 0. ) {
-    ERROR_MESSAGE("Negative U[0] found!!  We encourage you to figure out how this weird thing happened!! \n"); 
+    ERROR_MESSAGE("Negative U[0] found!!  We encourage you to figure out how this weird thing happened!! \n");
     return(-100);
   }
 
@@ -182,7 +182,7 @@ int Utoprim_1d_ee(eos_struct eos, CCTK_REAL U[NPR], CCTK_REAL gcov[NDIM][NDIM], 
    * | gamma * S = geomfactor * S_star |
    * .---------------------------------.
    */
-  CCTK_REAL gamma_times_S = geomfactor * S_star; 
+  CCTK_REAL gamma_times_S = geomfactor * S_star;
   U_tmp[RHO]              = geomfactor * U[RHO];
   U_tmp[UU]               = geomfactor * (U[UU] - U[RHO]);
   U_tmp[UTCON1]           = geomfactor * U[UTCON1];
@@ -207,7 +207,7 @@ int Utoprim_1d_ee(eos_struct eos, CCTK_REAL U[NPR], CCTK_REAL gcov[NDIM][NDIM], 
   /* Perform the C2P */
   int ret = Utoprim_new_body(eos, U_tmp, gcov, gcon, gdet, prim_tmp, n_iter, gamma_times_S, gamma);
 
-  /* Transform new primitive variables back if there was no problem : */ 
+  /* Transform new primitive variables back if there was no problem : */
   if( ret == 0 ) {
     prim[RHO   ] = prim_tmp[RHO   ];
     prim[UU    ] = prim_tmp[UU    ];
@@ -228,10 +228,10 @@ int Utoprim_1d_ee(eos_struct eos, CCTK_REAL U[NPR], CCTK_REAL gcov[NDIM][NDIM], 
 
      -- Attempt an inversion from U to prim using the initial guess prim.
 
-     -- This is the main routine that calculates auxiliary quantities for the 
-        Newton-Raphson routine. 
+     -- This is the main routine that calculates auxiliary quantities for the
+        Newton-Raphson routine.
 
-  -- assumes that 
+  -- assumes that
              /  rho gamma        \
          U = |  alpha T^t_\mu    |
              \  alpha B^i        /
@@ -244,19 +244,19 @@ int Utoprim_1d_ee(eos_struct eos, CCTK_REAL U[NPR], CCTK_REAL gcov[NDIM][NDIM], 
                \  alpha B^i   /
 
 
-return:  (i*100 + j)  where 
-         i = 0 ->  Newton-Raphson solver either was not called (yet or not used) 
+return:  (i*100 + j)  where
+         i = 0 ->  Newton-Raphson solver either was not called (yet or not used)
                    or returned successfully;
-             1 ->  Newton-Raphson solver did not converge to a solution with the 
+             1 ->  Newton-Raphson solver did not converge to a solution with the
                    given tolerances;
-             2 ->  Newton-Raphson procedure encountered a numerical divergence 
+             2 ->  Newton-Raphson procedure encountered a numerical divergence
                    (occurrence of "nan" or "+/-inf" ;
-	     
-         j = 0 -> success 
-             1 -> failure: some sort of failure in Newton-Raphson; 
+
+         j = 0 -> success
+             1 -> failure: some sort of failure in Newton-Raphson;
              2 -> failure: utsq<0 w/ initial p[] guess;
 	     3 -> failure: W<0 or W>W_TOO_BIG
-             4 -> failure: v^2 > 1 
+             4 -> failure: v^2 > 1
              5 -> failure: rho,uu <= 0 ;
 
 **********************************************************************************/
@@ -290,10 +290,10 @@ static int Utoprim_new_body(eos_struct eos, CCTK_REAL U[NPR], CCTK_REAL gcov[NDI
 	+ gcov[2][3]*Bcon[2]*Bcon[3]) ;
 
 
-  Qcov[0] = U[QCOV0] ;  
-  Qcov[1] = U[QCOV1] ;  
-  Qcov[2] = U[QCOV2] ;  
-  Qcov[3] = U[QCOV3] ;  
+  Qcov[0] = U[QCOV0] ;
+  Qcov[1] = U[QCOV1] ;
+  Qcov[2] = U[QCOV2] ;
+  Qcov[3] = U[QCOV3] ;
   raise(Qcov,geom,Qcon) ;
 
   QdotB   = Qcov[1]*Bcon[1] + Qcov[2]*Bcon[2] + Qcov[3]*Bcon[3] ;
@@ -301,12 +301,12 @@ static int Utoprim_new_body(eos_struct eos, CCTK_REAL U[NPR], CCTK_REAL gcov[NDI
 
 //-fast   ncov[0] = -geom->alpha;
 //-fast   ncov[1] = ncov[2] = ncov[3] = 0.;
-//-faster   alpha = geom->alpha; 
-  
-//-faster  ncon[0] = -alpha * geom->gcon[0][0]; 
-//-faster  ncon[1] = -alpha * geom->gcon[0][1]; 
-//-faster  ncon[2] = -alpha * geom->gcon[0][2]; 
-//-faster  ncon[3] = -alpha * geom->gcon[0][3]; 
+//-faster   alpha = geom->alpha;
+
+//-faster  ncon[0] = -alpha * geom->gcon[0][0];
+//-faster  ncon[1] = -alpha * geom->gcon[0][1];
+//-faster  ncon[2] = -alpha * geom->gcon[0][2];
+//-faster  ncon[3] = -alpha * geom->gcon[0][3];
   CCTK_REAL alpha = 1.0/sqrt(-gcon[0][0]);
   CCTK_REAL Qdotn = -alpha * Qcon[0];
 
@@ -321,7 +321,7 @@ static int Utoprim_new_body(eos_struct eos, CCTK_REAL U[NPR], CCTK_REAL gcov[NDI
   utsq = 0. ;
   for(i=1;i<4;i++)
     for(j=1;j<4;j++) utsq += gcov[i][j]*prim[UTCON1+i-1]*prim[UTCON1+j-1] ;
-  
+
   /* utsq =  geom->gcov[1][1]*prim[U1]*prim[U1] */
   /*       + geom->gcov[2][2]*prim[U2]*prim[U2] */
   /*       + geom->gcov[3][3]*prim[U3]*prim[U3] */
@@ -329,7 +329,7 @@ static int Utoprim_new_body(eos_struct eos, CCTK_REAL U[NPR], CCTK_REAL gcov[NDI
   /* 	+ geom->gcov[1][3]*prim[U1]*prim[U3] */
   /* 	+ geom->gcov[2][3]*prim[U2]*prim[U3]) ; */
 
-  if( (utsq < 0.) && (fabs(utsq) < 1.0e-13) ) { 
+  if( (utsq < 0.) && (fabs(utsq) < 1.0e-13) ) {
     utsq = fabs(utsq);
   }
   if(utsq < 0. || utsq > UTSQ_TOO_BIG) {
@@ -338,7 +338,7 @@ static int Utoprim_new_body(eos_struct eos, CCTK_REAL U[NPR], CCTK_REAL gcov[NDI
   }
 
   CCTK_REAL gammasq = 1. + utsq ;    // Lorentz factor squared
-  CCTK_REAL gamma   = sqrt(gammasq); // Lorentz factor, not to be confused with Gamma	
+  CCTK_REAL gamma   = sqrt(gammasq); // Lorentz factor, not to be confused with Gamma
   CCTK_REAL rho0    = D / gamma ;
 
   /* Set basic cold polytrope-based hybrid EOS quantities */
@@ -362,29 +362,29 @@ static int Utoprim_new_body(eos_struct eos, CCTK_REAL U[NPR], CCTK_REAL gcov[NDI
   CCTK_REAL w = rho0 + u + p ;
 
 #if(LTRACE)
-  if( rho0 <= 0. ) { 
+  if( rho0 <= 0. ) {
     fprintf(stderr,"beg neg rho fix1, rho,D,gamma = %26.20e %26.20e %26.20e \n", rho0, D, gamma); fflush(stderr);
     rho0 = fabs(rho0);
   }
-#endif 
-    
+#endif
+
   W_last = w*gammasq ;
 
-  // Make sure that W is large enough so that v^2 < 1 : 
+  // Make sure that W is large enough so that v^2 < 1 :
   i_increase = 0;
-  while( (( W_last*W_last*W_last * ( W_last + 2.*Bsq ) 
+  while( (( W_last*W_last*W_last * ( W_last + 2.*Bsq )
 	    - QdotBsq*(2.*W_last + Bsq) ) <= W_last*W_last*(Qtsq-Bsq*Bsq))
 	 && (i_increase < 10) ) {
     W_last *= 10.;
     i_increase++;
   }
-  
+
   W_for_gnr2 = W_for_gnr2_old = W_last;
   rho_for_gnr2 = rho_for_gnr2_old = rho0;
 
-  // Calculate W: 
+  // Calculate W:
   x_1d[0] = W_last;
-  
+
   retval = general_newton_raphson( x_1d, 1, func_W );
 
   W = x_1d[0];
@@ -407,10 +407,10 @@ static int Utoprim_new_body(eos_struct eos, CCTK_REAL U[NPR], CCTK_REAL gcov[NDI
     }
   }
 
-  rho_g = x_rho[0] = rho_for_gnr2; 
+  rho_g = x_rho[0] = rho_for_gnr2;
 
   ntries = 0;
-  while (  (retval = gnr2( x_rho, 1, func_rho )) &&  ( ntries++ < 10 )  ) { 
+  while (  (retval = gnr2( x_rho, 1, func_rho )) &&  ( ntries++ < 10 )  ) {
     rho_g *= 10.;
     x_rho[0] = rho_g;
   }
@@ -422,7 +422,7 @@ static int Utoprim_new_body(eos_struct eos, CCTK_REAL U[NPR], CCTK_REAL gcov[NDI
     return(retval);
   }
 
-  // Calculate v^2 : 
+  // Calculate v^2 :
   rho0       = rho_for_gnr2;
   poly_idx   = find_polytropic_K_and_Gamma_index(eos,rho0);
   Gamma_poly = eos.Gamma_ppoly_tab[poly_idx];
@@ -434,7 +434,7 @@ static int Utoprim_new_body(eos_struct eos, CCTK_REAL U[NPR], CCTK_REAL gcov[NDI
   gamma_sq = 1.+utsq;
   gamma = sqrt(gamma_sq);
   *gamma_out = gamma;
-  
+
   if( utsq < 0. ) {
     retval = 4;
 #if(LTRACE)
@@ -444,14 +444,14 @@ static int Utoprim_new_body(eos_struct eos, CCTK_REAL U[NPR], CCTK_REAL gcov[NDI
   }
 
   // Recover the primitive variables from the scalars and conserved variables:
-  
+
   w = W / gamma_sq;
-  p = gamma_times_S * rho_Gm1 / gamma; 
+  p = gamma_times_S * rho_Gm1 / gamma;
   u = p * Gm1_inv;
 
-  // User may want to handle this case differently, e.g. do NOT return upon 
+  // User may want to handle this case differently, e.g. do NOT return upon
   // a negative rho/u, calculate v^i so that rho/u can be floored by other routine:
-  if( treat_floor_as_failure && ((rho0 <= 0.) || (u <= 0.)) ) { 
+  if( treat_floor_as_failure && ((rho0 <= 0.) || (u <= 0.)) ) {
     retval = 5;
 #if(LTRACE)
     fprintf(stderr,"fix1: retval, W, rho,utsq,u = %d %26.20e %26.20e %26.20e %26.20e \n", retval,W, rho0,utsq,u);fflush(stderr);
@@ -463,7 +463,7 @@ static int Utoprim_new_body(eos_struct eos, CCTK_REAL U[NPR], CCTK_REAL gcov[NDI
   prim[UU] = u ;
 
   g_o_WBsq = gamma/(W+Bsq);
-  QdB_o_W  = QdotB / W; 
+  QdB_o_W  = QdotB / W;
   prim[UTCON1] = g_o_WBsq * ( Qcon[1] + geom->ncon[1] * Qdotn + QdB_o_W*Bcon[1] ) ;
   prim[UTCON2] = g_o_WBsq * ( Qcon[2] + geom->ncon[2] * Qdotn + QdB_o_W*Bcon[2] ) ;
   prim[UTCON3] = g_o_WBsq * ( Qcon[3] + geom->ncon[3] * Qdotn + QdB_o_W*Bcon[3] ) ;
@@ -478,25 +478,25 @@ static int Utoprim_new_body(eos_struct eos, CCTK_REAL U[NPR], CCTK_REAL gcov[NDI
 /**********************************************************************/
 /************************************************************
 
-  general_newton_raphson(): 
+  general_newton_raphson():
 
     -- performs Newton-Rapshon method on an arbitrary system.
 
     -- inspired in part by Num. Rec.'s routine newt();
 
-    Arguements: 
+    Arguements:
 
        -- x[]   = set of independent variables to solve for;
        -- n     = number of independent variables and residuals;
        -- funcd = name of function that calculates residuals, etc.;
 
 *****************************************************************/
-static int general_newton_raphson( CCTK_REAL x[], int n, 
-				   void (*funcd) (CCTK_REAL [], CCTK_REAL [], CCTK_REAL [], 
-						  CCTK_REAL [][NEWT_DIM], CCTK_REAL *, 
+static int general_newton_raphson( CCTK_REAL x[], int n,
+				   void (*funcd) (CCTK_REAL [], CCTK_REAL [], CCTK_REAL [],
+						  CCTK_REAL [][NEWT_DIM], CCTK_REAL *,
 						  CCTK_REAL *, int) )
 {
-  CCTK_REAL f, df, dx[NEWT_DIM], x_old[NEWT_DIM], resid[NEWT_DIM], 
+  CCTK_REAL f, df, dx[NEWT_DIM], x_old[NEWT_DIM], resid[NEWT_DIM],
     jac[NEWT_DIM][NEWT_DIM];
   CCTK_REAL errx, x_orig[NEWT_DIM];
   int    n_iter, id, jd, i_extra, doing_extra;
@@ -506,7 +506,7 @@ static int general_newton_raphson( CCTK_REAL x[], int n,
 
 
   // Initialize various parameters and variables:
-  errx = 1. ; 
+  errx = 1. ;
   df = f = 1.;
   i_extra = doing_extra = 0;
   //-fast  for( id = 0; id < n ; id++)  x_old[id] = x_orig[id] = x[id] ;
@@ -519,7 +519,7 @@ static int general_newton_raphson( CCTK_REAL x[], int n,
 
   /* Start the Newton-Raphson iterations : */
   keep_iterating = 1;
-  while( keep_iterating ) { 
+  while( keep_iterating ) {
 
     (*funcd) (x, dx, resid, jac, &f, &df, n);  /* returns with new dx, f, df */
 
@@ -535,7 +535,7 @@ static int general_newton_raphson( CCTK_REAL x[], int n,
 
 //    //METHOD specific:
 //    i_increase = 0;
-//    while( (( x[0]*x[0]*x[0] * ( x[0] + 2.*Bsq ) - 
+//    while( (( x[0]*x[0]*x[0] * ( x[0] + 2.*Bsq ) -
 //	      QdotBsq*(2.*x[0] + Bsq) ) <= x[0]*x[0]*(Qtsq-Bsq*Bsq))
 //	   && (i_increase < 10) ) {
 //      x[0] -= (1.*i_increase) * dx[0] / 10. ;
@@ -561,14 +561,14 @@ static int general_newton_raphson( CCTK_REAL x[], int n,
     /* If we've reached the tolerance level, then just do a few extra iterations */
     /*  before stopping                                                          */
     /*****************************************************************************/
-    
+
     if( (fabs(errx) <= NEWT_TOL) && (doing_extra == 0) && (EXTRA_NEWT_ITER > 0) ) {
       doing_extra = 1;
     }
 
     if( doing_extra == 1 ) i_extra++ ;
 
-    if( ((fabs(errx) <= NEWT_TOL)&&(doing_extra == 0)) || 
+    if( ((fabs(errx) <= NEWT_TOL)&&(doing_extra == 0)) ||
 	(i_extra > EXTRA_NEWT_ITER) || (n_iter >= (MAX_NEWT_ITER-1)) ) {
       keep_iterating = 0;
     }
@@ -582,7 +582,7 @@ static int general_newton_raphson( CCTK_REAL x[], int n,
   if( (!isfinite(f)) || (!isfinite(df)) || (!isfinite(x[0]))  ) {
 #if(LTRACE)
     fprintf(stderr,"\ngnr not finite, f,df,x_o,x,W_o,W,rho_o,rho = %26.20e %26.20e %26.20e %26.20e %26.20e %26.20e %26.20e %26.20e \n",
-	    f,df,x[0],x_old[0],W_for_gnr2_old,W_for_gnr2,rho_for_gnr2_old,rho_for_gnr2); fflush(stderr); 
+	    f,df,x[0],x_old[0],W_for_gnr2_old,W_for_gnr2,rho_for_gnr2_old,rho_for_gnr2); fflush(stderr);
 #endif
     return(2);
   }
@@ -595,7 +595,7 @@ static int general_newton_raphson( CCTK_REAL x[], int n,
   }
   else {
     return(1);
-  } 
+  }
 
   return(0);
 
@@ -603,18 +603,18 @@ static int general_newton_raphson( CCTK_REAL x[], int n,
 
 
 /***********************************************************/
-/********************************************************************** 
+/**********************************************************************
 
   gnr2()
 
     -- used to calculate rho from W
 
 *****************************************************************/
-static int gnr2( CCTK_REAL x[], int n, 
-			    void (*funcd) (CCTK_REAL [], CCTK_REAL [], CCTK_REAL [], 
+static int gnr2( CCTK_REAL x[], int n,
+			    void (*funcd) (CCTK_REAL [], CCTK_REAL [], CCTK_REAL [],
 					 CCTK_REAL [][NEWT_DIM],CCTK_REAL *,CCTK_REAL *,int) )
 {
-  CCTK_REAL f, df, dx[NEWT_DIM], x_old[NEWT_DIM], resid[NEWT_DIM], 
+  CCTK_REAL f, df, dx[NEWT_DIM], x_old[NEWT_DIM], resid[NEWT_DIM],
     jac[NEWT_DIM][NEWT_DIM];
   CCTK_REAL errx, x_orig[NEWT_DIM];
   int    n_iter, id,jd, i_extra, doing_extra;
@@ -624,7 +624,7 @@ static int gnr2( CCTK_REAL x[], int n,
 
 
   // Initialize various parameters and variables:
-  errx = 1. ; 
+  errx = 1. ;
   df = f = 1.;
   i_extra = doing_extra = 0;
   //-fast  for( id = 0; id < n ; id++)  x_old[id] = x_orig[id] = x[id] ;
@@ -635,14 +635,14 @@ static int gnr2( CCTK_REAL x[], int n,
 
   /* Start the Newton-Raphson iterations : */
   keep_iterating = 1;
-  while( keep_iterating ) { 
+  while( keep_iterating ) {
 
     (*funcd) (x, dx, resid, jac, &f, &df, n);  /* returns with new dx, f, df */
 
     /* Save old values before calculating the new: */
     //-fast  errx = 0.;
     //-fast    for( id = 0; id < n ; id++) { x_old[id] = x[id] ;  }
-    x_old[0] = x[0] ;  
+    x_old[0] = x[0] ;
 
     /* Make the newton step: */
     //-fast    for( id = 0; id < n ; id++) { x[id] += dx[id] ;  }
@@ -651,7 +651,7 @@ static int gnr2( CCTK_REAL x[], int n,
     /* Calculate the convergence criterion */
     //-fast    for( id = 0; id < n ; id++) { errx  += (x[id]==0.) ?  fabs(dx[id]) : fabs(dx[id]/x[id]); }
     //-fast    errx /= 1.*n;
-    errx  = (x[0]==0.) ?  fabs(dx[0]) : fabs(dx[0]/x[0]); 
+    errx  = (x[0]==0.) ?  fabs(dx[0]) : fabs(dx[0]/x[0]);
 
     /* Make sure that the new x[] is physical : */
     // METHOD specific:
@@ -667,21 +667,21 @@ static int gnr2( CCTK_REAL x[], int n,
     if( doing_extra == 1 ) i_extra++ ;
 
     // See if we've done the extra iterations, or have done too many iterations:
-    if( ((fabs(errx) <= NEWT_TOL2)&&(doing_extra == 0)) || 
+    if( ((fabs(errx) <= NEWT_TOL2)&&(doing_extra == 0)) ||
 	(i_extra > EXTRA_NEWT_ITER) || (n_iter >= (MAX_NEWT_ITER-1)) ) {
       keep_iterating = 0;
     }
 
     n_iter++;
 
-  }  
+  }
 
 
   /*  Check for bad untrapped divergences : */
   if( (!isfinite(f)) || (!isfinite(df)) || (!isfinite(x[0]))  ) {
 #if(LTRACE)
     fprintf(stderr,"\ngnr2 not finite, f,df,x_o,x,W_o,W,rho_o,rho = %26.20e %26.20e %26.20e %26.20e %26.20e %26.20e %26.20e %26.20e \n",
-	    f,df,x[0],x_old[0],W_for_gnr2_old,W_for_gnr2,rho_for_gnr2_old,rho_for_gnr2); fflush(stderr); 
+	    f,df,x[0],x_old[0],W_for_gnr2_old,W_for_gnr2,rho_for_gnr2_old,rho_for_gnr2); fflush(stderr);
 #endif
     return(2);
   }
@@ -695,7 +695,7 @@ static int gnr2( CCTK_REAL x[], int n,
   }
   else {
     return(1);
-  } 
+  }
 
   return(0);
 
@@ -719,7 +719,7 @@ static int gnr2( CCTK_REAL x[], int n,
         df    = -2*f;  (on output)
          n    = dimension of x[];
  *********************************************************************************/
-static void func_W(CCTK_REAL x[], CCTK_REAL dx[], CCTK_REAL resid[], 
+static void func_W(CCTK_REAL x[], CCTK_REAL dx[], CCTK_REAL resid[],
 			 CCTK_REAL jac[][NEWT_DIM], CCTK_REAL *f, CCTK_REAL *df, int n)
 {
   int retval, ntries;
@@ -745,26 +745,26 @@ static void func_W(CCTK_REAL x[], CCTK_REAL dx[], CCTK_REAL resid[],
 
   // get rho from NR:
   rho_g = x_rho[0] = rho_for_gnr2;
-  
+
   ntries = 0;
-  while (  (retval = gnr2( x_rho, 1, func_rho)) &&  ( ntries++ < 10 )  ) { 
+  while (  (retval = gnr2( x_rho, 1, func_rho)) &&  ( ntries++ < 10 )  ) {
     rho_g *= 10.;
     x_rho[0] = rho_g;
   }
 
 #if(LTRACE)
-  if( x_rho[0] <= 0. ) { 
+  if( x_rho[0] <= 0. ) {
     fprintf(stderr,"gnr2 neg rho = %d ,rho_n,rho,rho_o,W,W_o = %26.20e %26.20e %26.20e %26.20e %26.20e \n", retval, x_rho[0], rho_for_gnr2, rho_for_gnr2_old, x[0], W_for_gnr2_old);
     fflush(stderr);
   }
 
-  if( retval ) { 
+  if( retval ) {
     fprintf(stderr,"gnr2 retval = %d ,rho_n,rho,rho_o,W,W_o = %26.20e %26.20e %26.20e %26.20e %26.20e \n", retval, x_rho[0], rho_for_gnr2, rho_for_gnr2_old, x[0], W_for_gnr2_old);
     fflush(stderr);
   }
-#endif 
+#endif
 
-  rho_for_gnr2_old = rho_for_gnr2; 
+  rho_for_gnr2_old = rho_for_gnr2;
   rho = rho_for_gnr2 = x_rho[0];
 
 
@@ -820,13 +820,13 @@ static void func_W(CCTK_REAL x[], CCTK_REAL dx[], CCTK_REAL resid[],
          n    = dimension of x[];
  *********************************************************************************/
 // for the isentropic version:   eq.  (27)
-static void func_rho(CCTK_REAL x[], CCTK_REAL dx[], CCTK_REAL resid[], 
+static void func_rho(CCTK_REAL x[], CCTK_REAL dx[], CCTK_REAL resid[],
 			 CCTK_REAL jac[][NEWT_DIM], CCTK_REAL *f, CCTK_REAL *df, int n)
 {
 
   CCTK_REAL A, B, C, rho, W, B0;
   CCTK_REAL t40,t14;
-  
+
   rho = x[0];
   W = W_for_gnr2;
 
@@ -854,7 +854,7 @@ static void func_rho(CCTK_REAL x[], CCTK_REAL dx[], CCTK_REAL resid[],
 
 }
 
-/****************************************************************************** 
+/******************************************************************************
              END   OF   UTOPRIM_1D_EE.C
  ******************************************************************************/
 #endif

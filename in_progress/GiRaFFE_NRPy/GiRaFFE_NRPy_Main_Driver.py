@@ -72,7 +72,7 @@ def GiRaFFE_NRPy_Main_Driver_generate_all(out_dir):
     outCfunction(
         outfile  = os.path.join(out_dir,subdir,name+".h"), desc=desc, name=name,
         params   ="const paramstruct *restrict params,const REAL *restrict in_gfs,REAL *restrict auxevol_gfs",
-        body     = fin.FD_outputC("returnstring",parens_to_print,params=outCparams).replace("IDX4","IDX4S"),
+        body     = fin.FD_outputC("returnstring",parens_to_print,params=outCparams),
         loopopts ="AllPoints",
         rel_path_to_Cparams=os.path.join("../"))
 
@@ -109,7 +109,7 @@ def GiRaFFE_NRPy_Main_Driver_generate_all(out_dir):
     source_Ccode = outCfunction(
         outfile  = "returnstring", desc=desc, name=name,
         params   ="const paramstruct *params,const REAL *in_gfs,const REAL *auxevol_gfs,REAL *rhs_gfs",
-        body     = fin.FD_outputC("returnstring",RHSs_to_print,params=outCparams).replace("IDX4","IDX4S"),
+        body     = fin.FD_outputC("returnstring",RHSs_to_print,params=outCparams),
         loopopts ="InteriorPoints",
         rel_path_to_Cparams=os.path.join("../")).replace("= NGHOSTS","= NGHOSTS_A2B").replace("NGHOSTS+Nxx0","Nxx_plus_2NGHOSTS0-NGHOSTS_A2B").replace("NGHOSTS+Nxx1","Nxx_plus_2NGHOSTS1-NGHOSTS_A2B").replace("NGHOSTS+Nxx2","Nxx_plus_2NGHOSTS2-NGHOSTS_A2B")
     # Note the above .replace() functions. These serve to expand the loop range into the ghostzones, since
@@ -144,6 +144,9 @@ def GiRaFFE_NRPy_Main_Driver_generate_all(out_dir):
 
     subdir = "RHSs"
     Af.GiRaFFE_NRPy_Afield_flux(os.path.join(out_dir,subdir))
+
+    ixp.register_gridfunctions_for_single_rank1("AUXEVOL","Stilde_flux_HLLED")
+
     Sf.generate_C_code_for_Stilde_flux(os.path.join(out_dir,subdir), True, alpha_face,gamma_faceDD,beta_faceU,
                                        Valenciav_rU,B_rU,Valenciav_lU,B_lU,sqrt4pi)
 
@@ -157,13 +160,13 @@ def GiRaFFE_NRPy_Main_Driver_generate_all(out_dir):
 
     C2P_P2C.GiRaFFE_NRPy_C2P(StildeD,BU,gammaDD,betaU,alpha)
 
-    values_to_print = [\
-                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD0"),rhs=C2P_P2C.outStildeD[0]),\
-                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD1"),rhs=C2P_P2C.outStildeD[1]),\
-                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD2"),rhs=C2P_P2C.outStildeD[2]),\
-                       lhrh(lhs=gri.gfaccess("auxevol_gfs","ValenciavU0"),rhs=C2P_P2C.ValenciavU[0]),\
-                       lhrh(lhs=gri.gfaccess("auxevol_gfs","ValenciavU1"),rhs=C2P_P2C.ValenciavU[1]),\
-                       lhrh(lhs=gri.gfaccess("auxevol_gfs","ValenciavU2"),rhs=C2P_P2C.ValenciavU[2])\
+    values_to_print = [
+                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD0"),rhs=C2P_P2C.outStildeD[0]),
+                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD1"),rhs=C2P_P2C.outStildeD[1]),
+                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD2"),rhs=C2P_P2C.outStildeD[2]),
+                       lhrh(lhs=gri.gfaccess("auxevol_gfs","ValenciavU0"),rhs=C2P_P2C.ValenciavU[0]),
+                       lhrh(lhs=gri.gfaccess("auxevol_gfs","ValenciavU1"),rhs=C2P_P2C.ValenciavU[1]),
+                       lhrh(lhs=gri.gfaccess("auxevol_gfs","ValenciavU2"),rhs=C2P_P2C.ValenciavU[2])
                       ]
 
     subdir = "C2P"
@@ -173,16 +176,16 @@ def GiRaFFE_NRPy_Main_Driver_generate_all(out_dir):
     outCfunction(
         outfile  = os.path.join(out_dir,subdir,name+".h"), desc=desc, name=name,
         params   ="const paramstruct *params,REAL *xx[3],REAL *auxevol_gfs,REAL *in_gfs",
-        body     = fin.FD_outputC("returnstring",values_to_print,params=outCparams).replace("IDX4","IDX4S"),
+        body     = fin.FD_outputC("returnstring",values_to_print,params=outCparams),
         loopopts ="AllPoints,Read_xxs",
         rel_path_to_Cparams=os.path.join("../"))
 
     C2P_P2C.GiRaFFE_NRPy_P2C(gammaDD,betaU,alpha,  ValenciavU,BU, sqrt4pi)
 
-    values_to_print = [\
-                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD0"),rhs=C2P_P2C.StildeD[0]),\
-                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD1"),rhs=C2P_P2C.StildeD[1]),\
-                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD2"),rhs=C2P_P2C.StildeD[2]),\
+    values_to_print = [
+                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD0"),rhs=C2P_P2C.StildeD[0]),
+                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD1"),rhs=C2P_P2C.StildeD[1]),
+                       lhrh(lhs=gri.gfaccess("in_gfs","StildeD2"),rhs=C2P_P2C.StildeD[2]),
                       ]
 
     desc = "Recompute StildeD after current sheet fix to Valencia 3-velocity to ensure consistency between conservative & primitive variables."
@@ -190,7 +193,7 @@ def GiRaFFE_NRPy_Main_Driver_generate_all(out_dir):
     outCfunction(
         outfile  = os.path.join(out_dir,subdir,name+".h"), desc=desc, name=name,
         params   ="const paramstruct *params,REAL *auxevol_gfs,REAL *in_gfs",
-        body     = fin.FD_outputC("returnstring",values_to_print,params=outCparams).replace("IDX4","IDX4S"),
+        body     = fin.FD_outputC("returnstring",values_to_print,params=outCparams),
         loopopts ="AllPoints",
         rel_path_to_Cparams=os.path.join("../"))
 
@@ -217,30 +220,11 @@ const int NUM_RECONSTRUCT_GFS = 6;
 #include "RHSs/calculate_Stilde_flux_D0.h"
 #include "RHSs/calculate_Stilde_flux_D1.h"
 #include "RHSs/calculate_Stilde_flux_D2.h"
+#include "RHSs/calculate_Stilde_rhsD.h"
 #include "boundary_conditions/GiRaFFE_boundary_conditions.h"
 #include "A2B/driver_AtoB.h"
 #include "C2P/GiRaFFE_NRPy_cons_to_prims.h"
 #include "C2P/GiRaFFE_NRPy_prims_to_cons.h"
-
-void override_BU_with_old_GiRaFFE(const paramstruct *restrict params,REAL *restrict auxevol_gfs,const int n) {
-#include "set_Cparameters.h"
-    char filename[100];
-    sprintf(filename,"BU0_override-%08d.bin",n);
-    FILE *out2D = fopen(filename, "rb");
-    fread(auxevol_gfs+BU0GF*Nxx_plus_2NGHOSTS0*Nxx_plus_2NGHOSTS1*Nxx_plus_2NGHOSTS2,
-          sizeof(double),Nxx_plus_2NGHOSTS0*Nxx_plus_2NGHOSTS1*Nxx_plus_2NGHOSTS2,out2D);
-    fclose(out2D);
-    sprintf(filename,"BU1_override-%08d.bin",n);
-    out2D = fopen(filename, "rb");
-    fread(auxevol_gfs+BU1GF*Nxx_plus_2NGHOSTS0*Nxx_plus_2NGHOSTS1*Nxx_plus_2NGHOSTS2,
-          sizeof(double),Nxx_plus_2NGHOSTS0*Nxx_plus_2NGHOSTS1*Nxx_plus_2NGHOSTS2,out2D);
-    fclose(out2D);
-    sprintf(filename,"BU2_override-%08d.bin",n);
-    out2D = fopen(filename, "rb");
-    fread(auxevol_gfs+BU2GF*Nxx_plus_2NGHOSTS0*Nxx_plus_2NGHOSTS1*Nxx_plus_2NGHOSTS2,
-          sizeof(double),Nxx_plus_2NGHOSTS0*Nxx_plus_2NGHOSTS1*Nxx_plus_2NGHOSTS2,out2D);
-    fclose(out2D);
-}
 
 void GiRaFFE_NRPy_RHSs(const paramstruct *restrict params,REAL *restrict auxevol_gfs,const REAL *restrict in_gfs,REAL *restrict rhs_gfs) {
 #include "set_Cparameters.h"
@@ -339,6 +323,7 @@ void GiRaFFE_NRPy_RHSs(const paramstruct *restrict params,REAL *restrict auxevol
             //calculate_E_field_D2_left(params,auxevol_gfs,rhs_gfs);
             calculate_Stilde_flux_D2(params,auxevol_gfs,rhs_gfs);
         }
+        calculate_Stilde_rhsD(flux_dirn+1,params,auxevol_gfs,rhs_gfs);
         for(int count=0;count<=1;count++) {
             // This function is written to be general, using notation that matches the forward permutation added to AD2,
             // i.e., [F_HLL^x(B^y)]_z corresponding to flux_dirn=0, count=1.

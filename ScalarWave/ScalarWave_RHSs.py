@@ -50,14 +50,14 @@ def ScalarWave_RHSs():
 
     # Step 2: Register gridfunctions that are needed as input
     #         to the scalar wave RHS expressions.
-    uu, vv = gri.register_gridfunctions("EVOL",["uu","vv"])
+    uu, vv = gri.register_gridfunctions("EVOL", ["uu", "vv"])
 
     # Step 3: Declare the rank-2 indexed expression \partial_{ij} u,
     #         which is symmetric about interchange of indices i and j
     #         Derivative variables like these must have an underscore
     #         in them, so the finite difference module can parse the
     #         variable name properly.
-    uu_dDD = ixp.declarerank2("uu_dDD","sym01")
+    uu_dDD = ixp.declarerank2("uu_dDD", "sym01")
 
     # Step 4: Specify RHSs as global variables,
     #         to enable access outside this

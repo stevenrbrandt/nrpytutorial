@@ -5,14 +5,10 @@ nrpy_dir_path = os.path.join("..")
 if nrpy_dir_path not in sys.path:
     sys.path.append(nrpy_dir_path)
 
-from outputC import outCfunction # NRPy+: Core C code output module
+from outputC import outCfunction, add_to_Cfunction_dict # NRPy+: Core C code output module
 import cmdline_helper as cmd     # NRPy+: Multi-platform Python command-line interface
 
-def GiRaFFE_NRPy_FCVAL(Ccodesdir):
-    cmd.mkdir(Ccodesdir)
-    # Write out the code to a file.
-    with open(os.path.join(Ccodesdir,"interpolate_metric_gfs_to_cell_faces.h"),"w") as file:
-        file.write("""// Side note: the following values could be used for cell averaged gfs:
+prefunc = """// Side note: the following values could be used for cell averaged gfs:
 //     am2=-1.0/12.0, am1=7.0/12.0, a0=7.0/12.0, a1=-1.0/12.0
 // However, since the metric gfs store the grid point values instead of the cell average,
 //     the following coefficients should be used:
@@ -25,7 +21,7 @@ def GiRaFFE_NRPy_FCVAL(Ccodesdir):
 #define A1  -0.0625
 #define COMPUTE_FCVAL(METRICm2,METRICm1,METRIC,METRICp1) (AM2*(METRICm2) + AM1*(METRICm1) + A0*(METRIC) + A1*(METRICp1))
 
-const int metric_gfs_list[16] = {GAMMADD00GF,
+const int metric_gfs_list[10] = {GAMMADD00GF,
                                  GAMMADD01GF,
                                  GAMMADD02GF,
                                  GAMMADD11GF,
@@ -34,15 +30,9 @@ const int metric_gfs_list[16] = {GAMMADD00GF,
                                  BETAU0GF,
                                  BETAU1GF,
                                  BETAU2GF,
-                                 ALPHAGF,
-                                 GAMMAUU00GF,
-                                 GAMMAUU01GF,
-                                 GAMMAUU02GF,
-                                 GAMMAUU11GF,
-                                 GAMMAUU12GF,
-                                 GAMMAUU22GF};
+                                 ALPHAGF};
 
-const int metric_gfs_face_list[16] = {GAMMA_FACEDD00GF,
+const int metric_gfs_face_list[10] = {GAMMA_FACEDD00GF,
                                       GAMMA_FACEDD01GF,
                                       GAMMA_FACEDD02GF,
                                       GAMMA_FACEDD11GF,
@@ -51,16 +41,16 @@ const int metric_gfs_face_list[16] = {GAMMA_FACEDD00GF,
                                       BETA_FACEU0GF,
                                       BETA_FACEU1GF,
                                       BETA_FACEU2GF,
-                                      ALPHA_FACEGF,
-                                      GAMMA_FACEUU00GF,
-                                      GAMMA_FACEUU01GF,
-                                      GAMMA_FACEUU02GF,
-                                      GAMMA_FACEUU11GF,
-                                      GAMMA_FACEUU12GF,
-                                      GAMMA_FACEUU22GF};
+                                      ALPHA_FACEGF};
 
-const int num_metric_gfs = 16;
-""")
+const int num_metric_gfs = 10;
+"""
+
+def GiRaFFE_NRPy_FCVAL(Ccodesdir):
+    cmd.mkdir(Ccodesdir)
+    # Write out the code to a file.
+    with open(os.path.join(Ccodesdir,"interpolate_metric_gfs_to_cell_faces.h"),"w") as file:
+        file.write(prefunc)
 
     desc = "Interpolate metric gridfunctions to cell faces"
     name = "interpolate_metric_gfs_to_cell_faces"
@@ -74,9 +64,9 @@ const int num_metric_gfs = 16;
         body     ="""    for(int gf = 0;gf < num_metric_gfs;gf++) {
         in_gf  = metric_gfs_list[gf];
         out_gf = metric_gfs_face_list[gf];
-        for (int i2 = 2*(flux_dirn==3);i2 < Nxx_plus_2NGHOSTS2-1*(flux_dirn==3);i2++) {
-            for (int i1 = 2*(flux_dirn==2);i1 < Nxx_plus_2NGHOSTS1-1*(flux_dirn==2);i1++) {
-                for (int i0 = 2*(flux_dirn==1);i0 < Nxx_plus_2NGHOSTS0-1*(flux_dirn==1);i0++) {
+        for (int i2 = 2;i2 < Nxx_plus_2NGHOSTS2-1;i2++) {
+            for (int i1 = 2;i1 < Nxx_plus_2NGHOSTS1-1;i1++) {
+                for (int i0 = 2;i0 < Nxx_plus_2NGHOSTS0-1;i0++) {
                     Qm2 = auxevol_gfs[IDX4S(in_gf,i0-2*kronecker_delta[flux_dirn][0],i1-2*kronecker_delta[flux_dirn][1],i2-2*kronecker_delta[flux_dirn][2])];
                     Qm1 = auxevol_gfs[IDX4S(in_gf,i0-kronecker_delta[flux_dirn][0],i1-kronecker_delta[flux_dirn][1],i2-kronecker_delta[flux_dirn][2])];
                     Qp0 = auxevol_gfs[IDX4S(in_gf,i0,i1,i2)];
@@ -86,22 +76,43 @@ const int num_metric_gfs = 16;
             }
         }
     }
-#ifdef WORKAROUND_ENABLED
-        for (int i2 = 2*(flux_dirn==3);i2 < Nxx_plus_2NGHOSTS2-1*(flux_dirn==3);i2++) {
-            for (int i1 = 2*(flux_dirn==2);i1 < Nxx_plus_2NGHOSTS1-1*(flux_dirn==2);i1++) {
-                for (int i0 = 2*(flux_dirn==1);i0 < Nxx_plus_2NGHOSTS0-1*(flux_dirn==1);i0++) {
-                Qm2 = auxevol_gfs[IDX4S(PHIGF,i0-2*kronecker_delta[flux_dirn][0],i1-2*kronecker_delta[flux_dirn][1],i2-2*kronecker_delta[flux_dirn][2])];
-                Qm1 = auxevol_gfs[IDX4S(PHIGF,i0-kronecker_delta[flux_dirn][0],i1-kronecker_delta[flux_dirn][1],i2-kronecker_delta[flux_dirn][2])];
-                Qp0 = auxevol_gfs[IDX4S(PHIGF,i0,i1,i2)];
-                Qp1 = auxevol_gfs[IDX4S(PHIGF,i0+kronecker_delta[flux_dirn][0],i1+kronecker_delta[flux_dirn][1],i2+kronecker_delta[flux_dirn][2])];
-                auxevol_gfs[IDX4S(PHI_FACEGF,i0,i1,i2)] = COMPUTE_FCVAL(Qm2,Qm1,Qp0,Qp1);
-            }
-        }
-    }
-#endif /*WORKAROUND_ENABLED*/
-
 """,
     rel_path_to_Cparams=os.path.join("../"))
 
     with open(os.path.join(Ccodesdir,"interpolate_metric_gfs_to_cell_faces.h"),"a") as file:
         file.write(interp_Cfunc)
+
+def add_to_Cfunction_dict__GiRaFFE_NRPy_FCVAL(includes=None, rel_path_to_Cparams=os.path.join("../"),
+                                              path_from_rootsrcdir_to_this_Cfunc=os.path.join("FCVAL/")):
+
+    desc = "Interpolate metric gridfunctions to cell faces"
+    name = "interpolate_metric_gfs_to_cell_faces"
+    params   ="const paramstruct *params,REAL *auxevol_gfs,const int flux_dirn"
+    preloop  ="""    int in_gf,out_gf;
+    REAL Qm2,Qm1,Qp0,Qp1;
+
+"""
+    body     ="""    for(int gf = 0;gf < num_metric_gfs;gf++) {
+        in_gf  = metric_gfs_list[gf];
+        out_gf = metric_gfs_face_list[gf];
+        for (int i2 = 2;i2 < Nxx_plus_2NGHOSTS2-1;i2++) {
+            for (int i1 = 2;i1 < Nxx_plus_2NGHOSTS1-1;i1++) {
+                for (int i0 = 2;i0 < Nxx_plus_2NGHOSTS0-1;i0++) {
+                    Qm2 = auxevol_gfs[IDX4S(in_gf,i0-2*kronecker_delta[flux_dirn][0],i1-2*kronecker_delta[flux_dirn][1],i2-2*kronecker_delta[flux_dirn][2])];
+                    Qm1 = auxevol_gfs[IDX4S(in_gf,i0-kronecker_delta[flux_dirn][0],i1-kronecker_delta[flux_dirn][1],i2-kronecker_delta[flux_dirn][2])];
+                    Qp0 = auxevol_gfs[IDX4S(in_gf,i0,i1,i2)];
+                    Qp1 = auxevol_gfs[IDX4S(in_gf,i0+kronecker_delta[flux_dirn][0],i1+kronecker_delta[flux_dirn][1],i2+kronecker_delta[flux_dirn][2])];
+                    auxevol_gfs[IDX4S(out_gf,i0,i1,i2)] = COMPUTE_FCVAL(Qm2,Qm1,Qp0,Qp1);
+                }
+            }
+        }
+    }
+"""
+    add_to_Cfunction_dict(
+        includes=includes,
+        desc=desc,
+        name=name, params=params,
+        prefunc = prefunc, preloop = preloop, body=body,
+        path_from_rootsrcdir_to_this_Cfunc = path_from_rootsrcdir_to_this_Cfunc,
+        rel_path_to_Cparams=rel_path_to_Cparams)
+

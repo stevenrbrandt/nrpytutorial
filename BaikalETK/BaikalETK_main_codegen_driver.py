@@ -45,7 +45,7 @@ ShiftCondition = "GammaDriving2ndOrder_NoCovariant"
 # Output finite difference stencils as functions instead of inlined expressions.
 #   Dramatically speeds up compile times (esp with higher-order finite differences
 #   and GCC 9.3+)
-par.set_parval_from_str("finite_difference::FD_functions_enable", True)
+par.set_parval_from_str("finite_difference::enable_FD_functions", True)
 
 # Step 1.b: Set runtime parameters for Baikal and BaikalVacuum
 #         Current runtime choices:
@@ -131,7 +131,7 @@ if __name__ == "__main__":
         # Step 3.d.iii: Define master function for parallelization.
         #           Note that lambdifying this doesn't work in Python 3
         def master_func(i):
-            import BaikalETK.BaikalETK_C_kernels_codegen as BCk
+            import BaikalETK.BaikalETK_C_kernels_codegen as BCk  # lgtm [py/repeated-import]
             return BCk.BaikalETK_C_kernels_codegen_onepart(params=paramslist[i])
 
         # Step 3.d.iv: Evaluate list of functions in parallel if possible;
@@ -149,7 +149,7 @@ if __name__ == "__main__":
         print("***************************************")
         # Steps 3.d.ii-iv, alternate: As fallback, evaluate functions in serial.
         #       This will happen on Android and Windows systems
-        import BaikalETK.BaikalETK_C_kernels_codegen as BCk
+        import BaikalETK.BaikalETK_C_kernels_codegen as BCk  # lgtm [py/repeated-import]
         # No need to pickle if doing serial codegen.
         for param in paramslist:
             BCk.BaikalETK_C_kernels_codegen_onepart(params=param)

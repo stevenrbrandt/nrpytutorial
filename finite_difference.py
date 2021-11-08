@@ -9,11 +9,11 @@
 # Author: Zachariah B. Etienne
 #         zachetie **at** gmail **dot* com
 
-from outputC import parse_outCparams_string, outC_function_dict # NRPy+: Core C code output module
+from outputC import parse_outCparams_string, outC_function_dict, outC_function_prototype_dict, outC_NRPy_basic_defines_h_dict  # NRPy+: Core C code output module
 import NRPy_param_funcs as par   # NRPy+: parameter interface
 import sympy as sp               # SymPy: The Python computer algebra package upon which NRPy+ depends
 import grid as gri               # NRPy+: Functions having to do with numerical grids
-import os, sys                     # Standard Python module for multiplatform OS-level functions
+import os, sys                   # Standard Python module for multiplatform OS-level functions
 from finite_difference_helpers import extract_from_list_of_deriv_vars__base_gfs_and_deriv_ops_lists
 from finite_difference_helpers import generate_list_of_deriv_vars_from_lhrh_sympyexpr_list
 from finite_difference_helpers import read_gfs_from_memory, FDparams, construct_Ccode
@@ -22,10 +22,10 @@ from finite_difference_helpers import read_gfs_from_memory, FDparams, construct_
 modulename = __name__
 # Centered finite difference accuracy order
 par.initialize_param(par.glb_param("int",  modulename, "FD_CENTDERIVS_ORDER",          4))
-par.initialize_param(par.glb_param("bool", modulename, "FD_functions_enable",      False))
+par.initialize_param(par.glb_param("bool", modulename, "enable_FD_functions",      False))
 par.initialize_param(par.glb_param("int",  modulename, "FD_KO_ORDER__CENTDERIVS_PLUS", 2))
 
-def FD_outputC(filename,sympyexpr_list, params="", upwindcontrolvec=""):
+def FD_outputC(filename, sympyexpr_list, params="", upwindcontrolvec=""):
     outCparams = parse_outCparams_string(params)
 
     # Step 0.a:
@@ -33,7 +33,7 @@ def FD_outputC(filename,sympyexpr_list, params="", upwindcontrolvec=""):
     #     convert it to a list with just one element.
     #     This enables the rest of the routine to assume
     #     sympyexpr_list is indeed a list.
-    if type(sympyexpr_list) is not list:
+    if not isinstance(sympyexpr_list, list):
         sympyexpr_list = [sympyexpr_list]
 
     # Step 0.b:
@@ -56,10 +56,10 @@ def FD_outputC(filename,sympyexpr_list, params="", upwindcontrolvec=""):
         indent = ""
 
     # Step 0.c: FDparams named tuple stores parameters used in the finite-difference codegen
-    FDparams.SIMD_enable         = outCparams.SIMD_enable
+    FDparams.enable_SIMD         = outCparams.enable_SIMD
     FDparams.PRECISION           = par.parval_from_str("PRECISION")
     FDparams.FD_CD_order         = par.parval_from_str("FD_CENTDERIVS_ORDER")
-    FDparams.FD_functions_enable = par.parval_from_str("FD_functions_enable")
+    FDparams.enable_FD_functions = par.parval_from_str("enable_FD_functions")
     FDparams.DIM                 = par.parval_from_str("DIM")
     FDparams.MemAllocStyle       = par.parval_from_str("MemAllocStyle")
     FDparams.upwindcontrolvec    = upwindcontrolvec
@@ -100,7 +100,7 @@ def FD_outputC(filename,sympyexpr_list, params="", upwindcontrolvec=""):
     #     supported. If not, error out.
     for i in range(len(list_of_deriv_operators)):
         found_derivID = False
-        for derivID in ["dD","dupD","ddnD","dKOD"]:
+        for derivID in ["dD", "dupD", "ddnD", "dKOD"]:
             if derivID in list_of_deriv_operators[i]:
                 found_derivID = True
         if not found_derivID:
@@ -156,6 +156,8 @@ def FD_outputC(filename,sympyexpr_list, params="", upwindcontrolvec=""):
             successstr = "Wrote "
         print(successstr + "to file \"" + filename + "\"")
 
+################
+# TO BE DEPRECATED:
 def output_finite_difference_functions_h(path=os.path.join(".")):
     with open(os.path.join(path, "finite_difference_functions.h"), "w") as file:
         file.write("""
@@ -178,7 +180,39 @@ def output_finite_difference_functions_h(path=os.path.join(".")):
                 file.write(item.replace("const REAL_SIMD_ARRAY _NegativeOne_ =",
                                         "const REAL_SIMD_ARRAY "+UNUSED+" _NegativeOne_ =")) # Many of the NegativeOne's get optimized away in the SIMD postprocessing step. No need for all the warnings
 
+        # Clear all FD functions from outC_function_dict after outputting to finite_difference_functions.h.
+        #   Otherwise outputC will be outputting these as separate individual C codes & attempting to build them in Makefile.
+        key_list_del = []
+        for key, item in outC_function_dict.items():
+            if "__FD_OPERATOR_FUNC__" in item:
+                key_list_del += [key]
+        for key in key_list_del:
+            outC_function_dict.pop(key)
+            if key in outC_function_prototype_dict:
+                outC_function_prototype_dict.pop(key)
+
         file.write("#endif // #ifndef __FD_FUNCTIONS_H__\n")
+################
+
+
+def register_C_functions_and_NRPy_basic_defines(NGHOSTS_account_for_onezone_upwind=False, enable_SIMD=True):
+    # First register C functions needed by finite_difference
+
+    # Then set up the dictionary entry for finite_difference in NRPy_basic_defines
+    NGHOSTS = int(par.parval_from_str("finite_difference::FD_CENTDERIVS_ORDER")/2)
+    if NGHOSTS_account_for_onezone_upwind:
+        NGHOSTS += 1
+    Nbd_str = """
+// Set the number of ghost zones
+// Note that upwinding in e.g., BSSN requires that NGHOSTS = FD_CENTDERIVS_ORDER/2 + 1 <- Notice the +1.
+"""
+    Nbd_str += "#define NGHOSTS " + str(NGHOSTS)+"\n"
+    if not enable_SIMD:
+        Nbd_str += """
+// When enable_SIMD = False, this is the UPWIND_ALG() macro:
+#define UPWIND_ALG(UpwindVecU) UpwindVecU > 0.0 ? 1.0 : 0.0\n"""
+    outC_NRPy_basic_defines_h_dict["finite_difference"] = Nbd_str
+
 
 #######################################################
 #  FINITE-DIFFERENCE COEFFICIENT ALGORITHM
@@ -257,11 +291,17 @@ def compute_fdcoeffs_fdstencl(derivstring,FDORDER=-1):
             FDORDER += par.parval_from_str("FD_KO_ORDER__CENTDERIVS_PLUS")
 
     STENCILSIZE = FDORDER+1
-    UPDOWNWIND = 0
+    UPDOWNWIND_stencil_shift = 0
+    # dup/dnD = single-point-offset upwind/downwinding.
     if "dupD" in derivstring:
-        UPDOWNWIND =  1
+        UPDOWNWIND_stencil_shift =  1
     elif "ddnD" in derivstring:
-        UPDOWNWIND = -1
+        UPDOWNWIND_stencil_shift = -1
+    # dfullup/dnD = full upwind/downwinding.
+    elif "dfullupD" in derivstring:
+        UPDOWNWIND_stencil_shift =  int(FDORDER/2)
+    elif "dfulldnD" in derivstring:
+        UPDOWNWIND_stencil_shift = -int(FDORDER/2)
 
     # Step 1: Set up matrix based on the stencil size (FDORDER+1).
     #         See documentation above for details on how this
@@ -272,7 +312,7 @@ def compute_fdcoeffs_fdstencl(derivstring,FDORDER=-1):
             if i == 0:
                 M[(i,j)] = 1 # Setting n^0 = 1 for all n, including n=0, because this matches the pattern
             else:
-                dist_from_xeq0_col = j - sp.Rational((STENCILSIZE - 1),2) + UPDOWNWIND
+                dist_from_xeq0_col = j - sp.Rational((STENCILSIZE - 1),2) + UPDOWNWIND_stencil_shift
                 if dist_from_xeq0_col==0:
                     M[(i,j)] = 0
                 else:
@@ -329,7 +369,7 @@ def compute_fdcoeffs_fdstencl(derivstring,FDORDER=-1):
 
                 # Next store finite difference stencil point
                 # corresponding to coefficient.
-                gridpt_posn = i - int((STENCILSIZE-1)/2) + UPDOWNWIND
+                gridpt_posn = i - int((STENCILSIZE-1)/2) + UPDOWNWIND_stencil_shift
                 if gridpt_posn != 0:
                     dirn = int(derivstring[len(derivstring)-1])
                     idx4[dirn] = gridpt_posn

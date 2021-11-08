@@ -4,29 +4,39 @@
 # Author: Zachariah B. Etienne
 #         zachetie **at** gmail **dot* com
 
-import NRPy_param_funcs as par     # NRPy+: Parameter interface
-import sympy as sp                 # Import SymPy, a computer algebra system written entirely in Python
-from collections import namedtuple # Standard Python `collections` module: defines named tuples data structure
-import os                          # Standard Python module for multiplatform OS-level functions
+import NRPy_param_funcs as par      # NRPy+: Parameter interface
+import sympy as sp                  # Import SymPy, a computer algebra system written entirely in Python
+from collections import namedtuple  # Standard Python `collections` module: defines named tuples data structure
+import os                           # Standard Python module for multiplatform OS-level functions
 
 # Initialize globals related to the grid
 glb_gridfcs_list = []
-glb_gridfc  = namedtuple('gridfunction', 'gftype name rank DIM')
+glb_gridfc = namedtuple('gridfunction', 'gftype name rank DIM')
 
 thismodule = __name__
 par.initialize_param(par.glb_param("char", thismodule, "GridFuncMemAccess", "SENRlike"))
-par.initialize_param(par.glb_param("char", thismodule, "MemAllocStyle","210"))
+par.initialize_param(par.glb_param("char", thismodule, "MemAllocStyle", "210"))
 par.initialize_param(par.glb_param("int",  thismodule, "DIM", 3))
 
-Nxx = par.Cparameters("int", thismodule,["Nxx0","Nxx1","Nxx2"],[64,32,64]) # Default to 64x32x64 grid
+# This parameter is set as many times as needed.
+par.initialize_param(par.glb_param("char", thismodule, "current_gridsuffix", ""))
+
+# Multiple grid support.
+par.Cparameters("int",  thismodule, "numgrids", 1)
+
+Nxx = par.Cparameters("int", thismodule, ["Nxx0", "Nxx1", "Nxx2"], [64, 32, 64])  # Default to 64x32x64 grid
 Nxx_plus_2NGHOSTS = par.Cparameters("int", thismodule,
                       ["Nxx_plus_2NGHOSTS0","Nxx_plus_2NGHOSTS1","Nxx_plus_2NGHOSTS2"],
                       [                  70,                  38,                  70]) # Default to 64x32x64 grid w/ NGHOSTS=3
-xx  = par.Cparameters("REAL",thismodule,[ "xx0", "xx1", "xx2"],1e300) # These are C variables, not parameters, and
-                                                                      # will be overwritten; best to initialize to crazy
-                                                                      # number to ensure they are overwritten!
-dxx   = par.Cparameters("REAL",thismodule,[   "dxx0",   "dxx1",   "dxx2"],0.1)
-invdx = par.Cparameters("REAL",thismodule,[ "invdx0", "invdx1", "invdx2"],1.0)
+xx = par.Cparameters("REAL", thismodule, ["xx0", "xx1", "xx2"], 1e300) # These are C variables, not parameters, and
+                                                                       # will be overwritten; best to initialize to crazy
+                                                                       # number to ensure they are overwritten!
+# TODO: dt = par.Cparameters("REAL", thismodule, ["dt"], 0.1)
+dxx = par.Cparameters("REAL", thismodule, ["dxx0", "dxx1", "dxx2"], 0.1)
+invdx = par.Cparameters("REAL", thismodule, ["invdx0", "invdx1", "invdx2"], 1.0)
+
+# Origin of grid in Cartesian coordinates, relative to global grid
+Cart_origin = par.Cparameters("REAL", thismodule, ["Cart_originx", "Cart_originy", "Cart_originz"], 0.0)
 
 def variable_type(var):
     var_is_gf = False
@@ -88,7 +98,7 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = ""):
         elif gftype == "AUXEVOL":
             gfarrayname = "auxevol_gfs"
         # Return gfarrayname[IDX3(varname,i0)] for DIM=1, gfarrayname[IDX3(varname,i0,i1)] for DIM=2, etc.
-        retstring += gfarrayname + "[IDX" + str(DIM+1) + "(" + varname.upper()+"GF" + ", "
+        retstring += gfarrayname + "[IDX" + str(DIM+1) + "S(" + varname.upper()+"GF" + ", "
     elif par.parval_from_str("GridFuncMemAccess") == "ETK":
         # Return varname[CCTK_GFINDEX3D(i0,i1,i2)] for DIM=3. Error otherwise
         if DIM != 3:
@@ -128,7 +138,7 @@ def verify_gridfunction_basename_is_valid(gf_basename):
 
     # https://stackoverflow.com/questions/1303243/how-to-find-out-if-a-python-object-is-a-string
     if sys.version_info[0] < 3:
-        if not isinstance(gf_basename,basestring):
+        if not isinstance(gf_basename, basestring):
             print("ERROR: gf_names must be strings")
             sys.exit(1)
     else:
@@ -150,7 +160,7 @@ def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3):
         sys.exit(1)
 
     # Step 1: convert gf_names to a list if it's not already a list
-    if type(gf_names) is not list:
+    if not isinstance(gf_names, list):
         gf_namestmp = [gf_names]
         gf_names = gf_namestmp
 
@@ -242,27 +252,54 @@ def gridfunction_lists():
 
     return evolved_variables_list,auxiliary_variables_list,auxevol_variables_list
 
-def output__gridfunction_defines_h__return_gf_lists(outdir):
-
+def gridfunction_defines():
     evolved_variables_list, auxiliary_variables_list, auxevol_variables_list = gridfunction_lists()
 
-    # Finally we set up the #define statements:
+    outstr  = """/* EVOLVED VARIABLES: */
+#define NUM_EVOL_GFS """ + str(len(evolved_variables_list)) + "\n"
+    for i in range(len(evolved_variables_list)):
+        outstr += "#define " + evolved_variables_list[i].upper() + "GF\t" + str(i) + "\n"
+
+    outstr += "\n\n" + """/* AUXILIARY VARIABLES: */
+#define NUM_AUX_GFS """ + str(len(auxiliary_variables_list)) + "\n"
+    for i in range(len(auxiliary_variables_list)):
+        outstr += "#define " + auxiliary_variables_list[i].upper() + "GF\t" + str(i) + "\n"
+
+    outstr += "\n\n" + """/* AUXEVOL VARIABLES: */
+#define NUM_AUXEVOL_GFS """ + str(len(auxevol_variables_list)) + "\n"
+    for i in range(len(auxevol_variables_list)):
+        outstr += "#define " + auxevol_variables_list[i].upper() + "GF\t" + str(i) + "\n"
+
+    return outstr
+
+
+####################
+# TO BE DEPRECATED
+def output__gridfunction_defines_h__return_gf_lists(outdir):
     with open(os.path.join(outdir,"gridfunction_defines.h"), "w") as file:
         file.write("/* This file is automatically generated by NRPy+. Do not edit. */\n\n")
+        file.write(gridfunction_defines())
+    return gridfunction_lists()
+####################
 
-        file.write("/* EVOLVED VARIABLES: */\n")
-        file.write("#define NUM_EVOL_GFS "+str(len(evolved_variables_list))+"\n")
-        for i in range(len(evolved_variables_list)):
-            file.write("#define "+evolved_variables_list[i].upper()+"GF\t"+str(i)+"\n")
+from outputC import outC_NRPy_basic_defines_h_dict
+def register_C_functions_and_NRPy_basic_defines():
+    # First register C functions needed by grid
 
-        file.write("\n\n /* AUXILIARY VARIABLES: */\n")
-        file.write("#define NUM_AUX_GFS " + str(len(auxiliary_variables_list)) + "\n")
-        for i in range(len(auxiliary_variables_list)):
-            file.write("#define " + auxiliary_variables_list[i].upper() + "GF\t" + str(i) + "\n")
-
-        file.write("\n\n /* AUXEVOL VARIABLES: */\n")
-        file.write("#define NUM_AUXEVOL_GFS "+str(len(auxevol_variables_list))+"\n")
-        for i in range(len(auxevol_variables_list)):
-            file.write("#define "+auxevol_variables_list[i].upper()+"GF\t"+str(i)+"\n")
-
-    return evolved_variables_list,auxiliary_variables_list,auxevol_variables_list
+    # Then set up the dictionary entry for grid in NRPy_basic_defines
+    Nbd_str  = gridfunction_defines()
+    Nbd_str += r"""
+// Declare the IDX4S(gf,i,j,k) macro, which enables us to store 4-dimensions of
+//   data in a 1D array. In this case, consecutive values of "i"
+//   (all other indices held to a fixed value) are consecutive in memory, where
+//   consecutive values of "j" (fixing all other indices) are separated by
+//   Nxx_plus_2NGHOSTS0 elements in memory. Similarly, consecutive values of
+//   "k" are separated by Nxx_plus_2NGHOSTS0*Nxx_plus_2NGHOSTS1 in memory, etc.
+#define IDX4S(g,i,j,k) \
+( (i) + Nxx_plus_2NGHOSTS0 * ( (j) + Nxx_plus_2NGHOSTS1 * ( (k) + Nxx_plus_2NGHOSTS2 * (g) ) ) )
+#define IDX4ptS(g,idx) ( (idx) + (Nxx_plus_2NGHOSTS0*Nxx_plus_2NGHOSTS1*Nxx_plus_2NGHOSTS2) * (g) )
+#define IDX3S(i,j,k) ( (i) + Nxx_plus_2NGHOSTS0 * ( (j) + Nxx_plus_2NGHOSTS1 * ( (k) ) ) )
+#define LOOP_REGION(i0min,i0max, i1min,i1max, i2min,i2max) \
+  for(int i2=i2min;i2<i2max;i2++) for(int i1=i1min;i1<i1max;i1++) for(int i0=i0min;i0<i0max;i0++)
+"""
+    outC_NRPy_basic_defines_h_dict["grid"] = Nbd_str

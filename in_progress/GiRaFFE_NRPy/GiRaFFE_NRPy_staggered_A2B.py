@@ -13,10 +13,10 @@ def GiRaFFE_NRPy_A2B(Ccodesdir):
     cmd.mkdir(Ccodesdir)
     # Write out the code to a file.
     with open(os.path.join(Ccodesdir,"compute_B_and_Bstagger_from_A.h"),"w") as file:
-        file.write("""#define LOOP_DEFINE_SIMPLE                      \\
-  _Pragma("omp parallel for")                   \\
-  for(int k=0;k<Nxx_plus_2NGHOSTS2;k++)                \\
-    for(int j=0;j<Nxx_plus_2NGHOSTS1;j++)              \\
+        file.write(r"""#define LOOP_DEFINE_SIMPLE                      \
+  _Pragma("omp parallel for")                   \
+  for(int k=0;k<Nxx_plus_2NGHOSTS2;k++)                \
+    for(int j=0;j<Nxx_plus_2NGHOSTS1;j++)              \
       for(int i=0;i<Nxx_plus_2NGHOSTS0;i++)
 
 void GiRaFFE_compute_B_and_Bstagger_from_A(const paramstruct *params,

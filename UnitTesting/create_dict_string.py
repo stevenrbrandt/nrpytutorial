@@ -18,9 +18,9 @@ def create_dict_string(value_dict):
     # For each entry in the sorted dictionary, add properly formatted dictionary entry to return_string based on
     # type of variable (mpf, mpc, other)
     for var, num in sorted(value_dict.items(), key=lambda s: s[0].lower()):
-        if type(num) == mpf:
+        if isinstance(num, mpf):
             return_string += "'" + var + "': mpf('" + str(num) + "'), "
-        elif type(num) == mpc:
+        elif isinstance(num, mpc):
             return_string += "'" + var + "': mpc(real='" + str(num.real) + "', imag='" + str(num.imag) + "'), "
         else:
             return_string += "'" + var + "': " + str(num) + ", "

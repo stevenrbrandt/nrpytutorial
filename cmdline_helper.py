@@ -23,12 +23,12 @@
 #          zachetie **at** gmail **dot* com
 #          Kevin Lituchy
 
-import io, os, shlex, subprocess, sys, time, multiprocessing, getpass, platform
+import io, os, shlex, subprocess, sys, time, multiprocessing, getpass, platform, glob
 
 # check_executable_exists(): Check to see whether an executable exists.
 #                            Error out or return False if not exists;
 #                            return True if executable exists in PATH.
-def check_executable_exists(exec_name,error_if_not_found=True):
+def check_executable_exists(exec_name, error_if_not_found=True):
     cmd = "where" if os.name == "nt" else "which"
     try:
         subprocess.check_output([cmd, exec_name])
@@ -56,20 +56,20 @@ def C_compile(main_C_output_path, main_C_output_file, compile_mode="optimized", 
 
     # Step 3: Compile the executable
     if compile_mode=="safe":
-        compile_string = "gcc -O2 -g -fopenmp "+str(main_C_output_path)+" -o "+str(main_C_output_file)+" -lm"+additional_libraries
+        compile_string = "gcc -std=gnu99 -O2 -g -fopenmp "+str(main_C_output_path)+" -o "+str(main_C_output_file)+" -lm"+additional_libraries
         Execute_input_string(compile_string, os.devnull)
         # Check if executable exists (i.e., compile was successful), if not, try with more conservative compile flags.
         if not os.path.isfile(main_C_output_file):
             # Step 3.A: Revert to more compatible gcc compile option
             print("Most safe failed. Removing -fopenmp:")
-            compile_string = "gcc -O2 "+str(main_C_output_path)+" -o "+str(main_C_output_file)+" -lm"+additional_libraries
+            compile_string = "gcc -std=gnu99 -O2 "+str(main_C_output_path)+" -o "+str(main_C_output_file)+" -lm"+additional_libraries
             Execute_input_string(compile_string, os.devnull)
         if not os.path.isfile(main_C_output_file):
             print("Sorry, compilation failed")
             sys.exit(1)
     elif compile_mode=="icc":
         check_executable_exists("icc")
-        compile_string = "icc -O2 -xHost -qopenmp -unroll "+str(main_C_output_path)+" -o "+str(main_C_output_file)+" -lm"+additional_libraries
+        compile_string = "icc -std=gnu99 -O2 -xHost -qopenmp -unroll "+str(main_C_output_path)+" -o "+str(main_C_output_file)+" -lm"+additional_libraries
         Execute_input_string(compile_string, os.devnull)
         # Check if executable exists (i.e., compile was successful), if not, try with more conservative compile flags.
         if not os.path.isfile(main_C_output_file):
@@ -82,22 +82,31 @@ def C_compile(main_C_output_path, main_C_output_file, compile_mode="optimized", 
             print("Sorry, compilation failed")
             sys.exit(1)
     elif compile_mode=="optimized":
-        compile_string = "gcc -Ofast -fopenmp -march=native -funroll-loops "+str(main_C_output_path)+" -o "+str(main_C_output_file)+" -lm"+additional_libraries
+        compile_string = "gcc -std=gnu99 -Ofast -fopenmp -march=native -funroll-loops "+str(main_C_output_path)+" -o "+str(main_C_output_file)+" -lm"+additional_libraries
         Execute_input_string(compile_string, os.devnull)
         # Check if executable exists (i.e., compile was successful), if not, try with more conservative compile flags.
         if not os.path.isfile(main_C_output_file):
             # Step 3.A: Revert to more compatible gcc compile option
             print("Most optimized compilation failed. Removing -march=native:")
-            compile_string = "gcc -Ofast -fopenmp -funroll-loops "+str(main_C_output_path)+" -o "+str(main_C_output_file)+" -lm"+additional_libraries
+            compile_string = "gcc -std=gnu99 -Ofast -fopenmp -funroll-loops "+str(main_C_output_path)+" -o "+str(main_C_output_file)+" -lm"+additional_libraries
             Execute_input_string(compile_string, os.devnull)
         if not os.path.isfile(main_C_output_file):
             # Step 3.B: Revert to maximally compatible gcc compile option
             print("Next-to-most optimized compilation failed. Moving to maximally-compatible gcc compile option:")
-            compile_string = "gcc -O2 "+str(main_C_output_path)+" -o "+str(main_C_output_file)+" -lm"+additional_libraries
+            compile_string = "gcc -std=gnu99 -O2 "+str(main_C_output_path)+" -o "+str(main_C_output_file)+" -lm"+additional_libraries
             Execute_input_string(compile_string, os.devnull)
         # Step 3.C: If there are still missing components within the compiler, say compilation failed
         if not os.path.isfile(main_C_output_file):
             print("Sorry, compilation failed")
+            sys.exit(1)
+    elif compile_mode=="emscripten":
+        compile_string = "emcc -std=gnu99 -s -O3 -march=native -funroll-loops -s ALLOW_MEMORY_GROWTH=1 "\
+            +str(main_C_output_path)+" -o "+str(main_C_output_file)+" -lm "+additional_libraries
+        Execute_input_string(compile_string, os.devnull)
+        # Check if executable exists (i.e., compile was successful), if not, try with more conservative compile flags.
+        # If there are still missing components within the compiler, say compilation failed
+        if not os.path.isfile(main_C_output_file):
+            print("Sorry, compilation failed.")
             sys.exit(1)
     else:
         print("Sorry, compile_mode = \""+compile_mode+"\" unsupported.")
@@ -105,11 +114,46 @@ def C_compile(main_C_output_path, main_C_output_file, compile_mode="optimized", 
 
     print("Finished compilation.")
 
+
+from outputC import construct_Makefile_from_outC_function_dict
+def new_C_compile(Ccodesrootdir, exec_name, uses_free_parameters_h=False,
+                  compiler_opt_option="fast", addl_CFLAGS=None,
+                  addl_libraries=None, mkdir_Ccodesrootdir=True, CC="gcc", attempt=1):
+    check_executable_exists("gcc")
+    use_make = check_executable_exists("make", error_if_not_found=False)
+
+    construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_free_parameters_h,
+                                               compiler_opt_option, addl_CFLAGS,
+                                               addl_libraries, mkdir_Ccodesrootdir, use_make, CC=CC)
+    orig_working_directory = os.getcwd()
+    os.chdir(Ccodesrootdir)
+    if use_make:
+        Execute_input_string("make -j" + str(int(multiprocessing.cpu_count()) + 2), os.devnull)
+    else:
+        Execute_input_string(os.path.join("./", "backup_script_nomake.sh"))
+    os.chdir(orig_working_directory)
+
+    if not os.path.isfile(os.path.join(Ccodesrootdir, exec_name)) and attempt == 1:
+        print("Optimized compilation FAILED. Removing optimizations (including OpenMP) and retrying with debug enabled...")
+        # First clean up object files.
+        filelist = glob.glob(os.path.join(Ccodesrootdir, "*.o"))
+        for file in filelist:
+            os.remove(file)
+        # Then retry compilation (recursion)
+        new_C_compile(Ccodesrootdir, exec_name, uses_free_parameters_h,
+                      compiler_opt_option="debug", addl_CFLAGS=addl_CFLAGS,
+                      addl_libraries=addl_libraries, mkdir_Ccodesrootdir=mkdir_Ccodesrootdir, CC=CC, attempt=2)
+    if not os.path.isfile(os.path.join(Ccodesrootdir, exec_name)) and attempt == 2:
+        print("Sorry, compilation failed")
+        sys.exit(1)
+    print("Finished compilation.")
+
+
 # Execute(): Execute generated executable file, using taskset
 #            if available. Calls Execute_input_string() to
 #            redirect output from stdout & stderr to desired
 #            destinations.
-def Execute(executable, executable_output_arguments="", file_to_redirect_stdout=os.devnull,verbose=True):
+def Execute(executable, executable_output_arguments="", file_to_redirect_stdout=os.devnull, verbose=True):
     # Step 1: Delete old version of executable file
     if file_to_redirect_stdout != os.devnull:
         delete_existing_files(file_to_redirect_stdout)
@@ -127,9 +171,13 @@ def Execute(executable, executable_output_arguments="", file_to_redirect_stdout=
     taskset_exists = check_executable_exists("taskset", error_if_not_found=False)
     if taskset_exists:
         execute_string += "taskset -c 0"
-        if getpass.getuser() != "jovyan": # on mybinder, username is jovyan, and taskset -c 0 is the fastest option.
+        on_4900hs = False
+        if platform.system() == "Linux" and \
+                "AMD Ryzen 9 4900HS" in str(subprocess.check_output("cat /proc/cpuinfo", shell=True)):
+            on_4900hs = True
+        if not on_4900hs and getpass.getuser() != "jovyan": # on mybinder, username is jovyan, and taskset -c 0 is the fastest option.
             # If not on mybinder and taskset exists:
-            has_HT_cores = False # Does CPU have hyperthreading cores?
+            has_HT_cores = False  # Does CPU have hyperthreading cores?
             if platform.processor() != '': # If processor string returns null, then assume CPU does not support hyperthreading.
                                            # This will yield correct behavior on ARM (e.g., cell phone) CPUs.
                 has_HT_cores=True
@@ -141,11 +189,13 @@ def Execute(executable, executable_output_arguments="", file_to_redirect_stdout=
                                                                   # This will happen on ARM (e.g., cellphone) CPUs
             for i in range(N_cores_to_use-1):
                 execute_string += ","+str(i+1)
+        if on_4900hs:
+            execute_string = "taskset -c 1,3,5,7,9,11,13,15"
         execute_string += " "
     execute_string += execute_prefix+executable+" "+executable_output_arguments
 
     # Step 3: Execute the desired executable
-    Execute_input_string(execute_string, file_to_redirect_stdout,verbose)
+    Execute_input_string(execute_string, file_to_redirect_stdout, verbose)
 
 # Execute_input_string(): Executes an input string and redirects
 #            output from stdout & stderr to desired destinations.
@@ -191,7 +241,7 @@ def mkdir(newpath):
     if not os.path.exists(os.path.join(newpath)):
         os.makedirs(os.path.join(newpath))
 
-def output_Jupyter_notebook_to_LaTeXed_PDF(notebookname,location_of_template_file=os.path.join("."),verbose=True):
+def output_Jupyter_notebook_to_LaTeXed_PDF(notebookname, location_of_template_file=os.path.join("."), verbose=True):
     Execute_input_string(r"jupyter nbconvert --to latex --template-file "
                          +os.path.join(location_of_template_file,"latex_nrpy_style.tplx")
                          +r" --log-level='WARN' "+notebookname+".ipynb",verbose=False)

@@ -15,7 +15,7 @@ def MaxwellCartesian_Evol():
     # par.set_parval_from_str("finite_difference::FD_CENTDERIVS_ORDER", 4)
 
     # Step 2: Register gridfunctions that are needed as input.
-    psi = gri.register_gridfunctions("EVOL", ["psi"])
+    _psi = gri.register_gridfunctions("EVOL", ["psi"]) # lgtm [py/unused-local-variable]
 
     # Step 3a: Declare the rank-1 indexed expressions E_{i}, A_{i},
     #          and \partial_{i} \psi. Derivative variables like these
@@ -24,7 +24,6 @@ def MaxwellCartesian_Evol():
     ED = ixp.register_gridfunctions_for_single_rank1("EVOL", "ED")
     AD = ixp.register_gridfunctions_for_single_rank1("EVOL", "AD")
     psi_dD = ixp.declarerank1("psi_dD")
-    x,y,z = gri.register_gridfunctions("AUX",["x","y","z"])
 
     ## Step 3b: Declare the conformal metric tensor and its first
     #           derivative. These are needed to find the Christoffel
