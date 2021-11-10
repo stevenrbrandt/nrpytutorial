@@ -227,6 +227,12 @@ potential_body = """// Basic extrapolation boundary conditions
       }
 //          +1.0*gfs[IDX4S(which_gf,i0+3*FACEX0,i1+3*FACEX1,i2+3*FACEX2)]; \\
 
+// Basic Copy boundary conditions
+#define  FACE_UPDATE_COPY(which_gf, i0min,i0max, i1min,i1max, i2min,i2max, FACEX0,FACEX1,FACEX2) \\
+  for(int i2=i2min;i2<i2max;i2++) for(int i1=i1min;i1<i1max;i1++) for(int i0=i0min;i0<i0max;i0++) { \\
+        gfs[IDX4S(which_gf,i0,i1,i2)] = gfs[IDX4S(which_gf,i0+1*FACEX0,i1+1*FACEX1,i2+1*FACEX2)]; \\
+      }
+
 void apply_bcs_potential(const paramstruct *restrict params,REAL *gfs) {
 #include "../set_Cparameters.h"
     // First, we apply extrapolation boundary conditions to AD
@@ -273,12 +279,18 @@ void apply_bcs_potential(const paramstruct *restrict params,REAL *gfs) {
 
 velocity_name = "apply_bcs_velocity.h"
 velocity_prototype = "void apply_bcs_velocity(const paramstruct *restrict params,REAL *aux_gfs);"
-velocity_body = """// Basic Copy boundary conditions
-#define  FACE_UPDATE_COPY(which_gf, i0min,i0max, i1min,i1max, i2min,i2max, FACEX0,FACEX1,FACEX2) \\
+velocity_body = """// This macro acts differently in that it acts on an entire 3-vector of gfs, instead of 1.
+// which_gf_0 corresponds to the zeroth component of that vector. The if statements only
+// evaluate true if the velocity is directed inwards on the face in consideration.
+#define  FACE_UPDATE_OUTFLOW(which_gf, i0min,i0max, i1min,i1max, i2min,i2max, FACEX0,FACEX1,FACEX2) \\
   for(int i2=i2min;i2<i2max;i2++) for(int i1=i1min;i1<i1max;i1++) for(int i0=i0min;i0<i0max;i0++) { \\
-        gfs[IDX4S(which_gf,i0,i1,i2)] = gfs[IDX4S(which_gf,i0+1*FACEX0,i1+1*FACEX1,i2+1*FACEX2)]; \\
-      }
-
+      aux_gfs[IDX4S(which_gf_0,i0,i1,i2)] =                                      \\
+          aux_gfs[IDX4S(which_gf_0,i0+FACEX0,i1+FACEX1,i2+FACEX2)];              \\
+      aux_gfs[IDX4S(which_gf_0+1,i0,i1,i2)] =                                    \\
+          aux_gfs[IDX4S(which_gf_0+1,i0+FACEX0,i1+FACEX1,i2+FACEX2)];            \\
+      aux_gfs[IDX4S(which_gf_0+2,i0,i1,i2)] =                                    \\
+          aux_gfs[IDX4S(which_gf_0+2,i0+FACEX0,i1+FACEX1,i2+FACEX2)];            \\
+  }
 void apply_bcs_velocity(const paramstruct *restrict params,REAL *aux_gfs) {
 #include "../set_Cparameters.h"
     // Apply outflow/copy boundary conditions to ValenciavU by passing VALENCIAVU0 as which_gf_0
@@ -301,12 +313,15 @@ void apply_bcs_velocity(const paramstruct *restrict params,REAL *aux_gfs) {
 //     }
 }"""
 
+includes = """#include "NRPy_basic_defines.h"
+#include "GiRaFFE_basic_defines.h"
+"""
 
 def add_to_Cfunction_dict__GiRaFFE_NRPy_BCs():
-    outC_function_outdir_dict[potential_name] = os.path.join("./boundary_conditions/")
-    outC_function_dict[potential_name] = potential_body
+    outC_function_outdir_dict[potential_name] = "default"
+    outC_function_dict[potential_name] = includes+potential_body.replace("../set_Cparameters.h","set_Cparameters.h")
     outC_function_prototype_dict[potential_name] = potential_prototype
 
-    outC_function_outdir_dict[velocity_name] = os.path.join("./boundary_conditions/")
-    outC_function_dict[velocity_name] = velocity_body
+    outC_function_outdir_dict[velocity_name] = "default"
+    outC_function_dict[velocity_name] = includes+velocity_body.replace("../set_Cparameters.h","set_Cparameters.h")
     outC_function_prototype_dict[velocity_name] = velocity_prototype

@@ -246,21 +246,20 @@ def GiRaFFE_NRPy_Afield_flux(Ccodesdir):
     with open(os.path.join(Ccodesdir,"calculate_E_field_flat_all_in_one.h"),"w") as file:
         file.write(body)
 
-def add_to_Cfunction_dict__GiRaFFE_NRPy_Afield_flux(gammaDD, betaU, alpha,
-                                                    includes=None, rel_path_to_Cparams=os.path.join("../"),
-                                                    path_from_rootsrcdir_to_this_Cfunc=os.path.join("RHSs/")):
+includes = """#include "NRPy_basic_defines.h"
+#include "GiRaFFE_basic_defines.h"
+"""
+
+def add_to_Cfunction_dict__GiRaFFE_NRPy_Afield_flux(gammaDD, betaU, alpha, outdir):
     for flux_dirn in range(3):
         chsp.find_cmax_cmin(flux_dirn,gammaDD,betaU,alpha)
         Ccode_kernel = outputC([chsp.cmax,chsp.cmin],["cmax","cmin"],"returnstring",params="outCverbose=False,CSE_sorting=none")
         Ccode_kernel = Ccode_kernel.replace("cmax","*cmax").replace("cmin","*cmin")
         Ccode_kernel = Ccode_kernel.replace("betaU0","betaUi").replace("betaU1","betaUi").replace("betaU2","betaUi")
 
-#         with open(os.path.join(path_from_rootsrcdir_to_this_Cfunc,"compute_cmax_cmin_dirn"+str(flux_dirn)+".h"),"w") as file:
-#             file.write(Ccode_kernel)
-        outC_function_outdir_dict[name] = path_from_rootsrcdir_to_this_Cfunc
-        outC_function_dict[name] = Ccode_kernel
-        outC_function_prototype_dict[name] = ""
+        with open(os.path.join(outdir,"compute_cmax_cmin_dirn"+str(flux_dirn)+".h"),"w") as file:
+            file.write(Ccode_kernel)
 
-    outC_function_outdir_dict[name] = path_from_rootsrcdir_to_this_Cfunc
-    outC_function_dict[name] = body
+    outC_function_outdir_dict[name] = "default"
+    outC_function_dict[name] = includes+body.replace("../set_Cparameters.h","set_Cparameters.h")
     outC_function_prototype_dict[name] = prototype

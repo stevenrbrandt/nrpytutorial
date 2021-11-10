@@ -20,12 +20,6 @@ par.set_parval_from_str("finite_difference::FD_CENTDERIVS_ORDER",2)
 
 out_dir = os.path.join("GiRaFFE_standalone_Ccodes")
 cmd.mkdir(out_dir)
-cmd.mkdir(os.path.join(out_dir, "RHSs"))
-cmd.mkdir(os.path.join(out_dir, "FCVAL"))
-cmd.mkdir(os.path.join(out_dir, "PPM"))
-cmd.mkdir(os.path.join(out_dir, "C2P"))
-cmd.mkdir(os.path.join(out_dir, "A2B"))
-cmd.mkdir(os.path.join(out_dir, "boundary_conditions"))
 
 CoordSystem = "Cartesian"
 
@@ -71,8 +65,7 @@ gri.register_gridfunctions("AUXEVOL","AevolParen")
 # Declare this symbol
 sqrt4pi = par.Cparameters("REAL",thismodule,"sqrt4pi","sqrt(4.0*M_PI)")
 
-def add_to_Cfunction_dict__AD_gauge_term_psi6Phi_flux_term(includes=None, rel_path_to_Cparams=os.path.join("../"),
-                                                           path_from_rootsrcdir_to_this_Cfunc=os.path.join("RHSs/")):
+def add_to_Cfunction_dict__AD_gauge_term_psi6Phi_flux_term(includes=None):
     GRHD.compute_sqrtgammaDET(gammaDD)
     GRFFE.compute_AD_source_term_operand_for_FD(GRHD.sqrtgammaDET,betaU,alpha,psi6Phi,AD)
     GRFFE.compute_psi6Phi_rhs_flux_term_operand(gammaDD,GRHD.sqrtgammaDET,betaU,alpha,AD,psi6Phi)
@@ -94,13 +87,10 @@ def add_to_Cfunction_dict__AD_gauge_term_psi6Phi_flux_term(includes=None, rel_pa
         includes=includes,
         desc=desc,
         name=name, params=params,
-        body=body, loopopts=loopopts,
-        path_from_rootsrcdir_to_this_Cfunc = path_from_rootsrcdir_to_this_Cfunc,
-        rel_path_to_Cparams=rel_path_to_Cparams)
+        body=body, loopopts=loopopts)
 #     return pickle_NRPy_env()
 
-def add_to_Cfunction_dict__AD_gauge_term_psi6Phi_fin_diff(includes=None, rel_path_to_Cparams=os.path.join("../"),
-                                   path_from_rootsrcdir_to_this_Cfunc=os.path.join("RHSs/")):
+def add_to_Cfunction_dict__AD_gauge_term_psi6Phi_fin_diff(includes=None):
     xi_damping = par.Cparameters("REAL",thismodule,"xi_damping",0.1)
     GRFFE.compute_psi6Phi_rhs_damping_term(alpha,psi6Phi,xi_damping)
 
@@ -138,17 +128,13 @@ def add_to_Cfunction_dict__AD_gauge_term_psi6Phi_fin_diff(includes=None, rel_pat
         includes=includes,
         desc=desc,
         name=name, params=params,
-        body=body, loopopts=loopopts,
-        path_from_rootsrcdir_to_this_Cfunc = path_from_rootsrcdir_to_this_Cfunc,
-        rel_path_to_Cparams=rel_path_to_Cparams)
+        body=body, loopopts=loopopts)
     outC_function_dict[name] = outC_function_dict[name].replace("= NGHOSTS","= NGHOSTS_A2B").replace("NGHOSTS+Nxx0","Nxx_plus_2NGHOSTS0-NGHOSTS_A2B").replace("NGHOSTS+Nxx1","Nxx_plus_2NGHOSTS1-NGHOSTS_A2B").replace("NGHOSTS+Nxx2","Nxx_plus_2NGHOSTS2-NGHOSTS_A2B")
     # Note the above .replace() functions. These serve to expand the loop range into the ghostzones, since
     # the second-order FD needs fewer than some other algorithms we use do.
 
 import GiRaFFE_NRPy.GiRaFFE_NRPy_C2P_P2C as C2P_P2C
-def add_to_Cfunction_dict__cons_to_prims(StildeD,BU,gammaDD,betaU,alpha,
-                                         includes=None, rel_path_to_Cparams=os.path.join("../"),
-                                         path_from_rootsrcdir_to_this_Cfunc=os.path.join("C2P/")):
+def add_to_Cfunction_dict__cons_to_prims(StildeD,BU,gammaDD,betaU,alpha,includes=None):
     C2P_P2C.GiRaFFE_NRPy_C2P(StildeD,BU,gammaDD,betaU,alpha)
 
     values_to_print = [
@@ -169,15 +155,12 @@ def add_to_Cfunction_dict__cons_to_prims(StildeD,BU,gammaDD,betaU,alpha,
         includes=includes,
         desc=desc,
         name=name, params=params,
-        body=body, loopopts=loopopts,
-        path_from_rootsrcdir_to_this_Cfunc = path_from_rootsrcdir_to_this_Cfunc,
-        rel_path_to_Cparams=rel_path_to_Cparams)
+        body=body, loopopts=loopopts)
 
 # TINYDOUBLE = par.Cparameters("REAL",thismodule,"TINYDOUBLE",1e-100)
 
 def add_to_Cfunction_dict__prims_to_cons(gammaDD,betaU,alpha,  ValenciavU,BU, sqrt4pi,
-                                         includes=None, rel_path_to_Cparams=os.path.join("../"),
-                                         path_from_rootsrcdir_to_this_Cfunc=os.path.join("C2P/")):
+                                         includes=None):
     C2P_P2C.GiRaFFE_NRPy_P2C(gammaDD,betaU,alpha,  ValenciavU,BU, sqrt4pi)
 
     values_to_print = [
@@ -196,12 +179,12 @@ def add_to_Cfunction_dict__prims_to_cons(gammaDD,betaU,alpha,  ValenciavU,BU, sq
         includes=includes,
         desc=desc,
         name=name, params=params,
-        body=body, loopopts=loopopts,
-        path_from_rootsrcdir_to_this_Cfunc = path_from_rootsrcdir_to_this_Cfunc,
-        rel_path_to_Cparams=rel_path_to_Cparams)
+        body=body, loopopts=loopopts)
 
 main_evolution_prototype = "void GiRaFFE_NRPy_RHSs(const paramstruct *restrict params,REAL *restrict auxevol_gfs,const REAL *restrict in_gfs,REAL *restrict rhs_gfs);"
-main_evolution_func = """void GiRaFFE_NRPy_RHSs(const paramstruct *restrict params,REAL *restrict auxevol_gfs,const REAL *restrict in_gfs,REAL *restrict rhs_gfs) {
+main_evolution_func = """#include "NRPy_basic_defines.h"
+#include "GiRaFFE_basic_defines.h"
+void GiRaFFE_NRPy_RHSs(const paramstruct *restrict params,REAL *restrict auxevol_gfs,const REAL *restrict in_gfs,REAL *restrict rhs_gfs) {
 #include "set_Cparameters.h"
     // First thing's first: initialize the RHSs to zero!
 #pragma omp parallel for
@@ -343,7 +326,9 @@ main_evolution_func = """void GiRaFFE_NRPy_RHSs(const paramstruct *restrict para
 }"""
 
 post_step_prototype = "void GiRaFFE_NRPy_post_step(const paramstruct *restrict params,REAL *xx[3],REAL *restrict auxevol_gfs,REAL *restrict evol_gfs,const int n);"
-post_step_func = """void GiRaFFE_NRPy_post_step(const paramstruct *restrict params,REAL *xx[3],REAL *restrict auxevol_gfs,REAL *restrict evol_gfs,const int n) {
+post_step_func = """#include "NRPy_basic_defines.h"
+#include "GiRaFFE_basic_defines.h"
+void GiRaFFE_NRPy_post_step(const paramstruct *restrict params,REAL *xx[3],REAL *restrict auxevol_gfs,REAL *restrict evol_gfs,const int n) {
     // First, apply BCs to AD and psi6Phi. Then calculate BU from AD
     apply_bcs_potential(params,evol_gfs);
     driver_A_to_B(params,evol_gfs,auxevol_gfs);
@@ -358,10 +343,10 @@ post_step_func = """void GiRaFFE_NRPy_post_step(const paramstruct *restrict para
 }"""
 
 def add_to_Cfunction_dict__driver_function():
-    outC_function_outdir_dict["GiRaFFE_NRPy_RHSs"] = os.path.join("./")
+    outC_function_outdir_dict["GiRaFFE_NRPy_RHSs"] = "default"
     outC_function_dict["GiRaFFE_NRPy_RHSs"] = main_evolution_func
     outC_function_prototype_dict["GiRaFFE_NRPy_RHSs"] = main_evolution_prototype
 
-    outC_function_outdir_dict["GiRaFFE_NRPy_post_step"] = os.path.join("./")
+    outC_function_outdir_dict["GiRaFFE_NRPy_post_step"] = "default"
     outC_function_dict["GiRaFFE_NRPy_post_step"] = post_step_func
     outC_function_prototype_dict["GiRaFFE_NRPy_post_step"] = post_step_prototype

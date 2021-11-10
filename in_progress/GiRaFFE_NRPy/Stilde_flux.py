@@ -154,9 +154,8 @@ rhs_gfs[IDX4ptS(STILDED2GF,index)] += (auxevol_gfs[IDX4ptS(STILDE_FLUX_HLLED2GF,
         rel_path_to_Cparams=os.path.join("../")
     )
 
-def add_to_Cfunction_dict__Stilde_flux(includes=None, rel_path_to_Cparams=os.path.join("../"),
-                                       path_from_rootsrcdir_to_this_Cfunc=os.path.join("RHSs/"),
-                                       inputs_provided = False, alpha_face=None, gamma_faceDD=None, beta_faceU=None,
+def add_to_Cfunction_dict__Stilde_flux(includes=None, inputs_provided = False,
+                                       alpha_face=None, gamma_faceDD=None, beta_faceU=None,
                                        Valenciav_rU=None, B_rU=None, Valenciav_lU=None, B_lU=None, sqrt4pi=None,
                                        outCparams = "outCverbose=False,CSE_sorting=none", write_cmax_cmin=False):
     if not inputs_provided:
@@ -207,9 +206,7 @@ def add_to_Cfunction_dict__Stilde_flux(includes=None, rel_path_to_Cparams=os.pat
             includes=includes,
             desc=desc,
             name=name, params=input_params_for_Stilde_flux,
-            body=body, loopopts=loopopts,
-            path_from_rootsrcdir_to_this_Cfunc = path_from_rootsrcdir_to_this_Cfunc,
-            rel_path_to_Cparams=rel_path_to_Cparams)
+            body=body, loopopts=loopopts)
 
         outC_function_dict[name] = outC_function_dict[name].replace("NGHOSTS+Nxx0","NGHOSTS+Nxx0+1").replace("NGHOSTS+Nxx1","NGHOSTS+Nxx1+1").replace("NGHOSTS+Nxx2","NGHOSTS+Nxx2+1")
 
@@ -236,6 +233,4 @@ rhs_gfs[IDX4ptS(STILDED2GF,index)] += (auxevol_gfs[IDX4ptS(STILDE_FLUX_HLLED2GF,
         includes=includes,
         desc=desc,
         name=name, params=params,
-        preloop=pre_body, body=body, loopopts=loopopts,
-        path_from_rootsrcdir_to_this_Cfunc = path_from_rootsrcdir_to_this_Cfunc,
-        rel_path_to_Cparams=rel_path_to_Cparams)
+        preloop=pre_body, body=body, loopopts=loopopts)
