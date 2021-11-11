@@ -265,8 +265,7 @@ REAL find_accepted_Bx_order(REAL *Bx) {
     with open(os.path.join(outdir,"driver_AtoB.h"),"a") as file:
         file.write(driver_Ccode)
 
-def add_to_Cfunction_dict__GiRaFFE_NRPy_A2B(gammaDD,AD,BU,includes=None, rel_path_to_Cparams=os.path.join("../"),
-                                            path_from_rootsrcdir_to_this_Cfunc=os.path.join("A2B/")):
+def add_to_Cfunction_dict__GiRaFFE_NRPy_A2B(gammaDD,AD,BU,includes=None):
     # Set spatial dimension (must be 3 for BSSN)
     DIM = 3
     par.set_parval_from_str("grid::DIM",DIM)
@@ -314,7 +313,5 @@ for(int which_gz = 0; which_gz < NGHOSTS_A2B; which_gz++) {
         includes=includes,
         desc=desc,
         name=name, prefunc=prefunc, params=params,
-        body=body, loopopts=loopopts, postloop=postloop,
-        path_from_rootsrcdir_to_this_Cfunc = path_from_rootsrcdir_to_this_Cfunc,
-        rel_path_to_Cparams=rel_path_to_Cparams)
-    outC_function_dict[name] = outC_function_dict[name].replace("= NGHOSTS","= NGHOSTS_A2B").replace("NGHOSTS+Nxx0","Nxx_plus_2NGHOSTS0-NGHOSTS_A2B").replace("NGHOSTS+Nxx1","Nxx_plus_2NGHOSTS1-NGHOSTS_A2B").replace("NGHOSTS+Nxx2","Nxx_plus_2NGHOSTS2-NGHOSTS_A2B")
+        body=body, loopopts=loopopts, postloop=postloop)
+    outC_function_dict[name] = outC_function_dict[name].replace("= NGHOSTS","= NGHOSTS_A2B").replace("NGHOSTS+Nxx0","Nxx_plus_2NGHOSTS0-NGHOSTS_A2B").replace("NGHOSTS+Nxx1","Nxx_plus_2NGHOSTS1-NGHOSTS_A2B").replace("NGHOSTS+Nxx2","Nxx_plus_2NGHOSTS2-NGHOSTS_A2B").replace("../set_Cparameters.h","set_Cparameters.h")

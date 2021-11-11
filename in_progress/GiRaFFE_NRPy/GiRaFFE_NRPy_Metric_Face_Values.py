@@ -82,8 +82,7 @@ def GiRaFFE_NRPy_FCVAL(Ccodesdir):
     with open(os.path.join(Ccodesdir,"interpolate_metric_gfs_to_cell_faces.h"),"a") as file:
         file.write(interp_Cfunc)
 
-def add_to_Cfunction_dict__GiRaFFE_NRPy_FCVAL(includes=None, rel_path_to_Cparams=os.path.join("../"),
-                                              path_from_rootsrcdir_to_this_Cfunc=os.path.join("FCVAL/")):
+def add_to_Cfunction_dict__GiRaFFE_NRPy_FCVAL(includes=None):
 
     desc = "Interpolate metric gridfunctions to cell faces"
     name = "interpolate_metric_gfs_to_cell_faces"
@@ -112,7 +111,5 @@ def add_to_Cfunction_dict__GiRaFFE_NRPy_FCVAL(includes=None, rel_path_to_Cparams
         includes=includes,
         desc=desc,
         name=name, params=params,
-        prefunc = prefunc, preloop = preloop, body=body,
-        path_from_rootsrcdir_to_this_Cfunc = path_from_rootsrcdir_to_this_Cfunc,
-        rel_path_to_Cparams=rel_path_to_Cparams)
+        prefunc = prefunc, preloop = preloop, body=body)
 

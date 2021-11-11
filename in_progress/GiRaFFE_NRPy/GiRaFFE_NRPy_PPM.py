@@ -11,7 +11,14 @@ prototype = """static void reconstruct_set_of_prims_PPM_GRFFE_NRPy(const paramst
                                                const int num_prims_to_reconstruct,const int *which_prims_to_reconstruct,
                                                const gf_and_gz_struct *in_prims,gf_and_gz_struct *out_prims_r,
                                                gf_and_gz_struct *out_prims_l,REAL *temporary);"""
-body = """/*****************************************
+kronecker_code = """// FIXME: Should make this zero-offset for NRPy+ standards. Probably a wrapper function for compatibility with a minimum of other changes?
+const int kronecker_delta[4][3] = { { 0,0,0 },
+                                    { 1,0,0 },
+                                    { 0,1,0 },
+                                    { 0,0,1 } };
+
+"""
+body_a = """/*****************************************
  * PPM Reconstruction Interface.
  * Zachariah B. Etienne (2013)
  *
@@ -30,14 +37,8 @@ body = """/*****************************************
 
 #define MIN(a,b) ( ((a) < (b)) ? (a) : (b) )
 #define MAX(a,b) ( ((a) > (b)) ? (a) : (b) )
-#define SQR(x) ((x) * (x))
-// FIXME: Should make this zero-offset for NRPy+ standards. Probably a wrapper function for compatibility with a minimum of other changes?
-const int kronecker_delta[4][3] = { { 0,0,0 },
-                                    { 1,0,0 },
-                                    { 0,1,0 },
-                                    { 0,0,1 } };
-
-// You'll find the #define's for LOOP_DEFINE and SET_INDEX_ARRAYS_NRPY inside:
+#define SQR(x) ((x) * (x))"""
+body_b = """// You'll find the #define's for LOOP_DEFINE and SET_INDEX_ARRAYS_NRPY inside:
 #include "loop_defines_reconstruction_NRPy.h"
 
 static inline REAL slope_limit_NRPy(const REAL *dU,const REAL *dUp1);
@@ -266,22 +267,26 @@ loops_body = """#ifndef loop_defines_reconstruction_NRPy_H_
 
 #endif /* loop_defines_reconstruction_NRPy_H_ */
 """
+
 def GiRaFFE_NRPy_PPM(Ccodesdir):
     cmd.mkdir(Ccodesdir)
     # Write out the code to a file.
     with open(os.path.join(Ccodesdir,name),"w") as file:
-        file.write(body)
+        file.write(body_a+kronecker_code+body_b)
 
     with open(os.path.join(Ccodesdir,loops_name),"w") as file:
         file.write(loops_body)
 
 from outputC import outC_function_outdir_dict, outC_function_dict, outC_function_prototype_dict
 
-def add_to_Cfunction_dict__GiRaFFE_NRPy_PPM():
-    outC_function_outdir_dict[name] = os.path.join("./PPM/")
-    outC_function_dict[name] = body
+includes = """#include "NRPy_basic_defines.h"
+#include "GiRaFFE_basic_defines.h"
+"""
+
+def add_to_Cfunction_dict__GiRaFFE_NRPy_PPM(outdir):
+    outC_function_outdir_dict[name] = "default"
+    outC_function_dict[name] = includes+body_a+body_b.replace("../set_Cparameters.h","set_Cparameters.h")
     outC_function_prototype_dict[name] = prototype
 
-    outC_function_outdir_dict[loops_name] = os.path.join("./PPM/")
-    outC_function_dict[loops_name] = loops_body
-    outC_function_prototype_dict[loops_name] = ""
+    with open(os.path.join(outdir,loops_name),"w") as file:
+        file.write(loops_body)

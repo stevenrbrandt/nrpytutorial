@@ -85,8 +85,7 @@ def write_out_functions_for_StildeD_source_term(outdir,outCparams,gammaDD,betaU,
             rel_path_to_Cparams=os.path.join("../"))
 
 def add_to_Cfunction_dict__functions_for_StildeD_source_term(outCparams,gammaDD,betaU,alpha,ValenciavU,BU,sqrt4pi,
-                                                             includes=None, rel_path_to_Cparams=os.path.join("../"),
-                                                             path_from_rootsrcdir_to_this_Cfunc=os.path.join("RHSs/")):
+                                                             includes=None):
     generate_memory_access_code()
     # First, we declare some dummy tensors that we will use for the codegen.
     gammaDDdD  = ixp.declarerank3("gammaDDdD","sym01",DIM=3)
@@ -115,5 +114,4 @@ def add_to_Cfunction_dict__functions_for_StildeD_source_term(outCparams,gammaDD,
             includes=includes,
             desc=desc,
             name=name, params=params,
-            body=body, loopopts=loopopts,
-            rel_path_to_Cparams=rel_path_to_Cparams)
+            body=body, loopopts=loopopts)
