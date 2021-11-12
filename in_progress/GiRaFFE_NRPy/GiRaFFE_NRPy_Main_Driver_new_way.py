@@ -184,6 +184,7 @@ def add_to_Cfunction_dict__prims_to_cons(gammaDD,betaU,alpha,  ValenciavU,BU, sq
 main_evolution_prototype = "void GiRaFFE_NRPy_RHSs(const paramstruct *restrict params,REAL *restrict auxevol_gfs,const REAL *restrict in_gfs,REAL *restrict rhs_gfs);"
 main_evolution_func = """#include "NRPy_basic_defines.h"
 #include "GiRaFFE_basic_defines.h"
+#include "NRPy_function_prototypes.h"
 void GiRaFFE_NRPy_RHSs(const paramstruct *restrict params,REAL *restrict auxevol_gfs,const REAL *restrict in_gfs,REAL *restrict rhs_gfs) {
 #include "set_Cparameters.h"
     // First thing's first: initialize the RHSs to zero!
@@ -320,6 +321,9 @@ void GiRaFFE_NRPy_RHSs(const paramstruct *restrict params,REAL *restrict auxevol
               &auxevol_gfs[IDX4ptS(B_LU0GF        +(flux_dirn)%3, 0)],&auxevol_gfs[IDX4ptS(B_LU0GF        +(flux_dirn-count+2)%3, 0)],
               &auxevol_gfs[IDX4ptS(B_RU0GF        +(flux_dirn-count+2)%3, 0)],
               &auxevol_gfs[IDX4ptS(B_LU0GF        +(flux_dirn-count+2)%3, 0)],
+              &auxevol_gfs[IDX4ptS(GAMMA_FACEDD00GF,0)],&auxevol_gfs[IDX4ptS(GAMMA_FACEDD01GF,0)],&auxevol_gfs[IDX4ptS(GAMMA_FACEDD02GF,0)],
+              &auxevol_gfs[IDX4ptS(GAMMA_FACEDD11GF,0)],&auxevol_gfs[IDX4ptS(GAMMA_FACEDD12GF,0)],&auxevol_gfs[IDX4ptS(GAMMA_FACEDD22GF,0)],
+              &auxevol_gfs[IDX4ptS(BETA_FACEU0GF+flux_dirn,0)],&auxevol_gfs[IDX4ptS(BETA_FACEU0GF+(flux_dirn-count+2)%3,0)],&auxevol_gfs[IDX4ptS(ALPHA_FACEGF,0)],
               &rhs_gfs[IDX4ptS(AD0GF+(flux_dirn+1+count)%3,0)], 2.0*((REAL)count)-1.0, flux_dirn);
         }
     }
@@ -328,6 +332,7 @@ void GiRaFFE_NRPy_RHSs(const paramstruct *restrict params,REAL *restrict auxevol
 post_step_prototype = "void GiRaFFE_NRPy_post_step(const paramstruct *restrict params,REAL *xx[3],REAL *restrict auxevol_gfs,REAL *restrict evol_gfs,const int n);"
 post_step_func = """#include "NRPy_basic_defines.h"
 #include "GiRaFFE_basic_defines.h"
+#include "NRPy_function_prototypes.h"
 void GiRaFFE_NRPy_post_step(const paramstruct *restrict params,REAL *xx[3],REAL *restrict auxevol_gfs,REAL *restrict evol_gfs,const int n) {
     // First, apply BCs to AD and psi6Phi. Then calculate BU from AD
     apply_bcs_potential(params,evol_gfs);
