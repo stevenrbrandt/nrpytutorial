@@ -4,9 +4,12 @@
 # Author: Zachariah B. Etienne
 #         zachetie **at** gmail **dot* com
 
-from outputC import *
+from outputC import outputC, add_to_Cfunction_dict # NRPy+: Core C code output module
 
-def BSSN_ID_function_string(cf,hDD,lambdaU,aDD,trK,alpha,vetU,betU):
+def BSSN_ID_function_string(cf,hDD,lambdaU,aDD,trK,alpha,vetU,betU, include_NRPy_basic_defines=False):
+    includes = []
+    if include_NRPy_basic_defines:
+        includes = ["NRPy_basic_defines.h"]
     rhss = [trK,alpha,cf]
     lhss = ["in_gfs[IDX4S(TRKGF,i0,i1,i2)]","in_gfs[IDX4S(ALPHAGF,i0,i1,i2)]","in_gfs[IDX4S(CFGF,i0,i1,i2)]"]
     for i in range(3):
@@ -32,6 +35,7 @@ def BSSN_ID_function_string(cf,hDD,lambdaU,aDD,trK,alpha,vetU,betU):
 
     desc = "Set up the initial data at all points on the numerical grid."
     add_to_Cfunction_dict(
+        includes=includes,
         desc    =desc,
         name    ="initial_data",
         params  ="const paramstruct *restrict params,REAL *restrict xx[3], REAL *restrict in_gfs",

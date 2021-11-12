@@ -1,7 +1,7 @@
 # As documented in the NRPy+ tutorial module
 #   Tutorial-RK_Butcher_Table_Generating_C_Code.ipynb,
 #   this module will produce the required C codes for
-#   allocating required memory Method of Lines (MoL) timestepping, 
+#   allocating required memory Method of Lines (MoL) timestepping,
 #   implementing MoL timestepping, and deallocating memory
 
 # Authors: Brandon Clark
@@ -22,23 +22,24 @@ def diagonal(key):
     row_idx = 0 # Initialize the Butcher table row index
     for i in range(L): # Check all the desired rows
         for j in range(1,row_idx): # Check each element before the diagonal element in a row
-            if Butcher[i][j] != sp.sympify(0): # If any non-diagonal coeffcient is non-zero, 
+            if Butcher[i][j] != sp.sympify(0): # If any non-diagonal coeffcient is non-zero,
                                                # then the table is not diagonal
                 diagonal = False
                 return diagonal
-        row_idx += 1 # Update to check the next row
+        row_idx += 1  # Update to check the next row
     return diagonal
 
 # Step 3.a: When allocating memory, we populate a list malloced_gridfunctions,
 #         which is used here to determine which gridfunctions need memory freed,
 #         via the free() command. Free the mallocs!
-def free_allocated_memory(outdir,RK_method,malloced_gridfunctions):
+def free_allocated_memory(outdir, RK_method, malloced_gridfunctions):
     # This step is made extremely easy, as we had to
     with open(os.path.join(outdir, "RK_Free_Memory.h"), "w") as file:
         file.write("// Code snippet freeing gridfunction memory for \"" + RK_method + "\" method:\n")
 
         for gridfunction in malloced_gridfunctions:
             file.write("free(" + gridfunction + ");\n")
+
 
 # # State whether each Butcher table is diagonal or not
 # for key, value in Butcher_dict.items():
@@ -52,6 +53,16 @@ def free_allocated_memory(outdir,RK_method,malloced_gridfunctions):
 def MoL_C_Code_Generation(RK_method = "RK4", RHS_string = "", post_RHS_string = "",outdir="MoLtimestepping/",
                           MemAllocOnly=False):
 
+    # MoL gridfunctions fall into 3 overlapping categories:
+    #           1) y_n=y_i(t_n) gridfunctions y_n_gfs, which stores data for the vector of gridfunctions y_i at t_n,
+    #              the start of each MoL timestep.
+    #           2) non-y_n gridfunctions, needed to compute the data at t_{n+1}. Often labeled with k_i in the name,
+    #              these gridfunctions are *not* needed at the start of each timestep, so are available for temporary
+    #              storage when gridfunctions needed for diagnostics are computed at the start of each timestep.
+    #              These gridfunctions can also be freed during a regrid, to enable storage for the post-regrid
+    #              destination y_n_gfs.
+    #           3) Diagnostic output gridfunctions diagnostic_output_gfs, which simply uses the memory from auxiliary
+    #              gridfunctions at one auxiliary time to compute diagnostics at t_n.
 
 ####### Step 3.b.i: Allocating Memory
     malloc_str = "// Code snippet allocating gridfunction memory for \"" + RK_method + "\" method:\n"
@@ -75,7 +86,7 @@ def MoL_C_Code_Generation(RK_method = "RK4", RHS_string = "", post_RHS_string = 
         malloc_str += malloc_gfs_str("k2_or_y_nplus_a32_k2_gfs")
         malloc_str += diagnostic_output_gfs_equal_to("k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs")
     else:
-        if diagonal(RK_method) == False: # Allocate memory for non-diagonal Butcher tables
+        if not diagonal(RK_method):  # Allocate memory for non-diagonal Butcher tables
             # Determine the number of k_i steps based on length of Butcher Table
             num_k = len(Butcher_dict[RK_method][0])-1
             # For non-diagonal tables an intermediate gridfunction "next_y_input" is used for rhs evaluations
@@ -101,7 +112,7 @@ def MoL_C_Code_Generation(RK_method = "RK4", RHS_string = "", post_RHS_string = 
 # ODE: y' = f(t,y), y(t_0) = y_0
 # Starting at time t_n with solution having value y_n and trying to update to y_nplus1 with timestep dt
 
-# Example of scheme for RK4 with k_1, k_2, k_3, k_4 (Using non-diagonal algortihm) Notice this requires storage of
+# Example of scheme for RK4 with k_1, k_2, k_3, k_4 (Using non-diagonal algorithm) Notice this requires storage of
 # y_n, y_nplus1, k_1 through k_4
 
 # k_1      = dt*f(t_n, y_n)
@@ -125,8 +136,6 @@ def MoL_C_Code_Generation(RK_method = "RK4", RHS_string = "", post_RHS_string = 
 ####### Step 3.b.ii: Implementing the Runge Kutta Scheme for Method of Lines Timestepping
     Butcher = Butcher_dict[RK_method][0] # Get the desired Butcher table from the dictionary
     num_steps = len(Butcher)-1 # Specify the number of required steps to update solution
-    indent = "  "
-    RK_str = "// Code snippet implementing "+RK_method+" algorithm for Method of Lines timestepping\n"
     # Diagonal RK3 only!!!
 
     def single_RK_substep(commentblock, RHS_str, RHS_input_str, RHS_output_str, RK_lhss_list, RK_rhss_list,
@@ -160,7 +169,8 @@ def MoL_C_Code_Generation(RK_method = "RK4", RHS_string = "", post_RHS_string = 
 
     RK_str = "// C code implementation of " + RK_method + " Method of Lines timestepping.\n"
 
-    if diagonal(RK_method) == True and "RK3" in RK_method:
+    # Diagonal RK3 only!!!
+    if diagonal(RK_method) and "RK3" in RK_method:
         #  In a diagonal RK3 method, only 3 gridfunctions need be defined. Below implements this approach.
 
         # k_1
@@ -173,7 +183,7 @@ def MoL_C_Code_Generation(RK_method = "RK4", RHS_string = "", post_RHS_string = 
 // ***k1 substep:***
 //  1. We will store k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs now as
 //     ...  the update for the next rhs evaluation y_n + a21*k1*dt
-// Post-RHS evaluation: 
+// Post-RHS evaluation:
 //  1. Apply post-RHS to y_n + a21*k1*dt""",
             RHS_str = RHS_string,
             RHS_input_str = "y_n_gfs", RHS_output_str = "k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs",
@@ -184,11 +194,11 @@ def MoL_C_Code_Generation(RK_method = "RK4", RHS_string = "", post_RHS_string = 
         # k_2
         RK_str += single_RK_substep(
             commentblock="""
-// ***k2 substep:*** 
+// ***k2 substep:***
 //    1. Reassign k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs to be the running total y_{n+1}; a32*k2*dt to the running total
 //    2. Store k2_or_y_nplus_a32_k2_gfs now as y_n + a32*k2*dt
 
-// Post-RHS evaluation: 
+// Post-RHS evaluation:
 //    1. Apply post-RHS to both y_n + a32*k2 (stored in k2_or_y_nplus_a32_k2_gfs)
 //       ... and the y_{n+1} running total, as they have not been applied yet to k2-related gridfunctions""",
             RHS_str=RHS_string,
@@ -202,10 +212,10 @@ def MoL_C_Code_Generation(RK_method = "RK4", RHS_string = "", post_RHS_string = 
         # k_3
         RK_str += single_RK_substep(
             commentblock="""
-// ***k3 substep:*** 
+// ***k3 substep:***
 //    1. Add k3 to the running total and save to y_n
 
-// Post-RHS evaluation: 
+// Post-RHS evaluation:
 //    1. Apply post-RHS to y_n""",
             RHS_str=RHS_string,
             RHS_input_str="k2_or_y_nplus_a32_k2_gfs", RHS_output_str="y_n_gfs",
@@ -214,14 +224,14 @@ def MoL_C_Code_Generation(RK_method = "RK4", RHS_string = "", post_RHS_string = 
             post_RHS_list=[post_RHS_string],
             post_RHS_output_list=["y_n_gfs"])
     else:
-        y_n           = "y_n_gfs"
-        if diagonal(RK_method) == False:
+        y_n = "y_n_gfs"
+        if not diagonal(RK_method):
             for s in range(num_steps):
                 next_y_input  = "next_y_input_gfs"
 
                 # If we're on the first step (s=0), we use y_n gridfunction as input.
                 #      Otherwise next_y_input is input. Output is just the reverse.
-                if s==0: # If on first step:
+                if s == 0:  # If on first step:
                     RHS_input = y_n
                 else:    # If on second step or later:
                     RHS_input = next_y_input
@@ -253,7 +263,7 @@ def MoL_C_Code_Generation(RK_method = "RK4", RHS_string = "", post_RHS_string = 
                     RK_lhss_list=[RK_lhs],   RK_rhss_list=[RK_rhs],
                     post_RHS_list=[post_RHS],
                     post_RHS_output_list=[post_RHS_output])
-        else:
+        else:  # diagonal case:
             y_nplus1_running_total = "y_nplus1_running_total_gfs"
             if RK_method == 'Euler': # Euler's method doesn't require any k_i, and gets its own unique algorithm
                 RK_str += single_RK_substep(
@@ -271,7 +281,7 @@ def MoL_C_Code_Generation(RK_method = "RK4", RHS_string = "", post_RHS_string = 
                         RHS_input  = "y_n_gfs"
                         RHS_output = "k_odd_gfs"
                     # For the remaining steps the inputs and ouputs alternate between k_odd and k_even
-                    elif s%2 == 0:
+                    elif s % 2 == 0:
                         RHS_input = "k_even_gfs"
                         RHS_output = "k_odd_gfs"
                     else:
@@ -280,28 +290,28 @@ def MoL_C_Code_Generation(RK_method = "RK4", RHS_string = "", post_RHS_string = 
 
                     RK_lhs_list = []
                     RK_rhs_list = []
-                    if s != num_steps-1: # For anything besides the final step
-                        if s == 0: # The first RK step
+                    if s != num_steps-1:  # For anything besides the final step
+                        if s == 0:  # The first RK step
                             RK_lhs_list.append(y_nplus1_running_total)
                             RK_rhs_list.append(RHS_output+"[i]*dt*("+sp.ccode(Butcher[num_steps][s+1]).replace("L","")+")")
 
                             RK_lhs_list.append(RHS_output)
                             RK_rhs_list.append(y_n+"[i] + "+RHS_output+"[i]*dt*("+sp.ccode(Butcher[s+1][s+1]).replace("L","")+")")
                         else:
-                            if Butcher[num_steps][s+1] !=0:
+                            if Butcher[num_steps][s+1] != 0:
                                 RK_lhs_list.append(y_nplus1_running_total)
-                                if Butcher[num_steps][s+1] !=1:
+                                if Butcher[num_steps][s+1] != 1:
                                     RK_rhs_list.append(y_nplus1_running_total+"[i] + "+RHS_output+"[i]*dt*("+sp.ccode(Butcher[num_steps][s+1]).replace("L","")+")")
                                 else:
                                     RK_rhs_list.append(y_nplus1_running_total+"[i] + "+RHS_output+"[i]*dt")
-                            if Butcher[s+1][s+1] !=0:
+                            if Butcher[s+1][s+1] != 0:
                                 RK_lhs_list.append(RHS_output)
-                                if Butcher[s+1][s+1] !=1:
+                                if Butcher[s+1][s+1] != 1:
                                     RK_rhs_list.append(y_n+"[i] + "+RHS_output+"[i]*dt*("+sp.ccode(Butcher[s+1][s+1]).replace("L","")+")")
                                 else:
                                     RK_rhs_list.append(y_n+"[i] + "+RHS_output+"[i]*dt")
                         post_RHS_output = RHS_output
-                    if s == num_steps-1: # If on the final step
+                    if s == num_steps-1:  # If on the final step
                         if Butcher[num_steps][s+1] != 0:
                             RK_lhs_list.append(y_n)
                             if Butcher[num_steps][s+1] != 1:

@@ -12,13 +12,13 @@ void GiRaFFE_NRPy_compute_conservatives(const REAL gxxL,const REAL gxyL,const RE
 
   // NOTE: SIGNIFICANTLY MODIFIED FROM ILLINOISGRMHD VERSION:
   //       velocities in GiRaFFE are defined to be "drift" velocity.
-  //       cf. Eqs 47 and 85 in http://arxiv.org/pdf/1310.3274.pdf 
+  //       cf. Eqs 47 and 85 in http://arxiv.org/pdf/1310.3274.pdf
   // Modified again from the original GiRaFFE to use Valencia velocity
 
   const REAL v_xL = gxxL*vxL + gxyL*vyL + gxzL*vzL;
   const REAL v_yL = gxyL*vxL + gyyL*vyL + gyzL*vzL;
   const REAL v_zL = gxzL*vxL + gyzL*vyL + gzzL*vzL;
-  
+
   /*
    * Comments:
    * Eq. 85 in https://arxiv.org/pdf/1310.3274.pdf:
@@ -27,7 +27,7 @@ void GiRaFFE_NRPy_compute_conservatives(const REAL gxxL,const REAL gxyL,const RE
    * (v^i + beta^i)*(sqrtgamma * B^2)/(4 pi alpha) = gamma^{ij} tilde{S}_j
    * Multiply both sides by gamma_{ik}:
    * gamma_{ik} (v^i + beta^i)*(sqrtgamma * B^2)/(4 pi alpha) = gamma_{ik} gamma^{ij} tilde{S}_j
-   * 
+   *
    * -> tilde{S}_k = gamma_{ik} (v^i + beta^i)*(sqrtgamma * B^2)/(4 pi alpha)
    */
 

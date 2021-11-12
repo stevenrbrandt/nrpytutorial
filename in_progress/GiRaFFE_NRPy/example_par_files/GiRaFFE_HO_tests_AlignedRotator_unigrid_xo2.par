@@ -7,7 +7,7 @@ GiRaFFEfood_HO::R_NS_aligned_rotator                                            
 GiRaFFE_HO::min_radius_inside_of_which_conserv_to_prims_FFE_and_FFE_evolution_is_DISABLED = 1.0 # Must be equal to parameter above.
 GiRaFFEfood_HO::Omega_aligned_rotator = 0.2
 GiRaFFEfood_HO::B_p_aligned_rotator   = 1e-5
-GiRaFFE_HO::current_sheet_null_v  = "yes" 
+GiRaFFE_HO::current_sheet_null_v  = "yes"
 
 Time::dtfac = 0.5
 
@@ -78,7 +78,7 @@ CarpetIOScalar::outScalar_reductions = "maximum"
 IOScalar::outScalar_every            = 4
 IOScalar::one_file_per_group         = no
 #IOScalar::outScalar_vars             = "
-# GiRaFFE_HO::BU0 
+# GiRaFFE_HO::BU0
 # GiRaFFE_HO::BU2
 #"
 
@@ -107,7 +107,7 @@ CarpetIOASCII::out3D_ghosts           = "no"
 CarpetIOASCII::output_symmetry_points = "no"
 
 # Parameters of thorn CarpetIOBasic (implementing IOBasic)
-CarpetIOBasic::outInfo_every      = 4 
+CarpetIOBasic::outInfo_every      = 4
 CarpetIOBasic::outInfo_reductions = "norm2"
 CarpetIOBasic::outInfo_vars       = "carpet::physical_time_per_hour"
 
@@ -149,7 +149,7 @@ HydroBase::initial_Aphi = "zero"
 #GiRaFFE::K_poly   = 100.0
 #GiRaFFE::neos     = 1
 #GiRaFFE::conserv_to_prims_MHD_debug = 0
-#GiRaFFE::Psi6threshold = 60.0 
+#GiRaFFE::Psi6threshold = 60.0
 #GiRaFFE::damp_lorenz   = 1.8
 GiRaFFE_HO::xi = 1.8
 #GiRaFFE::Velocity_BC   = "outflow"

@@ -1,145 +1,62 @@
-#!/usr/bin/env python
-# coding: utf-8
+# Step 0: Add NRPy's directory to the path
+# https://stackoverflow.com/questions/16780014/import-file-from-parent-directory
+import os,sys
+nrpy_dir_path = os.path.join("..")
+if nrpy_dir_path not in sys.path:
+    sys.path.append(nrpy_dir_path)
+nrpy_dir_path = os.path.join("../..")
+if nrpy_dir_path not in sys.path:
+    sys.path.append(nrpy_dir_path)
 
-# <a id='top'></a>
-# 
-# 
-# # $\texttt{GiRaFFEfood}$: Initial data for $\texttt{GiRaFFE}$
-# 
-# ## Aligned Rotator
-# 
-# $$\label{top}$$
-# 
-# This module provides another initial data option for $\texttt{GiRaFFE}$. This is a flat-spacetime test with initial data $$A_{\phi} = \frac{\mu \varpi}{r^3},$$ where  $\mu = B_p R_{\rm NS} / 2$, $R_{\rm NS}$ is the neutron star radius, and $\varpi = \sqrt{x^2+y^2}$ is the cylindrical radius. We let $A_r = A_\theta = 0$.
-# 
-# Additionally, the drift velocity $v^i = \Omega \textbf{e}_z \times \textbf{r} = [ijk] \Omega \textbf{e}^j_z x^k$, where $[ijk]$ is the Levi-Civita permutation symbol and $\textbf{e}^i_z = (0,0,1)$.
+# Step 0.a: Import the NRPy+ core modules and set the reference metric to Cartesian
+import sympy as sp               # SymPy: The Python computer algebra package upon which NRPy+ depends
+import NRPy_param_funcs as par   # NRPy+: Parameter interface
+import indexedexp as ixp         # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
+import GiRaFFEfood_NRPy.GiRaFFEfood_NRPy_Common_Functions as gfcf # Some useful functions for GiRaFFE initial data.
 
-# <a id='preliminaries'></a>
-# 
-# ### Steps 0-1: Preliminaries
-# $$\label{preliminaries}$$
-# 
-# \[Back to [top](#top)\]
-# 
-# Here, we will import the NRPy+ core modules and set the reference metric to Cartesian, set commonly used NRPy+ parameters, and set C parameters that will be set from outside the code eventually generated from these expressions. We will also set up a parameter to determine what initial data is set up, although it won't do much yet.
-
-
-# Step 0: Import the NRPy+ core modules and set the reference metric to Cartesian
-import NRPy_param_funcs as par
-import indexedexp as ixp
-import grid as gri
-import finite_difference as fin
-from outputC import *
-import loop
-
-import reference_metric as rfm
+import reference_metric as rfm   # NRPy+: Reference metric support
 par.set_parval_from_str("reference_metric::CoordSystem","Cartesian")
 rfm.reference_metric()
 
 # Step 1a: Set commonly used parameters.
 thismodule = __name__
 
+# The angular velocity of the "neutron star"
+Omega_aligned_rotator = par.Cparameters("REAL",thismodule,"Omega_aligned_rotator",1e3)
 B_p_aligned_rotator,R_NS_aligned_rotator = par.Cparameters("REAL",thismodule,
                                                            # B_p_aligned_rotator = the intensity of the magnetic field and
                                                            # R_NS_aligned_rotator= "Neutron star" radius
                                                            ["B_p_aligned_rotator","R_NS_aligned_rotator"],
                                                            [1e-5, 1.0])
 
-# The angular velocity of the "neutron star"
-Omega_aligned_rotator = par.Cparameters("REAL",thismodule,"Omega_aligned_rotator",1e3) 
+# Step 2: Set the vectors A and E in Spherical coordinates
+def Ar_AR(r,theta,phi, **params):
+    return sp.sympify(0)
 
-# <a id='step2'></a>
-# 
-# ### Step 2: Set the vectors A in Spherical coordinates
-# $$\label{step2}$$
-# 
-# \[Back to [top](#top)\]
-# 
-# We will first build the fundamental vector $A_i$ in spherical coordinates (see [Table 3](https://arxiv.org/pdf/1704.00599.pdf)). Note that we use reference_metric.py to set $r$ and $\theta$ in terms of Cartesian coordinates; this will save us a step later when we convert to Cartesian coordinates. So, we set 
-# \begin{align}
-# A_{\phi} &= \frac{\mu \varpi}{r^3}, \\
-# \end{align}
-# with $\mu = B_p R_{\rm NS} / 2$, $R_{\rm NS}$ is the neutron star radius, and $\varpi = \sqrt{x^2+y^2}$
+def Ath_AR(r,theta,phi, **params):
+    return sp.sympify(0)
 
-def GiRaFFEfood_NRPy_Aligned_Rotator():
-    r     = rfm.xxSph[0]
-    varpi = sp.sqrt(rfm.xxCart[0]**2 + rfm.xxCart[1]**2)
-
+def Aph_AR(r,theta,phi, **params):
+    # \mu \varpi / r^3
+    # \varpi = sqrt(x^2+y^2) = r \sin(\theta)
+    varpi = r * sp.sin(theta)
     mu = B_p_aligned_rotator * R_NS_aligned_rotator**3 / 2
+    return mu * varpi**2 / (r**3)
 
-    ASphD = ixp.zerorank1()
-
-    ASphD[2] = mu * varpi**2 / (r**3) # The other components were already declared to be 0.
-
-
-    # <a id='step3'></a>
-    # 
-    # ### Step 3: Use the Jacobian matrix to transform the vectors to Cartesian coordinates.
-    # $$\label{step3}$$
-    # 
-    # \[Back to [top](#top)\]
-    # 
-    # Now, we will use the coordinate transformation definitions provided by reference_metric.py to build the Jacobian 
-    # $$ 
-    # \frac{\partial x_{\rm Sph}^j}{\partial x_{\rm Cart}^i},
-    # $$ 
-    # where $x_{\rm Sph}^j \in \{r,\theta,\phi\}$ and $x_{\rm Cart}^i \in \{x,y,z\}$. We would normally compute its inverse, but since none of the quantities we need to transform have upper indices, it is not necessary. Then, since $A_i$ and has one lower index, it will need to be multiplied by the Jacobian:
-    # 
-    # $$
-    # A_i^{\rm Cart} = A_j^{\rm Sph} \frac{\partial x_{\rm Sph}^j}{\partial x_{\rm Cart}^i},
-    # $$
-
-
-    # Step 3: Use the Jacobian matrix to transform the vectors to Cartesian coordinates.
-    drrefmetric__dx_0UDmatrix = sp.Matrix([[sp.diff(rfm.xxSph[0],rfm.xx[0]), sp.diff(rfm.xxSph[0],rfm.xx[1]), sp.diff(rfm.xxSph[0],rfm.xx[2])],
-                                           [sp.diff(rfm.xxSph[1],rfm.xx[0]), sp.diff(rfm.xxSph[1],rfm.xx[1]), sp.diff(rfm.xxSph[1],rfm.xx[2])],
-                                           [sp.diff(rfm.xxSph[2],rfm.xx[0]), sp.diff(rfm.xxSph[2],rfm.xx[1]), sp.diff(rfm.xxSph[2],rfm.xx[2])]])
-    #dx__drrefmetric_0UDmatrix = drrefmetric__dx_0UDmatrix.inv() # We don't actually need this in this case.
-
-    global AD
-    AD = ixp.zerorank1(DIM=3)
-    for i in range(3):
-        for j in range(3):
-            AD[i] = drrefmetric__dx_0UDmatrix[(j,i)]*ASphD[j]
-
-
-    # <a id='step4'></a>
-    # 
-    # ### Step 4: Calculate $v^i$
-    # $$\label{step4}$$
-    # 
-    # \[Back to [top](#top)\]
-    # 
-    # Here, we will calculate the drift velocity $v^i = \Omega \textbf{e}_z \times \textbf{r} = [ijk] \Omega \textbf{e}^j_z x^k$, where $[ijk]$ is the Levi-Civita permutation symbol and $\textbf{e}^i_z = (0,0,1)$. Conveniently, in flat space, the drift velocity reduces to the Valencia velocity because $\alpha = 1$ and $\beta^i = 0$.
-
-
-    # Step 4: Calculate v^i
-    # Here, we build the Levi-Civita tensor from the Levi-Civita symbol.
-    import WeylScal4NRPy.WeylScalars_Cartesian as weyl
-    LeviCivitaSymbolDDD = weyl.define_LeviCivitaSymbol_rank3()
-
-    import Min_Max_and_Piecewise_Expressions as noif
+import Min_Max_and_Piecewise_Expressions as noif
+#Step 3: Compute v^i
+def ValenciavU_func_AR(**params):
+    LeviCivitaSymbolDDD = ixp.LeviCivitaSymbol_dim3_rank3()
 
     unit_zU = ixp.zerorank1()
     unit_zU[2] = sp.sympify(1)
 
-    global ValenciavU
+    r = rfm.xxSph[0]
+
     ValenciavU = ixp.zerorank1()
     for i in range(3):
         for j in range(3):
             for k in range(3):
                 ValenciavU[i] += noif.coord_leq_bound(r,R_NS_aligned_rotator)*LeviCivitaSymbolDDD[i][j][k] * Omega_aligned_rotator * unit_zU[j] * rfm.xx[k]
 
-
-    # ### NRPy+ Module Code Validation
-    # 
-    # \[Back to [top](#top)\]
-    # 
-    # Here, as a code validation check, we verify agreement in the SymPy expressions for the $\texttt{GiRaFFE}$ Aligned Rotator initial data equations  we intend to use between
-    # 1. this tutorial and 
-    # 2. the NRPy+ [GiRaFFEfood_NRPy_Aligned_Rotator.py](../edit/GiRaFFEfood_NRPy/GiRaFFEfood_NRPy_Aligned_Rotator.py) module.
-    # 
-
-
-
-
+    return ValenciavU

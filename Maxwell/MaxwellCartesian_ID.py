@@ -1,13 +1,12 @@
-import NRPy_param_funcs as par
-import indexedexp as ixp
-import grid as gri
-import finite_difference as fin
-from outputC import *
+import NRPy_param_funcs as par   # NRPy+: Parameter interface
+import indexedexp as ixp         # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
+import grid as gri               # NRPy+: Functions having to do with numerical grids
+import sympy as sp               # SymPy: The Python computer algebra package upon which NRPy+ depends
 
 def MaxwellCartesian_ID():
     DIM = par.parval_from_str("grid::DIM")
 
-    x,y,z = gri.register_gridfunctions("AUX",["x","y","z"])
+    x, y, z = gri.register_gridfunctions("AUX", ["x", "y", "z"])
     gammaDD = ixp.register_gridfunctions_for_single_rank2("AUX","gammaDD", "sym01") # The AUX or EVOL designation is *not*
                                                                                     # used in diagnostic modules.
 
@@ -28,7 +27,7 @@ def MaxwellCartesian_ID():
         EU_phi = 8*amp*radial*sp.sin(polar)*lam*lam*sp.exp(-lam*radial*radial)
         EidU[0] = -(y * EU_phi)/sp.sqrt(x*x + y*y)
         EidU[1] = (x * EU_phi)/sp.sqrt(x*x + y*y)
-        # The z component (2)is zero. 
+        # The z component (2)is zero.
         for i in range(DIM):
             for j in range(DIM):
                 EidD[i] += gammaDD[i][j] * EidU[j]

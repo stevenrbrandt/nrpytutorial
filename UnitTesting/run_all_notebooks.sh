@@ -1,6 +1,9 @@
 #!/bin/bash
 
-for i in *.ipynb; do
+# exit upon failure of any command.
+set -e
+
+for i in *.ipynb NRPyPN/*.ipynb ScalarField/*.ipynb; do
 
     echo $i;
 

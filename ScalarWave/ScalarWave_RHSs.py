@@ -31,24 +31,16 @@
 # \partial_t v = c^2 nabla^2 u
 #
 # where u and v are functions of space and time,
-# and nabla is the Laplaciaion differential operator.
+# and nabla is the Laplacian differential operator.
 
 # Step P1: Import needed NRPy+ core modules:
-from outputC import * # Needed for lhrh() named tuple
-import indexedexp as ixp
-import grid as gri
-import finite_difference as fin
-
-# Step P2: Define the C parameter wavespeed. The `wavespeed`
-#          variable is a proper SymPy variable, so it can be
-#          used in below expressions. In the C code, it acts
-#          just like a usual parameter, whose value is
-#          specified in the parameter file.
+import NRPy_param_funcs as par                # NRPy+: Parameter interface
+import grid as gri                            # NRPy+: Functionality for handling numerical grids
+import indexedexp as ixp                      # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
+from ScalarWave.CommonParams import wavespeed # NRPy+: Common parameters for all ScalarWave modules (defines wavespeed)
 
 # The name of this module ("ScalarWave") is given by __name__:
 thismodule = __name__
-global wavespeed
-wavespeed = par.Cparameters("REAL", thismodule, "wavespeed",1.0)
 
 # Define the main ScalarWave() function, which outputs C code
 def ScalarWave_RHSs():
@@ -58,14 +50,14 @@ def ScalarWave_RHSs():
 
     # Step 2: Register gridfunctions that are needed as input
     #         to the scalar wave RHS expressions.
-    uu, vv = gri.register_gridfunctions("EVOL",["uu","vv"])
+    uu, vv = gri.register_gridfunctions("EVOL", ["uu", "vv"])
 
     # Step 3: Declare the rank-2 indexed expression \partial_{ij} u,
     #         which is symmetric about interchange of indices i and j
     #         Derivative variables like these must have an underscore
     #         in them, so the finite difference module can parse the
     #         variable name properly.
-    uu_dDD = ixp.declarerank2("uu_dDD","sym01")
+    uu_dDD = ixp.declarerank2("uu_dDD", "sym01")
 
     # Step 4: Specify RHSs as global variables,
     #         to enable access outside this

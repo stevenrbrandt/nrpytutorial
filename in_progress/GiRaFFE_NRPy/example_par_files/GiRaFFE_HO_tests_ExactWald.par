@@ -23,7 +23,7 @@ CoordBase::boundary_size_y_upper = 3
 CoordBase::boundary_size_z_lower = 3
 CoordBase::boundary_size_z_upper = 3
 CoordBase::domainsize            = "minmax"
-CoordBase::dx                    = 8.4375 
+CoordBase::dx                    = 8.4375
 CoordBase::dy                    = 8.4375
 CoordBase::dz                    = 8.4375
 CoordBase::xmin                  =-41.66015625
@@ -34,13 +34,13 @@ CoordBase::ymax                  = 42.71484375
 CoordBase::zmax                  = 42.71484375
 
 # Parameters of thorn ADMBase (implementing ADMBase)
-ADMBase::dtlapse_evolution_method = "static" 
+ADMBase::dtlapse_evolution_method = "static"
 ADMBase::dtshift_evolution_method = "static"
 ADMBase::evolution_method         = "static"
 ADMBase::initial_data           = "ShiftedKerrSchild"
 ADMBase::initial_lapse            = "ShiftedKerrSchild"
 ADMBase::initial_shift            = "ShiftedKerrSchild"
-# All these are overwritten! 
+# All these are overwritten!
 ADMBase::initial_dtlapse          = "zero"
 ADMBase::initial_dtshift          = "zero"
 ADMBase::lapse_evolution_method   = "static"
@@ -68,7 +68,7 @@ Carpet::domain_from_coordbase    = "yes"
 Carpet::ghost_size               = 3
 Carpet::init_fill_timelevels     = "yes"
 Carpet::init_3_timelevels        = "no"
-Carpet::max_refinement_levels    = 4 
+Carpet::max_refinement_levels    = 4
 Carpet::poison_new_timelevels    = "yes"
 Carpet::prolongation_order_space = 5
 Carpet::prolongation_order_time  = 2
@@ -141,11 +141,11 @@ HydroBase::initial_Aphi      = "zero"
 #GiRaFFE::K_poly   = 100.0
 #GiRaFFE::neos     = 1
 #GiRaFFE::conserv_to_prims_MHD_debug = 0
-GiRaFFE_HO::xi  = 4.0    
+GiRaFFE_HO::xi  = 4.0
 #GiRaFFE::Velocity_BC  = "outflow"
-#GiRaFFE::EM_BC        = "copy"   
-#GiRaFFE::Symmetry     = "none"    
-#GiRaFFE::update_Tmunu = "no"  
+#GiRaFFE::EM_BC        = "copy"
+#GiRaFFE::Symmetry     = "none"
+#GiRaFFE::update_Tmunu = "no"
 
 IOUtil::out_dir = $parfile
 

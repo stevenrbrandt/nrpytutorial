@@ -1,12 +1,12 @@
 
 # Step 1: Import needed core NRPy+ and Python modules
-from outputC import *            # NRPy+: Core C code output module
+from outputC import lhrh         # NRPy+: Core C code output module
 import NRPy_param_funcs as par   # NRPy+: Parameter interface
 import finite_difference as fin  # NRPy+: Finite difference C code generation module
 import grid as gri               # NRPy+: Functions having to do with numerical grids
 import loop as lp                # NRPy+: Generate C code loops
 import indexedexp as ixp         # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
-import os, sys           # Standard Python modules for multiplatform OS-level functions
+import os, sys                   # Standard Python modules for multiplatform OS-level functions
 # We need the function keep_param__return_type() from this module:
 import BaikalETK.BaikalETK_ETK_ccl_files_codegen as ccl
 
@@ -24,7 +24,7 @@ def driver_C_codes(Csrcdict, ThornName,
     outstr = """
 #include <stdio.h>
 
-void BaikalETK_Banner() 
+void BaikalETK_Banner()
 {
     """
     logostr = logo.print_logo(print_to_stdout=False)
@@ -73,47 +73,53 @@ void BaikalETK_Symmetry_registration(CCTK_ARGUMENTS)
   // Stores gridfunction parity across x=0, y=0, and z=0 planes, respectively
   int sym[3];
 
-  // Next register parities for each gridfunction based on its name 
+  // Next register parities for each gridfunction based on its name
   //    (to ensure this algorithm is robust, gridfunctions with integers
   //     in their base names are forbidden in NRPy+).
 """
     outstr += ""
-    for gf in full_gfs_list:
+    for gfname in full_gfs_list:
+        gfname_without_GFsuffix = gfname[:-2]
         # Do not add T4UU gridfunctions if enable_stress_energy_source_terms==False:
-        if not (enable_stress_energy_source_terms == False and "T4UU" in gf):
+        if not (enable_stress_energy_source_terms == False and "T4UU" in gfname_without_GFsuffix):
             outstr += """
-  // Default to scalar symmetry:
-  sym[0] = 1; sym[1] = 1; sym[2] = 1;
-  // Now modify sym[0], sym[1], and/or sym[2] as needed 
-  //    to account for gridfunction parity across 
-  //    x=0, y=0, and/or z=0 planes, respectively
+      // Default to scalar symmetry:
+      sym[0] = 1; sym[1] = 1; sym[2] = 1;
+      // Now modify sym[0], sym[1], and/or sym[2] as needed
+      //    to account for gridfunction parity across
+      //    x=0, y=0, and/or z=0 planes, respectively
 """
             # If gridfunction name does not end in a digit, by NRPy+ syntax, it must be a scalar
-            if gf[len(gf) - 1].isdigit() == False:
-                pass # Scalar = default
-            elif len(gf) > 2:
+            if gfname_without_GFsuffix[len(gfname_without_GFsuffix) - 1].isdigit() == False:
+                outstr += "      // (this gridfunction is a scalar -- no need to change default sym[]'s!)\n"
+            elif len(gfname_without_GFsuffix) > 2:
                 # Rank-1 indexed expression (e.g., vector)
-                if gf[len(gf) - 2].isdigit() == False:
-                    if int(gf[-1]) > 2:
-                        print("Error: Found invalid gridfunction name: "+gf)
+                if gfname_without_GFsuffix[len(gfname_without_GFsuffix) - 2].isdigit() == False:
+                    if int(gfname_without_GFsuffix[-1]) > 2:
+                        print("Error: Found invalid gridfunction name: " + gfname)
                         sys.exit(1)
-                    symidx = gf[-1]
-                    outstr += "  sym["+symidx+"] = -1;\n"
+                    symidx = gfname_without_GFsuffix[-1]
+                    outstr += "      sym[" + symidx + "] = -1;\n"
                 # Rank-2 indexed expression
-                elif gf[len(gf) - 2].isdigit() == True:
-                    if len(gf) > 3 and gf[len(gf) - 3].isdigit() == True:
-                        print("Error: Found a Rank-3 or above gridfunction: "+gf+", which is at the moment unsupported.")
+                elif gfname_without_GFsuffix[len(gfname_without_GFsuffix) - 2].isdigit() == True:
+                    if len(gfname_without_GFsuffix) > 3 and gfname_without_GFsuffix[
+                        len(gfname_without_GFsuffix) - 3].isdigit() == True:
+                        print(
+                            "Error: Found a Rank-3 or above gridfunction: " + gfname + ", which is at the moment unsupported.")
                         print("It should be easy to support this if desired.")
                         sys.exit(1)
-                    symidx0 = gf[-2]
-                    outstr += "  sym["+symidx0+"] *= -1;\n"
-                    symidx1 = gf[-1]
-                    outstr += "  sym["+symidx1+"] *= -1;\n"
+                    symidx0 = gfname_without_GFsuffix[-2]
+                    if "T4UU" in gfname: symidx0 = str(int(symidx0)-1) # E.g., T4UU23 is T4UUyz, corresponding to directions 1,2
+                    if int(symidx0) >= 0: outstr += "      sym[" + symidx0 + "] *= -1;\n"
+                    symidx1 = gfname_without_GFsuffix[-1]
+                    if "T4UU" in gfname: symidx1 = str(int(symidx1)-1) # E.g., T4UU23 is T4UUyz, corresponding to directions 1,2
+                    if int(symidx1) >= 0: outstr += "      sym[" + symidx1 + "] *= -1;\n"
             else:
-                print("Don't know how you got this far with a gridfunction named "+gf+", but I'll take no more of this nonsense.")
+                print(
+                    "Don't know how you got this far with a gridfunction named " + gfname + ", but I'll take no more of this nonsense.")
                 print("   Please follow best-practices and rename your gridfunction to be more descriptive")
                 sys.exit(1)
-            outstr += "  SetCartSymVN(cctkGH, sym, \"BaikalETK::"+gf+"\");\n"
+            outstr += "      SetCartSymVN(cctkGH, sym, \"BaikalETK::" + gfname + "\");\n"
     outstr += "}\n"
 
     # Add C code string to dictionary (Python dictionaries are immutable)
@@ -144,6 +150,34 @@ void BaikalETK_zero_rhss(CCTK_ARGUMENTS)
     # Add C code string to dictionary (Python dictionaries are immutable)
     Csrcdict[append_to_make_code_defn_list("zero_rhss.c")] = outstr.replace("BaikalETK",ThornName)
 
+    # Next floor the lapse
+    outstr = """
+#include "cctk.h"
+#include "cctk_Arguments.h"
+#include "cctk_Parameters.h"
+#include "Symmetry.h"
+
+#ifndef MAX
+#define MAX(a,b) ( ((a) > (b)) ? (a) : (b) )
+
+void BaikalETK_floor_the_lapse(CCTK_ARGUMENTS)
+{
+  DECLARE_CCTK_ARGUMENTS;
+  DECLARE_CCTK_PARAMETERS;
+"""
+    outstr += lp.loop(["i2", "i1", "i0"], ["0", "0", "0"],
+                      ["cctk_lsh[2]", "cctk_lsh[1]", "cctk_lsh[0]"],
+                      ["1", "1", "1"],
+                      ["#pragma omp parallel for", "", "", ], "", """
+alphaGF[CCTK_GFINDEX3D(cctkGH, i0,i1,i2)] = MAX(alphaGF[CCTK_GFINDEX3D(cctkGH, i0,i1,i2)], lapse_floor);
+""")
+    outstr += """
+}
+#undef MAX
+#endif\n"""
+    # Add C code string to dictionary (Python dictionaries are immutable)
+    Csrcdict[append_to_make_code_defn_list("floor_the_lapse.c")] = outstr.replace("BaikalETK", ThornName)
+
     # Next registration with the Method of Lines thorn
     outstr = """
 //--------------------------------------------------------------------------
@@ -163,7 +197,7 @@ void BaikalETK_MoL_registration(CCTK_ARGUMENTS)
 {
   DECLARE_CCTK_ARGUMENTS;
   DECLARE_CCTK_PARAMETERS;
-  
+
   CCTK_INT ierr = 0, group, rhs;
 
   // Register evolution & RHS gridfunction groups with MoL, so it knows
@@ -171,7 +205,7 @@ void BaikalETK_MoL_registration(CCTK_ARGUMENTS)
   group = CCTK_GroupIndex("BaikalETK::evol_variables");
   rhs = CCTK_GroupIndex("BaikalETK::evol_variables_rhs");
   ierr += MoLRegisterEvolvedGroup(group, rhs);
-  
+
   if (ierr) CCTK_ERROR("Problems registering with MoL");
 }
 """
@@ -180,7 +214,7 @@ void BaikalETK_MoL_registration(CCTK_ARGUMENTS)
 
     # Next register with the boundary conditions thorns.
     # PART 1: Set BC type to "none" for all variables
-    # Since we choose NewRad boundary conditions, we must register all 
+    # Since we choose NewRad boundary conditions, we must register all
     #   gridfunctions to have boundary type "none". This is because
     #   NewRad is seen by the rest of the Toolkit as a modification to the
     #   RHSs.
@@ -199,7 +233,7 @@ void BaikalETK_BoundaryConditions_evolved_gfs(CCTK_ARGUMENTS)
 {
   DECLARE_CCTK_ARGUMENTS;
   DECLARE_CCTK_PARAMETERS;
-  
+
   CCTK_INT ierr CCTK_ATTRIBUTE_UNUSED = 0;
 """
     for gf in evol_gfs_list:
@@ -214,13 +248,20 @@ void BaikalETK_BoundaryConditions_evolved_gfs(CCTK_ARGUMENTS)
 void BaikalETK_BoundaryConditions_aux_gfs(CCTK_ARGUMENTS) {
   DECLARE_CCTK_ARGUMENTS;
   DECLARE_CCTK_PARAMETERS;
-  
+
   CCTK_INT ierr CCTK_ATTRIBUTE_UNUSED = 0;
+
+  CCTK_INT bndsize[6];
+  CCTK_INT is_internal[6];
+  CCTK_INT is_staggered[6];
+  CCTK_INT shiftout[6];
+
+  GetBoundarySpecification(6, bndsize, is_internal, is_staggered, shiftout);
 
 """
     for gf in aux_gfs_list:
         outstr += """
-  ierr = Boundary_SelectVarForBC(cctkGH, CCTK_ALL_FACES, cctk_nghostzones[0], -1, "BaikalETK::"""+gf+"""", "flat");
+  ierr = Boundary_SelectVarForBC(cctkGH, CCTK_ALL_FACES, bndsize[0], -1, "BaikalETK::"""+gf+"""", "flat");
   if (ierr < 0) CCTK_ERROR("Failed to register BC for BaikalETK::"""+gf+"""!");
 """
     outstr += "}\n"
@@ -236,7 +277,7 @@ void BaikalETK_BoundaryConditions_aux_gfs(CCTK_ARGUMENTS) {
     #       var  =  var_at_infinite_r + u(r-var_char_speed*t)/r^var_radpower
     #  Obviously for var_radpower>0, var_at_infinite_r is the value of
     #    the variable at r->infinity. var_char_speed is the propagation
-    #    speed at the outer boundary, and var_radpower is the radial 
+    #    speed at the outer boundary, and var_radpower is the radial
     #    falloff rate.
 
     outstr = """
@@ -249,14 +290,14 @@ void BaikalETK_BoundaryConditions_aux_gfs(CCTK_ARGUMENTS) {
 void BaikalETK_NewRad(CCTK_ARGUMENTS) {
   DECLARE_CCTK_ARGUMENTS;
   DECLARE_CCTK_PARAMETERS;
-  
+
 """
     for gf in evol_gfs_list:
         var_at_infinite_r = "0.0"
         var_char_speed    = "1.0"
         var_radpower      = "1.0"
 
-        if gf == "alpha":
+        if "alpha" in gf:
             var_at_infinite_r = "1.0"
             if LapseCondition == "OnePlusLog":
                 var_char_speed = "sqrt(2.0)"
@@ -271,23 +312,25 @@ void BaikalETK_NewRad(CCTK_ARGUMENTS) {
     # Add C code string to dictionary (Python dictionaries are immutable)
     Csrcdict[append_to_make_code_defn_list("BoundaryCondition_NewRad.c")] = outstr.replace("BaikalETK",ThornName)
 
-    # First we convert from ADM to BSSN, as is required to convert initial data 
+    # First we convert from ADM to BSSN, as is required to convert initial data
     #    (given using) ADM quantities, to the BSSN evolved variables
     import BSSN.ADM_Numerical_Spherical_or_Cartesian_to_BSSNCurvilinear as atob
     IDhDD,IDaDD,IDtrK,IDvetU,IDbetU,IDalpha,IDcf,IDlambdaU = \
         atob.Convert_Spherical_or_Cartesian_ADM_to_BSSN_curvilinear("Cartesian","DoNotOutputADMInputFunction",os.path.join(ThornName,"src"))
-    
+
     # Store the original list of registered gridfunctions; we'll want to unregister
     #   all the *SphorCart* gridfunctions after we're finished with them below.
     orig_glb_gridfcs_list = []
     for gf in gri.glb_gridfcs_list:
         orig_glb_gridfcs_list.append(gf)
-        
-    alphaSphorCart   = gri.register_gridfunctions(                 "AUXEVOL", "alphaSphorCart")
-    betaSphorCartU   = ixp.register_gridfunctions_for_single_rank1("AUXEVOL", "betaSphorCartU")
-    BSphorCartU      = ixp.register_gridfunctions_for_single_rank1("AUXEVOL", "BSphorCartU")
-    gammaSphorCartDD = ixp.register_gridfunctions_for_single_rank2("AUXEVOL", "gammaSphorCartDD", "sym01")
-    KSphorCartDD     = ixp.register_gridfunctions_for_single_rank2("AUXEVOL", "KSphorCartDD", "sym01")
+
+    # We ignore the return values for the following register_gridfunctions...() calls,
+    #   as they are unused.
+    gri.register_gridfunctions(                 "AUXEVOL", "alphaSphorCart")
+    ixp.register_gridfunctions_for_single_rank1("AUXEVOL", "betaSphorCartU")
+    ixp.register_gridfunctions_for_single_rank1("AUXEVOL", "BSphorCartU")
+    ixp.register_gridfunctions_for_single_rank2("AUXEVOL", "gammaSphorCartDD", "sym01")
+    ixp.register_gridfunctions_for_single_rank2("AUXEVOL", "KSphorCartDD", "sym01")
 
     # ADM to BSSN conversion, used for converting ADM initial data into a form readable by this thorn.
     # ADM to BSSN, Part 1: Set up function call and pointers to ADM gridfunctions
@@ -301,7 +344,7 @@ void BaikalETK_NewRad(CCTK_ARGUMENTS) {
 void BaikalETK_ADM_to_BSSN(CCTK_ARGUMENTS) {
     DECLARE_CCTK_ARGUMENTS;
     DECLARE_CCTK_PARAMETERS;
-    
+
     CCTK_REAL *alphaSphorCartGF = alp;
 """
     # It's ugly if we output code in the following ordering, so we'll first
@@ -318,38 +361,45 @@ void BaikalETK_ADM_to_BSSN(CCTK_ARGUMENTS) {
         outstr += line
 
     # ADM to BSSN, Part 2: Set up ADM to BSSN conversions for BSSN gridfunctions that do not require
-    #                      finite-difference derivatives (i.e., all gridfunctions except lambda^i (=Gamma^i 
+    #                      finite-difference derivatives (i.e., all gridfunctions except lambda^i (=Gamma^i
     #                      in non-covariant BSSN)):
     #                      h_{ij}, a_{ij}, trK, vet^i=beta^i,bet^i=B^i, cf (conformal factor), and alpha
+
+    # Output finite difference stencils as inlined expressions.
+    #   We do this instead of outputting as FD functions, as this function
+    #   does not take long to compile, and we have already output all the
+    #   FD functions to file, so if this one contains new FD functions,
+    #   the compile will fail.
+    par.set_parval_from_str("finite_difference::enable_FD_functions", False)
+
     all_but_lambdaU_expressions = [
-        lhrh(lhs=gri.gfaccess("in_gfs","hDD00"),rhs=IDhDD[0][0]),
-        lhrh(lhs=gri.gfaccess("in_gfs","hDD01"),rhs=IDhDD[0][1]),
-        lhrh(lhs=gri.gfaccess("in_gfs","hDD02"),rhs=IDhDD[0][2]),
-        lhrh(lhs=gri.gfaccess("in_gfs","hDD11"),rhs=IDhDD[1][1]),
-        lhrh(lhs=gri.gfaccess("in_gfs","hDD12"),rhs=IDhDD[1][2]),
-        lhrh(lhs=gri.gfaccess("in_gfs","hDD22"),rhs=IDhDD[2][2]),
-        lhrh(lhs=gri.gfaccess("in_gfs","aDD00"),rhs=IDaDD[0][0]),
-        lhrh(lhs=gri.gfaccess("in_gfs","aDD01"),rhs=IDaDD[0][1]),
-        lhrh(lhs=gri.gfaccess("in_gfs","aDD02"),rhs=IDaDD[0][2]),
-        lhrh(lhs=gri.gfaccess("in_gfs","aDD11"),rhs=IDaDD[1][1]),
-        lhrh(lhs=gri.gfaccess("in_gfs","aDD12"),rhs=IDaDD[1][2]),
-        lhrh(lhs=gri.gfaccess("in_gfs","aDD22"),rhs=IDaDD[2][2]),
-        lhrh(lhs=gri.gfaccess("in_gfs","trK"),rhs=IDtrK),
-        lhrh(lhs=gri.gfaccess("in_gfs","vetU0"),rhs=IDvetU[0]),
-        lhrh(lhs=gri.gfaccess("in_gfs","vetU1"),rhs=IDvetU[1]),
-        lhrh(lhs=gri.gfaccess("in_gfs","vetU2"),rhs=IDvetU[2]),
-        lhrh(lhs=gri.gfaccess("in_gfs","betU0"),rhs=IDbetU[0]),
-        lhrh(lhs=gri.gfaccess("in_gfs","betU1"),rhs=IDbetU[1]),
-        lhrh(lhs=gri.gfaccess("in_gfs","betU2"),rhs=IDbetU[2]),
-        lhrh(lhs=gri.gfaccess("in_gfs","alpha"),rhs=IDalpha),
-        lhrh(lhs=gri.gfaccess("in_gfs","cf"),rhs=IDcf)]
+        lhrh(lhs=gri.gfaccess("in_gfs", "hDD00"), rhs=IDhDD[0][0]),
+        lhrh(lhs=gri.gfaccess("in_gfs", "hDD01"), rhs=IDhDD[0][1]),
+        lhrh(lhs=gri.gfaccess("in_gfs", "hDD02"), rhs=IDhDD[0][2]),
+        lhrh(lhs=gri.gfaccess("in_gfs", "hDD11"), rhs=IDhDD[1][1]),
+        lhrh(lhs=gri.gfaccess("in_gfs", "hDD12"), rhs=IDhDD[1][2]),
+        lhrh(lhs=gri.gfaccess("in_gfs", "hDD22"), rhs=IDhDD[2][2]),
+        lhrh(lhs=gri.gfaccess("in_gfs", "aDD00"), rhs=IDaDD[0][0]),
+        lhrh(lhs=gri.gfaccess("in_gfs", "aDD01"), rhs=IDaDD[0][1]),
+        lhrh(lhs=gri.gfaccess("in_gfs", "aDD02"), rhs=IDaDD[0][2]),
+        lhrh(lhs=gri.gfaccess("in_gfs", "aDD11"), rhs=IDaDD[1][1]),
+        lhrh(lhs=gri.gfaccess("in_gfs", "aDD12"), rhs=IDaDD[1][2]),
+        lhrh(lhs=gri.gfaccess("in_gfs", "aDD22"), rhs=IDaDD[2][2]),
+        lhrh(lhs=gri.gfaccess("in_gfs", "trK"), rhs=IDtrK),
+        lhrh(lhs=gri.gfaccess("in_gfs", "vetU0"), rhs=IDvetU[0]),
+        lhrh(lhs=gri.gfaccess("in_gfs", "vetU1"), rhs=IDvetU[1]),
+        lhrh(lhs=gri.gfaccess("in_gfs", "vetU2"), rhs=IDvetU[2]),
+        lhrh(lhs=gri.gfaccess("in_gfs", "betU0"), rhs=IDbetU[0]),
+        lhrh(lhs=gri.gfaccess("in_gfs", "betU1"), rhs=IDbetU[1]),
+        lhrh(lhs=gri.gfaccess("in_gfs", "betU2"), rhs=IDbetU[2]),
+        lhrh(lhs=gri.gfaccess("in_gfs", "alpha"), rhs=IDalpha),
+        lhrh(lhs=gri.gfaccess("in_gfs", "cf"), rhs=IDcf)]
 
     outCparams = "preindent=1,outCfileaccess=a,outCverbose=False,includebraces=False"
-    all_but_lambdaU_outC = fin.FD_outputC("returnstring",all_but_lambdaU_expressions, outCparams)
-    outstr += lp.loop(["i2","i1","i0"],["0","0","0"],["cctk_lsh[2]","cctk_lsh[1]","cctk_lsh[0]"],
-                       ["1","1","1"],["#pragma omp parallel for","",""],"    ",all_but_lambdaU_outC)
+    all_but_lambdaU_outC = fin.FD_outputC("returnstring", all_but_lambdaU_expressions, outCparams)
+    outstr += lp.loop(["i2", "i1", "i0"], ["0", "0", "0"], ["cctk_lsh[2]", "cctk_lsh[1]", "cctk_lsh[0]"],
+                      ["1", "1", "1"], ["#pragma omp parallel for", "", ""], "    ", all_but_lambdaU_outC)
 
-    
     # ADM to BSSN, Part 3: Set up ADM to BSSN conversions for BSSN gridfunctions defined from
     #                      finite-difference derivatives: lambda^i, which is Gamma^i in non-covariant BSSN):
     outstr += """
@@ -359,14 +409,22 @@ void BaikalETK_ADM_to_BSSN(CCTK_ARGUMENTS) {
 """
 
     path = os.path.join(ThornName,"src")
-    BSSN_RHS_FD_orders_output = []
-    for root, dirs, files in os.walk(path):
-        for file in files:
-            if "BSSN_RHSs_FD_order" in file:
-                array = file.replace(".","_").split("_")
-                BSSN_RHS_FD_orders_output.append(int(array[4]))
+    BaikalETK_src_filelist = []
+    for _root, _dirs, files in os.walk(path):  # _root, _dirs unused.
+        for filename in files:
+            BaikalETK_src_filelist.append(filename)
+    BaikalETK_src_filelist.sort() # Sort the list in place.
 
-    for current_FD_order in BSSN_RHS_FD_orders_output:
+    BSSN_FD_orders_output = []
+    for filename in BaikalETK_src_filelist:
+        if "BSSN_RHSs_" in filename:
+            array = filename.replace(".","_").split("_")
+            FDorder =  int(array[-2])
+            if FDorder not in BSSN_FD_orders_output:
+                BSSN_FD_orders_output.append(FDorder)
+    BSSN_FD_orders_output.sort()
+
+    for current_FD_order in BSSN_FD_orders_output:
         # Store original finite-differencing order:
         orig_FD_order = par.parval_from_str("finite_difference::FD_CENTDERIVS_ORDER")
         # Set new finite-differencing order:
@@ -396,7 +454,7 @@ void BaikalETK_ADM_to_BSSN(CCTK_ARGUMENTS) {
     ExtrapolateGammas(cctkGH,lambdaU2GF);
 }
 """
-    
+
     # Unregister the *SphorCartGF's.
     gri.glb_gridfcs_list = orig_glb_gridfcs_list
 
@@ -446,25 +504,24 @@ void BaikalETK_BSSN_to_ADM(CCTK_ARGUMENTS) {
                        ["1","1","1"],["#pragma omp parallel for","",""],"",bssn_to_adm_Ccode)
 
     outstr += "}\n"
-    
+
     # Add C code string to dictionary (Python dictionaries are immutable)
     Csrcdict[append_to_make_code_defn_list("BSSN_to_ADM.c")] = outstr.replace("BaikalETK",ThornName)
 
-    # Next, the driver for computing the Ricci tensor:
-    outstr = """
+    ###########################
+    ###########################
+    # BSSN_RHSs and Ricci driver functions
+    ###########################
+    common_includes = """
 #include <math.h>
-
-#include "SIMD/SIMD_intrinsics.h"
-
 #include "cctk.h"
 #include "cctk_Arguments.h"
 #include "cctk_Parameters.h"
-
-void BaikalETK_driver_pt1_BSSN_Ricci(CCTK_ARGUMENTS) {
+#include "SIMD/SIMD_intrinsics.h"
+#include "finite_difference_functions.h"
+"""
+    common_preloop = """
     DECLARE_CCTK_ARGUMENTS;
-
-    const CCTK_INT *FD_order = CCTK_ParameterGet("FD_order","BaikalETK",NULL);
-
     const CCTK_REAL NOSIMDinvdx0 = 1.0/CCTK_DELTA_SPACE(0);
     const REAL_SIMD_ARRAY invdx0 = ConstSIMD(NOSIMDinvdx0);
     const CCTK_REAL NOSIMDinvdx1 = 1.0/CCTK_DELTA_SPACE(1);
@@ -472,19 +529,61 @@ void BaikalETK_driver_pt1_BSSN_Ricci(CCTK_ARGUMENTS) {
     const CCTK_REAL NOSIMDinvdx2 = 1.0/CCTK_DELTA_SPACE(2);
     const REAL_SIMD_ARRAY invdx2 = ConstSIMD(NOSIMDinvdx2);
 """
-    path = os.path.join(ThornName,"src")
 
-    for root, dirs, files in os.walk(path):
-        for file in files:
-            if "BSSN_Ricci_FD_order" in file:
-                array = file.replace(".","_").split("_")
-                outstr += "    if(*FD_order == "+str(array[4])+") {\n"
-                outstr += "        #include \""+file+"\"\n"
-                outstr += "    }\n"
-    outstr += "}\n"
-    
+    # Output the driver code for computing the Ricci tensor:
+    outstr = common_includes
+    for order in BSSN_FD_orders_output:
+        outstr += """extern void """+ThornName+"_"+"BSSN_Ricci_FD_order_"+str(order)+"(CCTK_ARGUMENTS);\n"
+    outstr += """
+void BaikalETK_driver_pt1_BSSN_Ricci(CCTK_ARGUMENTS) {
+    DECLARE_CCTK_ARGUMENTS;
+    const CCTK_INT *FD_order = CCTK_ParameterGet("FD_order","BaikalETK",NULL);
+"""
+    for order in BSSN_FD_orders_output:
+        outstr += "    if(*FD_order == "+str(order)+") {\n"
+        outstr += "        "+ThornName+"_"+"BSSN_Ricci_FD_order_"+str(order)+"(CCTK_PASS_CTOC);\n"
+        outstr += "    }\n"
+    outstr += "} // END FUNCTION\n"
     # Add C code string to dictionary (Python dictionaries are immutable)
     Csrcdict[append_to_make_code_defn_list("driver_pt1_BSSN_Ricci.c")] = outstr.replace("BaikalETK",ThornName)
+
+    # Create functions for the largest C kernels (BSSN RHSs and Ricci) and output
+    #    the .h files to .c files with function wrappers; delete original .h files
+    for filename in BaikalETK_src_filelist:
+        if ("BSSN_Ricci_FD_order_") in filename and (".h" in filename):
+            outstr = common_includes + "void BaikalETK_"+filename.replace(".h","")+"(CCTK_ARGUMENTS) {\n"
+            outstr += common_preloop
+            with open(os.path.join(path,filename), "r") as currfile:
+                outstr += currfile.read()
+            # Now that we've inserted the contents of the kernel into this file,
+            #     we delete the file containing the kernel
+            os.remove(os.path.join(path,filename))
+            outstr += "} // END FUNCTION\n"
+            # Add C code string to dictionary (Python dictionaries are immutable)
+            Csrcdict[append_to_make_code_defn_list(filename.replace(".h",".c"))] = outstr.replace("BaikalETK",ThornName)
+    ###########################
+    # Output BSSN RHSs driver function
+    outstr = common_includes
+    for filename in BaikalETK_src_filelist:
+        if ("BSSN_RHSs_" in filename) and (".h" in filename):
+            outstr += """extern void """ + ThornName+"_"+filename.replace(".h", "(CCTK_ARGUMENTS);") + "\n"
+
+    outstr += """
+void BaikalETK_driver_pt2_BSSN_RHSs(CCTK_ARGUMENTS) {
+    DECLARE_CCTK_ARGUMENTS;
+
+    const CCTK_INT *FD_order = CCTK_ParameterGet("FD_order","BaikalETK",NULL);
+
+"""
+    for filename in BaikalETK_src_filelist:
+        if ("BSSN_RHSs_" in filename) and (".h" in filename):
+            array = filename.replace(".", "_").split("_")
+            outstr += "    if(*FD_order == " + str(array[-2]) + ") {\n"
+            outstr += "        " + ThornName+"_"+filename.replace(".h", "(CCTK_PASS_CTOC);") + "\n"
+            outstr += "    }\n"
+    outstr += "} // END FUNCTION\n"
+    # Add C code string to dictionary (Python dictionaries are immutable)
+    Csrcdict[append_to_make_code_defn_list("driver_pt2_BSSN_RHSs.c")] = outstr.replace("BaikalETK", ThornName)
 
     def SIMD_declare_C_params():
         SIMD_declare_C_params_str = ""
@@ -501,70 +600,34 @@ void BaikalETK_driver_pt1_BSSN_Ricci(CCTK_ARGUMENTS) {
                 SIMD_declare_C_params_str += "    const REAL_SIMD_ARRAY "+parname+" = ConstSIMD(*NOSIMD"+parname+");\n"
         return SIMD_declare_C_params_str
 
-    # Next, the driver for computing the BSSN RHSs:
-    outstr = """
-#include <math.h>
-
-#include "SIMD/SIMD_intrinsics.h"
-
-#include "cctk.h"
-#include "cctk_Arguments.h"
-#include "cctk_Parameters.h"
-
-void BaikalETK_driver_pt2_BSSN_RHSs(CCTK_ARGUMENTS) {
-    DECLARE_CCTK_ARGUMENTS;
-
-    const CCTK_INT *FD_order = CCTK_ParameterGet("FD_order","BaikalETK",NULL);
-
-    const CCTK_REAL NOSIMDinvdx0 = 1.0/CCTK_DELTA_SPACE(0);
-    const REAL_SIMD_ARRAY invdx0 = ConstSIMD(NOSIMDinvdx0);
-    const CCTK_REAL NOSIMDinvdx1 = 1.0/CCTK_DELTA_SPACE(1);
-    const REAL_SIMD_ARRAY invdx1 = ConstSIMD(NOSIMDinvdx1);
-    const CCTK_REAL NOSIMDinvdx2 = 1.0/CCTK_DELTA_SPACE(2);
-    const REAL_SIMD_ARRAY invdx2 = ConstSIMD(NOSIMDinvdx2);
-"""+SIMD_declare_C_params()
-    
-    path = os.path.join(ThornName,"src")
-
-    for root, dirs, files in os.walk(path):
-        for file in files:
-            if "BSSN_RHSs_FD_order" in file:
-                array = file.replace(".","_").split("_")
-                outstr += "    if(*FD_order == "+str(array[4])+") {\n"
-                outstr += "        #include \""+file+"\"\n"
-                outstr += "    }\n"
-    outstr += "}\n"
-
-    # Add C code string to dictionary (Python dictionaries are immutable)
-    Csrcdict[append_to_make_code_defn_list("driver_pt2_BSSN_RHSs.c")] = outstr.replace("BaikalETK",ThornName)
+    # Create functions for the largest C kernels (BSSN RHSs and Ricci) and output
+    #    the .h files to .c files with function wrappers; delete original .h files
+    path = os.path.join(ThornName, "src")
+    for filename in BaikalETK_src_filelist:
+        if ("BSSN_RHSs_" in filename) and (".h" in filename):
+            outstr = common_includes + "void BaikalETK_"+filename.replace(".h","")+"(CCTK_ARGUMENTS) {\n"
+            outstr += common_preloop+SIMD_declare_C_params()
+            with open(os.path.join(path,filename), "r") as currfile:
+                outstr += currfile.read()
+            # Now that we've inserted the contents of the kernel into this file,
+            #     we delete the file containing the kernel
+            os.remove(os.path.join(path,filename))
+            outstr += "} // END FUNCTION\n"
+            # Add C code string to dictionary (Python dictionaries are immutable)
+            Csrcdict[append_to_make_code_defn_list(filename.replace(".h",".c"))] = outstr.replace("BaikalETK",ThornName)
 
     # Next, the driver for enforcing detgammabar = detgammahat constraint:
-    outstr = """
-#include <math.h>
-
-#include "cctk.h"
-#include "cctk_Arguments.h"
-#include "cctk_Parameters.h"
-
-void BaikalETK_enforce_detgammabar_constraint(CCTK_ARGUMENTS) {
+    outstr = common_includes + """
+void BaikalETK_enforce_detgammahat_constraint(CCTK_ARGUMENTS) {
     DECLARE_CCTK_ARGUMENTS;
     DECLARE_CCTK_PARAMETERS;
-"""
-    
-    path = os.path.join(ThornName,"src")
-        
-    for root, dirs, files in os.walk(path):
-        for file in files:
-            if "enforcedetgammabar_constraint_FD_order" in file:
-                array = file.replace(".","_").split("_")
-                outstr += "    if(FD_order == "+str(array[4])+") {\n"
-                outstr += "        #include \""+file+"\"\n"
-                outstr += "    }\n"
-    outstr += "}\n"
 
+    #include "enforcedetgammabar_constraint.h"
+}
+"""
     # Add C code string to dictionary (Python dictionaries are immutable)
     Csrcdict[append_to_make_code_defn_list("driver_enforcedetgammabar_constraint.c")] = \
-        outstr.replace("BaikalETK",ThornName)
+        outstr.replace("BaikalETK", ThornName)
 
     # Next, the driver for computing the BSSN Hamiltonian & momentum constraints
     outstr = """
@@ -573,6 +636,8 @@ void BaikalETK_enforce_detgammabar_constraint(CCTK_ARGUMENTS) {
 #include "cctk.h"
 #include "cctk_Arguments.h"
 #include "cctk_Parameters.h"
+#include "SIMD/SIMD_intrinsics.h" // Contains needed definition of REAL_SIMD_ARRAY
+#include "finite_difference_functions.h"
 
 void BaikalETK_BSSN_constraints(CCTK_ARGUMENTS) {
     DECLARE_CCTK_ARGUMENTS;
@@ -582,23 +647,20 @@ void BaikalETK_BSSN_constraints(CCTK_ARGUMENTS) {
     const CCTK_REAL invdx1 = 1.0/CCTK_DELTA_SPACE(1);
     const CCTK_REAL invdx2 = 1.0/CCTK_DELTA_SPACE(2);
 """
-    path = os.path.join(ThornName,"src")
-        
-    for root, dirs, files in os.walk(path):
-        for file in files:
-            if "BSSN_constraints_FD_order" in file:
-                array = file.replace(".","_").split("_")
-                outstr += "    if(FD_order == "+str(array[4])+") {\n"
-                outstr += "        #include \""+file+"\"\n"
-                outstr += "    }\n"
+    for filename in BaikalETK_src_filelist:
+        if "BSSN_constraints_" in filename:
+            array = filename.replace(".","_").split("_")
+            outstr += "    if(FD_order == "+str(array[-2])+") {\n"
+            outstr += "        #include \""+filename+"\"\n"
+            outstr += "    }\n"
     outstr += "}\n"
 
     # Add C code string to dictionary (Python dictionaries are immutable)
     Csrcdict[append_to_make_code_defn_list("driver_BSSN_constraints.c")] = outstr.replace("BaikalETK",ThornName)
 
     if enable_stress_energy_source_terms == True:
-        # Declare T4DD as a set of gridfunctions. These won't 
-        #    actually appear in interface.ccl, as interface.ccl 
+        # Declare T4DD as a set of gridfunctions. These won't
+        #    actually appear in interface.ccl, as interface.ccl
         #    was set above. Thus before calling the code output
         #    by FD_outputC(), we'll have to set pointers
         #    to the actual gridfunctions they reference.
@@ -626,7 +688,7 @@ void BaikalETK_BSSN_constraints(CCTK_ARGUMENTS) {
             lhrh(lhs=gri.gfaccess("in_gfs","T4UU23"),rhs=T4UUraised[2][3]),
             lhrh(lhs=gri.gfaccess("in_gfs","T4UU33"),rhs=T4UUraised[3][3])]
 
-        outCparams = "outCverbose=False,includebraces=False,preindent=2,SIMD_enable=True"
+        outCparams = "outCverbose=False,includebraces=False,preindent=2,enable_SIMD=True"
         T4UUstr = fin.FD_outputC("returnstring",T4UU_expressions, outCparams)
         T4UUstr_loop = lp.loop(["i2","i1","i0"],["0","0","0"],["cctk_lsh[2]","cctk_lsh[1]","cctk_lsh[0]"],
                                ["1","1","SIMD_width"],["#pragma omp parallel for","",""],"",T4UUstr)

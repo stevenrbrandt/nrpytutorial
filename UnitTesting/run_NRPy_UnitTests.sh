@@ -49,18 +49,47 @@ add_test in_progress/GiRaFFE_HO/tests/test_GiRaFFE_HO.py
 add_test in_progress/GiRaFFEfood_HO/tests/test_GiRaFFEfood_HO.py
 add_test Maxwell/tests/test_Maxwell.py
 add_test ScalarWave/tests/test_ScalarWave.py
-add_test ScalarWaveCurvilinear/tests/test_ScalarWaveCurvilinear.py
 add_test tests/test_reference_metric.py
 add_test u0_smallb_Poynting__Cartesian/tests/test_u0_smallb_Poynting__Cartesian.py
 add_test WeylScal4NRPy/tests/test_WeylScal4NRPy.py
 
 # TODO: add your tests here
-
+echo "Starting doctest unit tests!"
+failed_unittest=0
+for file in expr_tree.py indexedexp.py loop.py functional.py finite_difference_helpers.py assert_equal.py; do
+    echo Running doctest on file: $file
+    $PYTHONEXEC -m doctest $file
+    if [ $? == 1 ]
+    then
+        failed_unittest=1
+    fi
+    echo Doctest of $file finished.
+done
+$PYTHONEXEC -c "import sys, sympy; major, minor = int(sympy.__version__.split('.')[0]), int(sympy.__version__.split('.')[1]); sys.exit(major == 1 and minor <= 3)"
+if [ $? == 0 ]
+then
+    echo Running doctest on file: cse_helpers.py
+    $PYTHONEXEC -m doctest cse_helpers.py
+    if [ $? == 1 ]
+    then
+        failed_unittest=1
+    fi
+    echo Doctest of cse_helpers.py finished.
+fi
+for file in tests/test_parse_BSSN.py; do
+    echo Running unittest on file: $file
+    $PYTHONEXEC $file
+    if [ $? == 1 ]
+    then
+        failed_unittest=1
+    fi
+    echo Unittest of $file finished.
+done
 
 # Checking failed_tests.txt to see what failed
 contents=$(<$failed_tests_file)
 
-if [ "$contents" == $"Failures:" ]
+if [ "$contents" == $"Failures:" ] && [ $failed_unittest == 0 ]
 then
   printf "All tests passed!\n\n"
   exit 0

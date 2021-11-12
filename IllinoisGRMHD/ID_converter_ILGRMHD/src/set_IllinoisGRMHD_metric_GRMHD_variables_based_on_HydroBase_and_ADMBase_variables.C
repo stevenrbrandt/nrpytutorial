@@ -1,9 +1,9 @@
 /********************************
  * CONVERT ET ID TO IllinoisGRMHD
- * 
+ *
  * Written in 2014 by Zachariah B. Etienne
  *
- * Sets metric & MHD variables needed 
+ * Sets metric & MHD variables needed
  * by IllinoisGRMHD, converting from
  * HydroBase and ADMBase.
  ********************************/
@@ -37,7 +37,7 @@ extern "C" void set_IllinoisGRMHD_metric_GRMHD_variables_based_on_HydroBase_and_
    ***************/
   eos_struct eos;
   initialize_EOS_struct_from_input(eos);
-  
+
   if(pure_hydro_run) {
 #pragma omp parallel for
     for(int k=0;k<cctk_lsh[2];k++) for(int j=0;j<cctk_lsh[1];j++) for(int i=0;i<cctk_lsh[0];i++) {
@@ -87,14 +87,14 @@ extern "C" void set_IllinoisGRMHD_metric_GRMHD_variables_based_on_HydroBase_and_
         Ay[index] = Avec[CCTK_GFINDEX4D(cctkGH,i,j,k,1)];
         Az[index] = Avec[CCTK_GFINDEX4D(cctkGH,i,j,k,2)];
         psi6phi[index] = Aphi[index];
-	
+
         double ETvx = vel[CCTK_GFINDEX4D(cctkGH,i,j,k,0)];
         double ETvy = vel[CCTK_GFINDEX4D(cctkGH,i,j,k,1)];
         double ETvz = vel[CCTK_GFINDEX4D(cctkGH,i,j,k,2)];
 
         // IllinoisGRMHD defines v^i = u^i/u^0.
-	
-        // Meanwhile, the ET/HydroBase formalism, called the Valencia 
+
+        // Meanwhile, the ET/HydroBase formalism, called the Valencia
         // formalism, splits the 4 velocity into a purely spatial part
         // and a part that is normal to the spatial hypersurface:
         // u^a = G (n^a + U^a), (Eq. 14 of arXiv:1304.5544; G=W, U^a=v^a)
@@ -105,8 +105,8 @@ extern "C" void set_IllinoisGRMHD_metric_GRMHD_variables_based_on_HydroBase_and_
         // of course \alpha u^0 = 1/sqrt(1+γ^ij u_i u_j) = \Gamma,
         // the standard Lorentz factor.
 
-        // Note that n^i = - \beta^i / \alpha, so 
-        // u^a = \Gamma (n^a + U^a) 
+        // Note that n^i = - \beta^i / \alpha, so
+        // u^a = \Gamma (n^a + U^a)
         // -> u^i = \Gamma ( U^i - \beta^i / \alpha )
         // which implies
         // v^i = u^i/u^0
@@ -131,7 +131,7 @@ extern "C" void set_IllinoisGRMHD_metric_GRMHD_variables_based_on_HydroBase_and_
         int index=CCTK_GFINDEX3D(cctkGH,i,j,k);
         double pert = (random_pert*(double)rand() / RAND_MAX);
         double one_plus_pert=(1.0+pert);
-        rho[index]*=one_plus_pert;
+        rho_b[index]*=one_plus_pert;
         vx[index]*=one_plus_pert;
         vy[index]*=one_plus_pert;
         vz[index]*=one_plus_pert;
@@ -147,7 +147,7 @@ extern "C" void set_IllinoisGRMHD_metric_GRMHD_variables_based_on_HydroBase_and_
 
   double dxi = 1.0/CCTK_DELTA_SPACE(0);
   double dyi = 1.0/CCTK_DELTA_SPACE(1);
-  double dzi = 1.0/CCTK_DELTA_SPACE(2);  
+  double dzi = 1.0/CCTK_DELTA_SPACE(2);
 
 #pragma omp parallel for
   for(int k=0;k<cctk_lsh[2];k++)
@@ -170,7 +170,7 @@ extern "C" void set_IllinoisGRMHD_metric_GRMHD_variables_based_on_HydroBase_and_
         double Psi = psi_bssn[actual_index];
         double Psim3 = 1.0/(Psi*Psi*Psi);
 
-        // For the lower boundaries, the following applies a "copy" 
+        // For the lower boundaries, the following applies a "copy"
         //    boundary condition on Bi_stagger where needed.
         //    E.g., Bx_stagger(i,jmin,k) = Bx_stagger(i,jmin+1,k)
         //    We find the copy BC works better than extrapolation.
@@ -250,7 +250,7 @@ extern "C" void set_IllinoisGRMHD_metric_GRMHD_variables_based_on_HydroBase_and_
 
         int actual_index = CCTK_GFINDEX3D(cctkGH,i,j,k);
 
-        // For the lower boundaries, the following applies a "copy" 
+        // For the lower boundaries, the following applies a "copy"
         //    boundary condition on Bi and Bi_stagger where needed.
         //    E.g., Bx(imin,j,k) = Bx(imin+1,j,k)
         //    We find the copy BC works better than extrapolation.

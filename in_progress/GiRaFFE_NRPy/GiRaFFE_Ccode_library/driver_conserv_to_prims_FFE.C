@@ -1,18 +1,18 @@
-/* We evolve forward in time a set of functions called the 
- * "conservative variables" (magnetic field and Poynting vector), 
- * and any time the conserv's are updated, we must recover the 
- * primitive variables (velocities), before reconstructing & evaluating 
- * the RHSs of the MHD equations again. 
+/* We evolve forward in time a set of functions called the
+ * "conservative variables" (magnetic field and Poynting vector),
+ * and any time the conserv's are updated, we must recover the
+ * primitive variables (velocities), before reconstructing & evaluating
+ * the RHSs of the MHD equations again.
  *
- * This file contains the routine for this algebraic calculation. 
+ * This file contains the routine for this algebraic calculation.
  * The velocity is calculated with formula (85), arXiv:1310.3274v2
- * $v^i = 4 \pi \alpha \gamma^{ij} {\tilde S}_j \gamma{-1/2} B^{-2} - \beta^i$ 
+ * $v^i = 4 \pi \alpha \gamma^{ij} {\tilde S}_j \gamma{-1/2} B^{-2} - \beta^i$
  * The force-free condition: $B^2>E^2$ is checked before computing the velocity.
  * and after imposing the constraint ${\tilde B}^i {\tilde S}_i = 0$
- 
- * The procedure is as described in arXiv:1310.3274v2: 
+
+ * The procedure is as described in arXiv:1310.3274v2:
  * 1. ${\tilde S}_i ->{\tilde S}_i - ({\tilde S}_j {\tilde B}^j) {\tilde B}_i/{\tilde B}^2$
- * 2. $f = \sqrt{(1-\gamma_{max}^{-2}){\tilde B}^4/(16 \pi^2 \gamma {\tilde S}^2)}$ 
+ * 2. $f = \sqrt{(1-\gamma_{max}^{-2}){\tilde B}^4/(16 \pi^2 \gamma {\tilde S}^2)}$
  * 3. ${\tilde S}_i -> {\tilde S}_i min(1,f)
  * 4. $v^i = 4 \pi \alpha \gamma^{ij} {\tilde S}_j \gamma{-1/2} B^{-2} - \beta^i$
  * 5. ${\tilde n}_i v^i = 0$
@@ -57,7 +57,7 @@ void GiRaFFE_NRPy_conserv_to_prims_FFE(const int Nxx[3],const int Nxx_plus_2NGHO
 
   const int imin=NGHOSTS,jmin=NGHOSTS,kmin=NGHOSTS;
   const int imax=Nxx_plus_2NGHOSTS[0]-NGHOSTS,jmax=Nxx_plus_2NGHOSTS[1]-NGHOSTS,kmax=Nxx_plus_2NGHOSTS[2]-NGHOSTS;
-  
+
   const REAL dz = dxx[2];
 
   REAL error_int_numer=0,error_int_denom=0;
@@ -155,7 +155,7 @@ void GiRaFFE_NRPy_conserv_to_prims_FFE(const int Nxx[3],const int Nxx_plus_2NGHO
 
           // Just below Eq. 86 in http://arxiv.org/pdf/1310.3274.pdf:
           REAL St2 = StildeD0L*mhd_st_upx + StildeD1L*mhd_st_upy + StildeD2L*mhd_st_upz;
-          //* 2. Eq. 92: Factor $f = \sqrt{(1-\gamma_{max}^{-2}){\tilde B}^4/(16 \pi^2 \gamma {\tilde S}^2)}$ 
+          //* 2. Eq. 92: Factor $f = \sqrt{(1-\gamma_{max}^{-2}){\tilde B}^4/(16 \pi^2 \gamma {\tilde S}^2)}$
 
 #ifdef APPLY_GRFFE_FIXES
           const REAL gmax = GAMMA_SPEED_LIMIT;
@@ -187,13 +187,13 @@ void GiRaFFE_NRPy_conserv_to_prims_FFE(const int Nxx[3],const int Nxx_plus_2NGHO
             num_vel_limits++;
           }
 #endif
-          //* 4. Eq. 85: $v^i = 4 pi \alpha \gamma^{ij} {\tilde S}_j \gamma{-1/2} B^{-2} - \beta^i$: 
+          //* 4. Eq. 85: $v^i = 4 pi \alpha \gamma^{ij} {\tilde S}_j \gamma{-1/2} B^{-2} - \beta^i$:
 
           // See, e.g., Eq 71 in http://arxiv.org/pdf/1310.3274.pdf
           // ... or end of page 7 on http://arxiv.org/pdf/1310.3274.pdf:
           const REAL B2 = Btilde2/(sqrtg*sqrtg);
-          /* 
-             Eq. 75: 
+          /*
+             Eq. 75:
              v^i = \alpha \gamma^{ij} S_j / \mathcal{B}^2 - \beta^i
              Eq. 7: \mathcal{B}^{\mu} = B^{\mu}/\sqrt{4 \pi}
              -> v^i = 4 \pi \alpha \gamma^{ij} S_j / B^2 - \beta^i
@@ -206,15 +206,15 @@ void GiRaFFE_NRPy_conserv_to_prims_FFE(const int Nxx[3],const int Nxx_plus_2NGHO
           /* ValenciavU2L not necessarily const! See below. */
           REAL ValenciavU2L = fourpi*mhd_st_upz/(sqrtg*B2);
           //* 5. Eq. 94: ${\tilde n}_i v^i = 0$ in the current sheet region
-          //     n^i is defined as the normal from the current sheet, which lies in the 
-          //     xy-plane (z=0). So n = (0,0,1) 
+          //     n^i is defined as the normal from the current sheet, which lies in the
+          //     xy-plane (z=0). So n = (0,0,1)
 #ifdef APPLY_GRFFE_FIXES
           if(current_sheet_null_v) {
             if (fabs(xx2) <= (4.0 + 1.0e-2)*dz ) {
               //ValenciavU2L = 0.0;
               ValenciavU2L = - (ValenciavU0L*gxzL + ValenciavU1L*gyzL) / gzzL;
-                // FIXME: This is probably not right, but also definitely not the problem. 
-            
+                // FIXME: This is probably not right, but also definitely not the problem.
+
               // ValenciavU2L reset: TYPICALLY WOULD RESET CONSERVATIVES TO BE CONSISTENT. LET'S NOT DO THAT, TO AVOID MESSING UP B-FIELDS
 
               if(1==1) {
@@ -228,8 +228,8 @@ void GiRaFFE_NRPy_conserv_to_prims_FFE(const int Nxx[3],const int Nxx_plus_2NGHO
           }
 #endif
           aux_gfs[IDX4pt(VALENCIAVU0GF, index)] = ValenciavU0L;
-          aux_gfs[IDX4pt(VALENCIAVU1GF, index)] = ValenciavU1L;      
-          aux_gfs[IDX4pt(VALENCIAVU2GF, index)] = ValenciavU2L;      
+          aux_gfs[IDX4pt(VALENCIAVU1GF, index)] = ValenciavU1L;
+          aux_gfs[IDX4pt(VALENCIAVU2GF, index)] = ValenciavU2L;
           //Now we compute the difference between original & new conservatives, for diagnostic purposes:
           //error_int_numer += fabs(StildeD0L - StildeD0_orig) + fabs(StildeD1L - StildeD1_orig) + fabs(StildeD2L - StildeD2_orig);
           //error_int_denom += fabs(StildeD0_orig) + fabs(StildeD1_orig) + fabs(StildeD2_orig);
@@ -240,7 +240,7 @@ void GiRaFFE_NRPy_conserv_to_prims_FFE(const int Nxx[3],const int Nxx_plus_2NGHO
           */
             error_int_numer += fabs(ValenciavU0L - ValenciavU0_orig) + fabs(ValenciavU1L - ValenciavU1_orig) + fabs(ValenciavU2L - ValenciavU2_orig);
             error_int_denom += fabs(ValenciavU0_orig) + fabs(ValenciavU1_orig) + fabs(ValenciavU2_orig);
-          
+
 
 
           in_gfs[IDX4pt(STILDED0GF, index)] = StildeD0L;

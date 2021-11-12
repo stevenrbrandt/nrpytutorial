@@ -14,36 +14,40 @@
 # Wikipedia also has an article on Spin-Weighted Spherical Hamronics:
 #   https://en.wikipedia.org/w/index.php?title=Spin-weighted_spherical_harmonics&oldid=853425244
 
-# Step 1: Initialize needed Python/NRPy+ modules 
-from outputC import *             # NRPy+: Core C code output module
+# Step 1: Initialize needed Python/NRPy+ modules
+from outputC import outputC       # NRPy+: Core C code output module
 import sympy as sp                # SymPy: The Python computer algebra package upon which NRPy+ depends
 import os                         # Python built-in: Multiplatform operating system functions
 
+# Step 2: Defining the Goldberg function
+
+# Step 2.a: Declare SymPy symbols:
+th, ph = sp.symbols('th ph', real=True)
+
+# Step 2.b: Define the Goldberg formula for spin-weighted spherical harmonics
+#           (https://aip.scitation.org/doi/10.1063/1.1705135);
+#           referenced & described in Wikipedia Spin-weighted spherical harmonics article:
+#           https://en.wikipedia.org/w/index.php?title=Spin-weighted_spherical_harmonics&oldid=853425244
+def Y(s, l, m, th, ph, GenerateMathematicaCode=False):
+    Sum = 0
+    for r in range(l - s + 1):
+        if GenerateMathematicaCode == True:
+            # Mathematica needs expression to be in terms of cotangent, so that code validation below
+            #    yields identity with existing Mathematica notebook on spin-weighted spherical harmonics.
+            Sum += sp.binomial(l - s, r) * sp.binomial(l + s, r + s - m) * (-1) ** (l - r - s) * sp.exp(
+                sp.I * m * ph) * sp.cot(th / 2) ** (2 * r + s - m)
+        else:
+            # SymPy C code generation cannot handle the cotangent function, so define cot(th/2) as 1/tan(th/2):
+            Sum += sp.binomial(l - s, r) * sp.binomial(l + s, r + s - m) * (-1) ** (l - r - s) * sp.exp(
+                sp.I * m * ph) / sp.tan(th / 2) ** (2 * r + s - m)
+
+    return (-1) ** m * sp.simplify(sp.sqrt(sp.factorial(l + m) * sp.factorial(l - m) * (2 * l + 1) / (
+                4 * sp.pi * sp.factorial(l + s) * sp.factorial(l - s))) * sp.sin(th / 2) ** (2 * l) * Sum)
+
+
 def SpinWeight_minus2_SphHarmonics(maximum_l=8,filename=os.path.join("SpinWeight_minus2_SphHarmonics","SpinWeight_minus2_SphHarmonics.h")):
-    # Step 2: Defining the Goldberg function
 
-    # Step 2.a: Declare SymPy symbols:
-    th, ph = sp.symbols('th ph',real=True)
-    m = sp.symbols('m', integer=True)
-
-    # Step 2.b: Define the Goldberg formula for spin-weighted spherical harmonics
-    #           (https://aip.scitation.org/doi/10.1063/1.1705135);
-    #           referenced & described in Wikipedia Spin-weighted spherical harmonics article:
-    #           https://en.wikipedia.org/w/index.php?title=Spin-weighted_spherical_harmonics&oldid=853425244
-    def Y(s, l, m, th, ph, GenerateMathematicaCode=False):
-        Sum = 0
-        for r in range(l-s + 1):
-            if GenerateMathematicaCode == True:
-                # Mathematica needs expression to be in terms of cotangent, so that code validation below
-                #    yields identity with existing Mathematica notebook on spin-weighted spherical harmonics.
-                Sum +=  sp.binomial(l-s, r)*sp.binomial(l+s, r+s-m)*(-1)**(l-r-s)*sp.exp(sp.I*m*ph)*sp.cot(th/2)**(2*r+s-m)
-            else:
-                # SymPy C code generation cannot handle the cotangent function, so define cot(th/2) as 1/tan(th/2):
-                Sum +=  sp.binomial(l-s, r)*sp.binomial(l+s, r+s-m)*(-1)**(l-r-s)*sp.exp(sp.I*m*ph)/sp.tan(th/2)**(2*r+s-m)
-
-        return (-1)**m*sp.simplify(sp.sqrt(sp.factorial(l+m)*sp.factorial(l-m)*(2*l+1)/(4*sp.pi*sp.factorial(l+s)*sp.factorial(l-s)))*sp.sin(th/2)**(2*l)*Sum)
-
-    # Step 3: (DISABLED FOR NOW; PASSES TEST). 
+    # Step 3: (DISABLED FOR NOW; PASSES TEST).
     #         Code Validation against Mathematica notebook:
     #         https://demonstrations.wolfram.com/versions/source.jsp?id=SpinWeightedSphericalHarmonics&version=0012
 
@@ -55,9 +59,9 @@ def SpinWeight_minus2_SphHarmonics(maximum_l=8,filename=os.path.join("SpinWeight
     #     print("FullSimplify[Y[-2, "+str(l)+", m, th, ph]-("+
     #           str(sp.mathematica_code(sp.simplify(Y(-2, l, m, th, ph, GenerateMathematicaCode=True)))).replace("binomial","Binomial").replace("factorial","Factorial")+")] \n")
 
-    
-    # Step 4: Generating C Code function for computing 
-    #         s=-2 spin-weighted spherical harmonics, 
+
+    # Step 4: Generating C Code function for computing
+    #         s=-2 spin-weighted spherical harmonics,
     #         using NRPy+'s outputC() function.
 
     outCparams = "preindent=3,outCfileaccess=a,outCverbose=False,includebraces=True"
