@@ -7,15 +7,24 @@ if nrpy_dir_path not in sys.path:
 
 import cmdline_helper as cmd     # NRPy+: Multi-platform Python command-line interface
 Ccodesdir = "GiRaFFE_standalone_Ccodes/RHSs"
-cmd.mkdir(os.path.join(Ccodesdir))
 
 from outputC import outputC, outC_function_outdir_dict, outC_function_dict, outC_function_prototype_dict # NRPy+: Core C code output module
 import sympy as sp               # SymPy: The Python computer algebra package upon which NRPy+ depends
 import indexedexp as ixp         # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
 import GiRaFFE_NRPy.GiRaFFE_NRPy_Characteristic_Speeds as chsp
 
-name = "calculate_E_field_flat_all_in_one.h"
-prototype = "REAL HLLE_solve(REAL F0B1_r, REAL F0B1_l, REAL U_r, REAL U_l, REAL cmin, REAL cmax)"
+name = "calculate_E_field_flat_all_in_one"
+prototype = """void calculate_E_field_flat_all_in_one(const paramstruct *params,
+                                       const REAL *Vr0,const REAL *Vr1,
+                                       const REAL *Vl0,const REAL *Vl1,
+                                       const REAL *Br0,const REAL *Br1,
+                                       const REAL *Bl0,const REAL *Bl1,
+                                       const REAL *Brflux_dirn,
+                                       const REAL *Blflux_dirn,
+                                       const REAL *gamma_faceDD00, const REAL *gamma_faceDD01, const REAL *gamma_faceDD02,
+                                       const REAL *gamma_faceDD11, const REAL *gamma_faceDD12, const REAL *gamma_faceDD22,
+                                       const REAL *beta_faceU0, const REAL *beta_faceU1, const REAL *alpha_face,
+                                       REAL *A2_rhs,const REAL SIGN,const int flux_dirn);"""
 body = r"""void find_cmax_cmin(const REAL gammaDD00, const REAL gammaDD01, const REAL gammaDD02,
                     const REAL gammaDD11, const REAL gammaDD12, const REAL gammaDD22,
                     const REAL betaUi, const REAL alpha, const int flux_dirn,
@@ -243,7 +252,7 @@ def GiRaFFE_NRPy_Afield_flux(Ccodesdir):
         with open(os.path.join(Ccodesdir,"compute_cmax_cmin_dirn"+str(flux_dirn)+".h"),"w") as file:
             file.write(Ccode_kernel)
 
-    with open(os.path.join(Ccodesdir,"calculate_E_field_flat_all_in_one.h"),"w") as file:
+    with open(os.path.join(Ccodesdir,name+".h"),"w") as file:
         file.write(body)
 
 includes = """#include "NRPy_basic_defines.h"

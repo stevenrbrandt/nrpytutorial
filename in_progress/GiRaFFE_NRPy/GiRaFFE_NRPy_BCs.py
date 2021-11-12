@@ -216,7 +216,7 @@ def GiRaFFE_NRPy_BCs(Ccodesdir):
     with open(os.path.join(Ccodesdir,name),"w") as file:
         file.write(body)
 
-potential_name = "apply_bcs_potential.h"
+potential_name = "apply_bcs_potential"
 potential_prototype = "void apply_bcs_potential(const paramstruct *restrict params,REAL *gfs);"
 potential_body = """// Basic extrapolation boundary conditions
 #define  FACE_UPDATE(which_gf, i0min,i0max, i1min,i1max, i2min,i2max, FACEX0,FACEX1,FACEX2) \\
@@ -225,7 +225,7 @@ potential_body = """// Basic extrapolation boundary conditions
           +2.0*gfs[IDX4S(which_gf,i0+1*FACEX0,i1+1*FACEX1,i2+1*FACEX2)]  \\
           -1.0*gfs[IDX4S(which_gf,i0+2*FACEX0,i1+2*FACEX1,i2+2*FACEX2)]; \\
       }
-//          +1.0*gfs[IDX4S(which_gf,i0+3*FACEX0,i1+3*FACEX1,i2+3*FACEX2)]; \\
+/*          +1.0*gfs[IDX4S(which_gf,i0+3*FACEX0,i1+3*FACEX1,i2+3*FACEX2)]; \\*/
 
 // Basic Copy boundary conditions
 #define  FACE_UPDATE_COPY(which_gf, i0min,i0max, i1min,i1max, i2min,i2max, FACEX0,FACEX1,FACEX2) \\
@@ -277,7 +277,7 @@ void apply_bcs_potential(const paramstruct *restrict params,REAL *gfs) {
     }*/
 }"""
 
-velocity_name = "apply_bcs_velocity.h"
+velocity_name = "apply_bcs_velocity"
 velocity_prototype = "void apply_bcs_velocity(const paramstruct *restrict params,REAL *aux_gfs);"
 velocity_body = """// This macro acts differently in that it acts on an entire 3-vector of gfs, instead of 1.
 // which_gf_0 corresponds to the zeroth component of that vector. The if statements only

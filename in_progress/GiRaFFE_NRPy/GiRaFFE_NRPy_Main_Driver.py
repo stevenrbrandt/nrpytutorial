@@ -216,7 +216,7 @@ const int NUM_RECONSTRUCT_GFS = 6;
 #include "RHSs/calculate_StildeD0_source_term.h"
 #include "RHSs/calculate_StildeD1_source_term.h"
 #include "RHSs/calculate_StildeD2_source_term.h"
-#include "../calculate_E_field_flat_all_in_one.h"
+#include "RHSs/calculate_E_field_flat_all_in_one.h"
 #include "RHSs/calculate_Stilde_flux_D0.h"
 #include "RHSs/calculate_Stilde_flux_D1.h"
 #include "RHSs/calculate_Stilde_flux_D2.h"
@@ -362,6 +362,9 @@ void GiRaFFE_NRPy_RHSs(const paramstruct *restrict params,REAL *restrict auxevol
               &auxevol_gfs[IDX4ptS(B_LU0GF        +(flux_dirn)%3, 0)],&auxevol_gfs[IDX4ptS(B_LU0GF        +(flux_dirn-count+2)%3, 0)],
               &auxevol_gfs[IDX4ptS(B_RU0GF        +(flux_dirn-count+2)%3, 0)],
               &auxevol_gfs[IDX4ptS(B_LU0GF        +(flux_dirn-count+2)%3, 0)],
+              &auxevol_gfs[IDX4ptS(GAMMA_FACEDD00GF,0)],&auxevol_gfs[IDX4ptS(GAMMA_FACEDD01GF,0)],&auxevol_gfs[IDX4ptS(GAMMA_FACEDD02GF,0)],
+              &auxevol_gfs[IDX4ptS(GAMMA_FACEDD11GF,0)],&auxevol_gfs[IDX4ptS(GAMMA_FACEDD12GF,0)],&auxevol_gfs[IDX4ptS(GAMMA_FACEDD22GF,0)],
+              &auxevol_gfs[IDX4ptS(BETA_FACEU0GF+flux_dirn,0)],&auxevol_gfs[IDX4ptS(BETA_FACEU0GF+(flux_dirn-count+2)%3,0)],&auxevol_gfs[IDX4ptS(ALPHA_FACEGF,0)],
               &rhs_gfs[IDX4ptS(AD0GF+(flux_dirn+1+count)%3,0)], 2.0*((REAL)count)-1.0, flux_dirn);
         }
     }

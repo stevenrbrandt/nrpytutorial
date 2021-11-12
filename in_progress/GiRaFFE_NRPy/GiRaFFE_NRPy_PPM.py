@@ -6,8 +6,8 @@ nrpy_dir_path = os.path.join("..")
 if nrpy_dir_path not in sys.path:
     sys.path.append(nrpy_dir_path)
 
-name = "reconstruct_set_of_prims_PPM_GRFFE_NRPy.c"
-prototype = """static void reconstruct_set_of_prims_PPM_GRFFE_NRPy(const paramstruct *params,REAL *auxevol_gfs,const int flux_dirn,
+name = "reconstruct_set_of_prims_PPM_GRFFE_NRPy"
+prototype = """void reconstruct_set_of_prims_PPM_GRFFE_NRPy(const paramstruct *params,REAL *auxevol_gfs,const int flux_dirn,
                                                const int num_prims_to_reconstruct,const int *which_prims_to_reconstruct,
                                                const gf_and_gz_struct *in_prims,gf_and_gz_struct *out_prims_r,
                                                gf_and_gz_struct *out_prims_l,REAL *temporary);"""
@@ -45,7 +45,7 @@ static inline REAL slope_limit_NRPy(const REAL *dU,const REAL *dUp1);
 static inline void monotonize_NRPy(const REAL *U,REAL *Ur,REAL *Ul);
 
 
-static void reconstruct_set_of_prims_PPM_GRFFE_NRPy(const paramstruct *params,REAL *auxevol_gfs,const int flux_dirn,
+void reconstruct_set_of_prims_PPM_GRFFE_NRPy(const paramstruct *params,REAL *auxevol_gfs,const int flux_dirn,
                                                const int num_prims_to_reconstruct,const int *which_prims_to_reconstruct,
                                                const gf_and_gz_struct *in_prims,gf_and_gz_struct *out_prims_r,
                                                gf_and_gz_struct *out_prims_l,REAL *temporary) {
@@ -271,7 +271,7 @@ loops_body = """#ifndef loop_defines_reconstruction_NRPy_H_
 def GiRaFFE_NRPy_PPM(Ccodesdir):
     cmd.mkdir(Ccodesdir)
     # Write out the code to a file.
-    with open(os.path.join(Ccodesdir,name),"w") as file:
+    with open(os.path.join(Ccodesdir,name+".c"),"w") as file:
         file.write(body_a+kronecker_code+body_b)
 
     with open(os.path.join(Ccodesdir,loops_name),"w") as file:
