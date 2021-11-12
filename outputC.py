@@ -594,13 +594,13 @@ CFLAGS = """ + CHOSEN_CFLAGS + """
                 Makefile.write(dep + "\n")
                 Makefile.write(compile_list[idx] + "\n\n")
             Makefile.write(exec_name + ": " + all_str.replace(exec_name, "") + "\n")
-            Makefile.write("\t$(CC) $(CFLAGS) main.c " + all_str.replace(exec_name, "").replace("main.o", "") + " -o " + exec_name + linked_libraries + "\n")
+            Makefile.write("\t$(CC) $(CFLAGS) " + all_str.replace(exec_name, "") + " -o " + exec_name + linked_libraries + "\n")
             Makefile.write("\nclean:\n\trm -f *.o */*.o *~ */*~ ./#* *.txt *.dat *.avi *.png " + exec_name + "\n")
     else:
         with open(os.path.join(Ccodesrootdir, "backup_script_nomake.sh"), "w") as backup:
             for compile_line in compile_list:
                 backup.write(compile_line.replace("$(CC)", CC).replace("$(CFLAGS)", CFLAGS).replace("\t", "") + "\n")
-            backup.write(CC + " " + CFLAGS + " main.c " + all_str.replace(exec_name, "").replace("main.o", "") + " -o " + exec_name + linked_libraries + "\n")
+            backup.write(CC + " " + CFLAGS + " " + all_str.replace(exec_name, "") + " -o " + exec_name + linked_libraries + "\n")
         os.chmod(os.path.join(Ccodesrootdir, "backup_script_nomake.sh"), stat.S_IRWXU)
 
 
