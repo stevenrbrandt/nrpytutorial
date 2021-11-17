@@ -604,7 +604,10 @@ CFLAGS = """ + CHOSEN_CFLAGS + """
         os.chmod(os.path.join(Ccodesrootdir, "backup_script_nomake.sh"), stat.S_IRWXU)
 
 
-def construct_NRPy_basic_defines_h(Ccodesrootdir, enable_SIMD=False, supplemental_dict={}):
+def construct_NRPy_basic_defines_h(Ccodesrootdir, enable_SIMD=False, supplemental_dict=None):
+    if supplemental_dict is None:
+        supplemental_dict = {}
+
     if not os.path.isdir(Ccodesrootdir):
         print("Error (in construct_NRPy_basic_defines_h): Directory \"" + Ccodesrootdir + "\" does not exist.")
         sys.exit(1)
