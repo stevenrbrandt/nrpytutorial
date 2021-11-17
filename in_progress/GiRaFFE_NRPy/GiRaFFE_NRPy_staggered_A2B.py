@@ -9,11 +9,12 @@ import cmdline_helper as cmd     # NRPy+: Multi-platform Python command-line int
 Ccodesdir = "GiRaFFE_standalone_Ccodes/A2B"
 cmd.mkdir(os.path.join(Ccodesdir))
 
-def GiRaFFE_NRPy_A2B(Ccodesdir):
-    cmd.mkdir(Ccodesdir)
-    # Write out the code to a file.
-    with open(os.path.join(Ccodesdir,"compute_B_and_Bstagger_from_A.h"),"w") as file:
-        file.write(r"""#define LOOP_DEFINE_SIMPLE                      \
+name = "GiRaFFE_compute_B_and_Bstagger_from_A"
+prototype = """void GiRaFFE_compute_B_and_Bstagger_from_A(const paramstruct *params,
+                                           const REAL *gxx, const REAL *gxy, const REAL *gxz, const REAL *gyy, const REAL *gyz,const REAL *gzz,
+                                           REAL *psi3_bssn, const REAL *Ax, const REAL *Ay, const REAL *Az,
+                                           REAL *Bx, REAL *By, REAL *Bz, REAL *Bx_stagger, REAL *By_stagger, REAL *Bz_stagger);"""
+body = r"""#define LOOP_DEFINE_SIMPLE                      \
   _Pragma("omp parallel for")                   \
   for(int k=0;k<Nxx_plus_2NGHOSTS2;k++)                \
     for(int j=0;j<Nxx_plus_2NGHOSTS1;j++)              \
@@ -156,4 +157,19 @@ void GiRaFFE_compute_B_and_Bstagger_from_A(const paramstruct *params,
     Bz[actual_index] = 0.5 * ( Bz_stagger[index] + Bz_stagger[indexkm1] );
   }
 }
-""")
+"""
+
+def GiRaFFE_NRPy_A2B(Ccodesdir):
+    cmd.mkdir(Ccodesdir)
+    # Write out the code to a file.
+    with open(os.path.join(Ccodesdir,"compute_B_and_Bstagger_from_A.h"),"w") as file:
+        file.write(body)
+
+includes = """#include "NRPy_basic_defines.h"
+#include "GiRaFFE_basic_defines.h"
+"""
+
+def add_to_Cfunction_dict__GiRaFFE_NRPy_staggered_A2B():
+    outC_function_outdir_dict[name] = "default"
+    outC_function_dict[name] = includes+body.replace("../set_Cparameters.h","set_Cparameters.h")
+    outC_function_prototype_dict[name] = prototype

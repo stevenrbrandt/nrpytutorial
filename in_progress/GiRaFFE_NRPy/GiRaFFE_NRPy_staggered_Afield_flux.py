@@ -9,11 +9,10 @@ import cmdline_helper as cmd     # NRPy+: Multi-platform Python command-line int
 Ccodesdir = "GiRaFFE_standalone_Ccodes/RHSs"
 cmd.mkdir(os.path.join(Ccodesdir))
 
-def GiRaFFE_NRPy_Afield_flux(Ccodesdir):
-    cmd.mkdir(Ccodesdir)
-    # Write out the code to a file.
-    with open(os.path.join(Ccodesdir,"A_i_rhs_no_gauge_terms.h"),"w") as file:
-        file.write(r"""/* Compute the part of A_i_rhs that excludes the gauge terms. I.e., we set
+name = "A_i_rhs_no_gauge_terms"
+prototype = """static void A_i_rhs_no_gauge_terms(const int A_dirn,const paramstruct *params,gf_and_gz_struct *out_prims_r,gf_and_gz_struct *out_prims_l,
+                                   REAL *psi6_pointer,REAL *cmax_1,REAL *cmin_1,REAL *cmax_2,REAL *cmin_2, REAL *A3_rhs);"""
+body = r"""/* Compute the part of A_i_rhs that excludes the gauge terms. I.e., we set
  *   A_i_rhs = \partial_t A_i = \psi^{6} (v^z B^x - v^x B^z)   here.
  */
 static void A_i_rhs_no_gauge_terms(const int A_dirn,const paramstruct *params,gf_and_gz_struct *out_prims_r,gf_and_gz_struct *out_prims_l,
@@ -115,4 +114,19 @@ static void A_i_rhs_no_gauge_terms(const int A_dirn,const paramstruct *params,gf
           + cmax_2L*cmin_2L*(B1tilder_minus_B1tildel)/(cmax_2L+cmin_2L);
       }
 }
-""")
+"""
+
+def GiRaFFE_NRPy_Afield_flux(Ccodesdir):
+    cmd.mkdir(Ccodesdir)
+    # Write out the code to a file.
+    with open(os.path.join(Ccodesdir,"A_i_rhs_no_gauge_terms.h"),"w") as file:
+        file.write(body)
+
+includes = """#include "NRPy_basic_defines.h"
+#include "GiRaFFE_basic_defines.h"
+"""
+
+def add_to_Cfunction_dict__GiRaFFE_NRPy_staggered_Afield_flux():
+    outC_function_outdir_dict[name] = "default"
+    outC_function_dict[name] = includes+body.replace("../set_Cparameters.h","set_Cparameters.h")
+    outC_function_prototype_dict[name] = prototype

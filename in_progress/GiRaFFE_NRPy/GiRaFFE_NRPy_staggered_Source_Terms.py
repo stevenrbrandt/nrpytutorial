@@ -9,11 +9,15 @@ import cmdline_helper as cmd     # NRPy+: Multi-platform Python command-line int
 Ccodesdir = "GiRaFFE_standalone_Ccodes/RHSs"
 cmd.mkdir(os.path.join(Ccodesdir))
 
-def GiRaFFE_NRPy_Source_Terms(Ccodesdir):
-    cmd.mkdir(Ccodesdir)
-    # Write out the code to a file.
-    with open(os.path.join(Ccodesdir,"Lorenz_psi6phi_rhs__add_gauge_terms_to_A_i_rhs.h"),"w") as file:
-        file.write("""static inline REAL avg(const REAL f[PLUS2+1][PLUS2+1][PLUS2+1],const int imin,const int imax, const int jmin,const int jmax, const int kmin,const int kmax);
+name = "Lorenz_psi6phi_rhs__add_gauge_terms_to_A_i_rhs"
+prototype = """static void Lorenz_psi6phi_rhs__add_gauge_terms_to_A_i_rhs(const paramstruct *params,REAL **in_vars,const REAL *psi6phi,
+                                                           /* TEMPS: */
+                                                           REAL *shiftx_iphjphkph,REAL *shifty_iphjphkph,REAL *shiftz_iphjphkph,
+                                                           REAL *alpha_iphjphkph,REAL *alpha_Phi_minus_betaj_A_j_iphjphkph,REAL *alpha_sqrtg_Ax_interp,
+                                                           REAL *alpha_sqrtg_Ay_interp,REAL *alpha_sqrtg_Az_interp,
+                                                           /* END TEMPS, 8 total! */
+                                                           REAL *psi6phi_rhs,REAL *Ax_rhs,REAL *Ay_rhs,REAL *Az_rhs)"""
+body = """static inline REAL avg(const REAL f[PLUS2+1][PLUS2+1][PLUS2+1],const int imin,const int imax, const int jmin,const int jmax, const int kmin,const int kmax);
 
 #define MINUS2 0
 #define MINUS1 1
@@ -291,4 +295,19 @@ static inline REAL avg(const REAL f[PLUS2+1][PLUS2+1][PLUS2+1],const int imin,co
       }
   return retval/num_in_sum;
 }
-""")
+"""
+
+def GiRaFFE_NRPy_Source_Terms(Ccodesdir):
+    cmd.mkdir(Ccodesdir)
+    # Write out the code to a file.
+    with open(os.path.join(Ccodesdir,"Lorenz_psi6phi_rhs__add_gauge_terms_to_A_i_rhs.h"),"w") as file:
+        file.write(body)
+
+includes = """#include "NRPy_basic_defines.h"
+#include "GiRaFFE_basic_defines.h"
+"""
+
+def add_to_Cfunction_dict__GiRaFFE_NRPy_staggered_Source_Terms():
+    outC_function_outdir_dict[name] = "default"
+    outC_function_dict[name] = includes+body.replace("../set_Cparameters.h","set_Cparameters.h")
+    outC_function_prototype_dict[name] = prototype
