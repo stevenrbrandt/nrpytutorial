@@ -99,7 +99,10 @@ def Convert_Spherical_or_Cartesian_ADM_to_BSSN_curvilinear(CoordType_in, Sph_r_t
     Jac_dUSphorCart_dDrfmUD = ixp.zerorank2()
     for i in range(DIM):
         for j in range(DIM):
-            Jac_dUSphorCart_dDrfmUD[i][j] = sp.diff(r_th_ph_or_Cart_xyz_of_xx[i],rfm.xx[j])
+            # Converting UIUCBlackHole ID to Cartesian coords takes 66.8s if the following isn't simplified:
+            # Jac_dUSphorCart_dDrfmUD[i][j] = sp.diff(r_th_ph_or_Cart_xyz_of_xx[i],rfm.xx[j])
+            # ... but when we simplify each term, the total conversion time is reduced to 60.93s
+            Jac_dUSphorCart_dDrfmUD[i][j] = sp.simplify(sp.diff(r_th_ph_or_Cart_xyz_of_xx[i],rfm.xx[j]))
 
     Jac_dUrfm_dDSphorCartUD, dummyDET = ixp.generic_matrix_inverter3x3(Jac_dUSphorCart_dDrfmUD)
 
