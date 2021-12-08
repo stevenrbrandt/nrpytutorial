@@ -379,6 +379,7 @@ def RicciBar__gammabarDD_dHatD__DGammaUDD__DGammaU():
     if par.parval_from_str(thismodule + "::LeaveRicciSymbolic") == "True":
         for i in range(len(gri.glb_gridfcs_list)):
             if "RbarDD00" in gri.glb_gridfcs_list[i].name:
+                RbarDD = ixp.declarerank2("RbarDD", "sym01")
                 return
 
         RbarDD = ixp.register_gridfunctions_for_single_rank2("AUXEVOL", "RbarDD", "sym01")
