@@ -59,7 +59,7 @@ def print_msg_with_timing(desc, msg="Symbolic", startstop="start", starttime=0.0
 
 
 # get_loopopts() sets up options for NRPy+'s loop module
-def get_loopopts(points_to_update, enable_SIMD, enable_rfm_precompute, gridsuffix, OMP_pragma_on, enable_xxs=True):
+def get_loopopts(points_to_update, enable_SIMD, enable_rfm_precompute, OMP_pragma_on, enable_xxs=True):
     loopopts = points_to_update
     if enable_SIMD:
         loopopts += ",enable_SIMD"
@@ -69,8 +69,6 @@ def get_loopopts(points_to_update, enable_SIMD, enable_rfm_precompute, gridsuffi
         pass
     else:
         loopopts += ",Read_xxs"
-    if gridsuffix != "":
-        loopopts += ","+gridsuffix.replace("_", "")
     if OMP_pragma_on != "i2":
         loopopts += ",pragma_on_"+OMP_pragma_on
     return loopopts
@@ -198,8 +196,6 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
                                    LapseCondition="OnePlusLog", ShiftCondition="GammaDriving2ndOrder_Covariant",
                                    enable_KreissOliger_dissipation=False, enable_stress_energy_source_terms=False,
                                    leave_Ricci_symbolic=True, OMP_pragma_on="i2"):
-    gridsuffix = par.parval_from_str("grid::current_gridsuffix")
-
     if includes is None:
         includes = []
     if enable_SIMD:
@@ -210,12 +206,12 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
 
     # Set up the C function for the BSSN RHSs
     desc = "Evaluate the BSSN RHSs"
-    name = "rhs_eval" + gridsuffix
+    name = "rhs_eval"
     params = "const paramstruct *restrict params, "
     if enable_rfm_precompute:
-        params += "const rfm_struct" + gridsuffix + " *restrict rfmstruct, "
+        params += "const rfm_struct *restrict rfmstruct, "
     else:
-        params += "REAL *xx" + gridsuffix + "[3], "
+        params += "REAL *xx[3], "
     params += """
               const REAL *restrict auxevol_gfs,const REAL *restrict in_gfs,REAL *restrict rhs_gfs"""
 
@@ -230,10 +226,8 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
 
     FD_outCparams = "outCverbose=False,enable_SIMD=" + str(enable_SIMD)
     FD_outCparams += ",GoldenKernelsEnable=" + str(enable_golden_kernels)
-    if gridsuffix != "":
-        FD_outCparams += ",gridsuffix=" + gridsuffix
 
-    loopopts = get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, gridsuffix, OMP_pragma_on)
+    loopopts = get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, OMP_pragma_on)
     FDorder = par.parval_from_str("finite_difference::FD_CENTDERIVS_ORDER")
     if enable_split_for_optimizations_doesnt_help and FDorder == 6:
         loopopts += ",DisableOpenMP"
@@ -305,7 +299,6 @@ def Ricci__generate_symbolic_expressions():
                              lhrh(lhs=gri.gfaccess("auxevol_gfs", "RbarDD12"), rhs=Bq.RbarDD[1][2]),
                              lhrh(lhs=gri.gfaccess("auxevol_gfs", "RbarDD22"), rhs=Bq.RbarDD[2][2])]
     print_msg_with_timing("3-Ricci tensor", msg="Symbolic", startstop="stop", starttime=starttime)
-
     return Ricci_SymbExpressions
 
 
@@ -313,8 +306,6 @@ def Ricci__generate_symbolic_expressions():
 def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."),
                                      enable_rfm_precompute=True, enable_golden_kernels=False, enable_SIMD=True,
                                      enable_split_for_optimizations_doesnt_help=False, OMP_pragma_on="i2"):
-    gridsuffix = par.parval_from_str("grid::current_gridsuffix")
-
     if includes is None:
         includes = []
     if enable_SIMD:
@@ -325,22 +316,20 @@ def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.
 
     # Set up the C function for the 3-Ricci tensor
     desc = "Evaluate the 3-Ricci tensor"
-    name = "Ricci_eval" + gridsuffix
+    name = "Ricci_eval"
     params = "const paramstruct *restrict params, "
     if enable_rfm_precompute:
-        params += "const rfm_struct" + gridsuffix + " *restrict rfmstruct, "
+        params += "const rfm_struct *restrict rfmstruct, "
     else:
-        params += "REAL *xx" + gridsuffix + "[3], "
+        params += "REAL *xx[3], "
     params += "const REAL *restrict in_gfs, REAL *restrict auxevol_gfs"
 
     # Construct body:
     Ricci_SymbExpressions = Ricci__generate_symbolic_expressions()
     FD_outCparams = "outCverbose=False,enable_SIMD=" + str(enable_SIMD)
     FD_outCparams += ",GoldenKernelsEnable=" + str(enable_golden_kernels)
-    if gridsuffix != "":
-        FD_outCparams += ",gridsuffix="+gridsuffix
     starttime = print_msg_with_timing("3-Ricci tensor", msg="Ccodegen", startstop="start")
-    loopopts = get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, gridsuffix, OMP_pragma_on)
+    loopopts = get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, OMP_pragma_on)
     preloop = ""
     FDorder = par.parval_from_str("finite_difference::FD_CENTDERIVS_ORDER")
     if enable_split_for_optimizations_doesnt_help and FDorder >= 8:
@@ -416,9 +405,6 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
                                            enable_rfm_precompute=True, enable_golden_kernels=False, enable_SIMD=True,
                                            enable_stress_energy_source_terms=False,
                                            output_H_only=False, OMP_pragma_on="i2"):
-
-    gridsuffix = par.parval_from_str("grid::current_gridsuffix")
-
     if includes is None:
         includes = []
     if enable_SIMD:
@@ -429,12 +415,12 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
 
     # Set up the C function for the BSSN constraints
     desc = "Evaluate the BSSN constraints"
-    name = "BSSN_constraints" + gridsuffix
+    name = "BSSN_constraints"
     params = "const paramstruct *restrict params, "
     if enable_rfm_precompute:
-        params += "const rfm_struct" + gridsuffix + " *restrict rfmstruct, "
+        params += "const rfm_struct *restrict rfmstruct, "
     else:
-        params += "REAL *xx" + gridsuffix + "[3], "
+        params += "REAL *xx[3], "
     params += """
                  const REAL *restrict in_gfs, const REAL *restrict auxevol_gfs, REAL *restrict aux_gfs"""
 
@@ -444,8 +430,6 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
 
     FD_outCparams = "outCverbose=False,enable_SIMD=" + str(enable_SIMD)
     FD_outCparams += ",GoldenKernelsEnable=" + str(enable_golden_kernels)
-    if gridsuffix != "":
-        FD_outCparams += ",gridsuffix="+gridsuffix
     starttime = print_msg_with_timing("BSSN constraints", msg="Ccodegen", startstop="start")
     body = fin.FD_outputC("returnstring", BSSN_constraints_SymbExpressions,
                           params=FD_outCparams)
@@ -456,7 +440,7 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
         desc=desc,
         name=name, params=params,
         body=body,
-        loopopts=get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, gridsuffix, OMP_pragma_on),
+        loopopts=get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, OMP_pragma_on),
         rel_path_to_Cparams=rel_path_to_Cparams)
     return pickle_NRPy_env()
 
@@ -466,8 +450,6 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
                                                          enable_rfm_precompute=True, enable_golden_kernels=False,
                                                          OMP_pragma_on="i2"):
     # This function disables SIMD, as it includes cbrt() and abs() functions.
-    gridsuffix = par.parval_from_str("grid::current_gridsuffix")
-
     if includes is None:
         includes = []
     enable_FD_functions = bool(par.parval_from_str("finite_difference::enable_FD_functions"))
@@ -476,12 +458,12 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
 
     # Set up the C function for enforcing the det(gammabar) = det(gammahat) BSSN algebraic constraint
     desc = "Enforce the det(gammabar) = det(gammahat) (algebraic) constraint"
-    name = "enforce_detgammahat_constraint" + gridsuffix
+    name = "enforce_detgammahat_constraint"
     params = "const paramstruct *restrict params, "
     if enable_rfm_precompute:
-        params += "const rfm_struct" + gridsuffix + " *restrict rfmstruct, "
+        params += "const rfm_struct *restrict rfmstruct, "
     else:
-        params += "REAL *xx" + gridsuffix + "[3], "
+        params += "REAL *xx[3], "
     params += "REAL *restrict in_gfs"
 
     # Construct body:
@@ -489,8 +471,6 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
 
     FD_outCparams = "outCverbose=False,enable_SIMD=False"
     FD_outCparams += ",GoldenKernelsEnable=" + str(enable_golden_kernels)
-    if gridsuffix != "":
-        FD_outCparams += ",gridsuffix="+gridsuffix
     starttime = print_msg_with_timing("Enforcing det(gammabar)=det(gammahat) constraint", msg="Ccodegen", startstop="start")
     body = fin.FD_outputC("returnstring", enforce_detg_constraint_symb_expressions,
                           params=FD_outCparams)
@@ -502,7 +482,7 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
         desc=desc,
         name=name, params=params,
         body=body,
-        loopopts=get_loopopts("AllPoints", enable_SIMD, enable_rfm_precompute, gridsuffix, OMP_pragma_on),
+        loopopts=get_loopopts("AllPoints", enable_SIMD, enable_rfm_precompute, OMP_pragma_on),
         rel_path_to_Cparams=rel_path_to_Cparams)
     return pickle_NRPy_env()
 
@@ -511,8 +491,6 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
 #   it in 3 parts: psi4_part0, psi4_part1, and psi4_part2
 def add_psi4_part_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."), whichpart=0,
                                     setPsi4tozero=False, OMP_pragma_on="i2"):
-    gridsuffix = par.parval_from_str("grid::current_gridsuffix")
-
     starttime = print_msg_with_timing("psi4, part " + str(whichpart), msg="Ccodegen", startstop="start")
 
     # Set up the C function for psi4
@@ -521,14 +499,12 @@ def add_psi4_part_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.j
     includes += ["NRPy_function_prototypes.h"]
 
     desc = "Compute psi4 at all interior gridpoints, part " + str(whichpart)
-    name = "psi4_part" + str(whichpart) + gridsuffix
+    name = "psi4_part" + str(whichpart)
     params = """const paramstruct *restrict params, const REAL *restrict in_gfs, REAL *restrict xx[3], REAL *restrict aux_gfs"""
 
     body = ""
     gri.register_gridfunctions("AUX", ["psi4_part" + str(whichpart) + "re", "psi4_part" + str(whichpart) + "im"])
     FD_outCparams = "outCverbose=False,enable_SIMD=False,CSE_sorting=none"
-    if gridsuffix != "":
-        FD_outCparams += ",gridsuffix=" + gridsuffix
     if not setPsi4tozero:
         # Set the body of the function
         # First compute the symbolic expressions
@@ -543,21 +519,21 @@ def add_psi4_part_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.j
 
         body += """
 REAL mre4U0,mre4U1,mre4U2,mre4U3,mim4U0,mim4U1,mim4U2,mim4U3,n4U0,n4U1,n4U2,n4U3;
-psi4_tetrad"""+gridsuffix+"""(params,
-              in_gfs[IDX4S"""+gridsuffix+"""(CFGF, i0,i1,i2)],
-              in_gfs[IDX4S"""+gridsuffix+"""(HDD00GF, i0,i1,i2)],
-              in_gfs[IDX4S"""+gridsuffix+"""(HDD01GF, i0,i1,i2)],
-              in_gfs[IDX4S"""+gridsuffix+"""(HDD02GF, i0,i1,i2)],
-              in_gfs[IDX4S"""+gridsuffix+"""(HDD11GF, i0,i1,i2)],
-              in_gfs[IDX4S"""+gridsuffix+"""(HDD12GF, i0,i1,i2)],
-              in_gfs[IDX4S"""+gridsuffix+"""(HDD22GF, i0,i1,i2)],
+psi4_tetrad(params,
+              in_gfs[IDX4S(CFGF, i0,i1,i2)],
+              in_gfs[IDX4S(HDD00GF, i0,i1,i2)],
+              in_gfs[IDX4S(HDD01GF, i0,i1,i2)],
+              in_gfs[IDX4S(HDD02GF, i0,i1,i2)],
+              in_gfs[IDX4S(HDD11GF, i0,i1,i2)],
+              in_gfs[IDX4S(HDD12GF, i0,i1,i2)],
+              in_gfs[IDX4S(HDD22GF, i0,i1,i2)],
               &mre4U0,&mre4U1,&mre4U2,&mre4U3,&mim4U0,&mim4U1,&mim4U2,&mim4U3,&n4U0,&n4U1,&n4U2,&n4U3,
               xx, i0,i1,i2);
 """
         body += "REAL xCart_rel_to_globalgrid_center[3];\n"
-        body += "xx_to_Cart" + gridsuffix + "(params, xx, i0, i1, i2,  xCart_rel_to_globalgrid_center);\n"
+        body += "xx_to_Cart(params, xx, i0, i1, i2,  xCart_rel_to_globalgrid_center);\n"
         body += "int ignore_Cart_to_i0i1i2[3];  REAL xx_rel_to_globalgridorigin[3];\n"
-        body += "Cart_to_xx_and_nearest_i0i1i2_global_grid_center" + gridsuffix + "(params, xCart_rel_to_globalgrid_center,xx_rel_to_globalgridorigin,ignore_Cart_to_i0i1i2);\n"
+        body += "Cart_to_xx_and_nearest_i0i1i2_global_grid_center(params, xCart_rel_to_globalgrid_center,xx_rel_to_globalgridorigin,ignore_Cart_to_i0i1i2);\n"
         for i in range(3):
             body += "const REAL xx" + str(i) + "=xx_rel_to_globalgridorigin[" + str(i) + "];\n"
         body += fin.FD_outputC("returnstring",
@@ -584,20 +560,18 @@ psi4_tetrad"""+gridsuffix+"""(params,
         desc=desc,
         name=name, params=params,
         body=body,
-        loopopts=get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, gridsuffix, OMP_pragma_on,
+        loopopts=get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, OMP_pragma_on,
                               enable_xxs=False),
         rel_path_to_Cparams=rel_path_to_Cparams)
     return pickle_NRPy_env()
 
 
 def add_psi4_tetrad_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."), setPsi4tozero=False):
-    gridsuffix = par.parval_from_str("grid::current_gridsuffix")
-
     starttime = print_msg_with_timing("psi4 tetrads", msg="Ccodegen", startstop="start")
 
     # Set up the C function for BSSN basis transformations
     desc = "Compute tetrad for psi4"
-    name = "psi4_tetrad" + gridsuffix
+    name = "psi4_tetrad"
 
     # First set up the symbolic expressions (RHSs) and their names (LHSs)
     psi4tet.Psi4_tetrads()
@@ -629,8 +603,6 @@ def add_psi4_tetrad_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path
     # Set the body of the function
     body = ""
     outCparams = "includebraces=False,outCverbose=False,enable_SIMD=False,preindent=1"
-    if gridsuffix != "":
-        outCparams += ",gridsuffix=" + gridsuffix
     if not setPsi4tozero:
         for i in range(3):
             body += "  const REAL xx" + str(i) + " = xx[" + str(i) + "][i" + str(i) + "];\n"
@@ -658,8 +630,6 @@ def add_psi4_tetrad_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path
 
 def add_SpinWeight_minus2_SphHarmonics_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."),
                                                          maximum_l=8):
-    gridsuffix = par.parval_from_str("grid::current_gridsuffix")
-
     starttime = print_msg_with_timing("Spin-weight s=-2 Spherical Harmonics", msg="Ccodegen", startstop="start")
 
     # Set up the C function for computing the spin-weight -2 spherical harmonic at theta,phi: Y_{s=-2, l,m}(theta,phi)
@@ -747,13 +717,13 @@ void lowlevel_decompose_psi4_into_swm2_modes(const int Nxx_plus_2NGHOSTS1,const 
         REAL *restrict xx[3],void xx_to_Cart(const paramstruct *restrict params, REAL *restrict xx[3],const int i0,const int i1,const int i2, REAL xCart[3])"""
 
     body = r"""  // Step 1: Allocate memory for 2D arrays used to store psi4, theta, sin(theta), and phi.
-  const int sizeof_2Darray = sizeof(REAL)*(Nxx_plus_2NGHOSTS1"""+gridsuffix+r"""-2*NGHOSTS)*(Nxx_plus_2NGHOSTS2"""+gridsuffix+r"""-2*NGHOSTS);
+  const int sizeof_2Darray = sizeof(REAL)*(Nxx_plus_2NGHOSTS1-2*NGHOSTS)*(Nxx_plus_2NGHOSTS2-2*NGHOSTS);
   REAL *restrict psi4r_at_R_ext = (REAL *restrict)malloc(sizeof_2Darray);
   REAL *restrict psi4i_at_R_ext = (REAL *restrict)malloc(sizeof_2Darray);
   //         ... also store theta, sin(theta), and phi to corresponding 1D arrays.
-  REAL *restrict sinth_array = (REAL *restrict)malloc(sizeof(REAL)*(Nxx_plus_2NGHOSTS1"""+gridsuffix+r"""-2*NGHOSTS));
-  REAL *restrict th_array    = (REAL *restrict)malloc(sizeof(REAL)*(Nxx_plus_2NGHOSTS1"""+gridsuffix+r"""-2*NGHOSTS));
-  REAL *restrict ph_array    = (REAL *restrict)malloc(sizeof(REAL)*(Nxx_plus_2NGHOSTS2"""+gridsuffix+r"""-2*NGHOSTS));
+  REAL *restrict sinth_array = (REAL *restrict)malloc(sizeof(REAL)*(Nxx_plus_2NGHOSTS1-2*NGHOSTS));
+  REAL *restrict th_array    = (REAL *restrict)malloc(sizeof(REAL)*(Nxx_plus_2NGHOSTS1-2*NGHOSTS));
+  REAL *restrict ph_array    = (REAL *restrict)malloc(sizeof(REAL)*(Nxx_plus_2NGHOSTS2-2*NGHOSTS));
 
   // Step 2: Loop over all extraction indices:
   for(int ii0=0;ii0<num_of_R_ext_idxs;ii0++) {
@@ -767,29 +737,29 @@ void lowlevel_decompose_psi4_into_swm2_modes(const int Nxx_plus_2NGHOSTS1,const 
     // Step 2.b: Compute psi_4 at this extraction radius and store to a local 2D array.
     const int i0=list_of_R_ext_idxs[ii0];
 #pragma omp parallel for
-    for(int i1=NGHOSTS;i1<Nxx_plus_2NGHOSTS1"""+gridsuffix+r"""-NGHOSTS;i1++) {
+    for(int i1=NGHOSTS;i1<Nxx_plus_2NGHOSTS1-NGHOSTS;i1++) {
       th_array[i1-NGHOSTS]    =     xx[1][i1];
       sinth_array[i1-NGHOSTS] = sin(xx[1][i1]);
-      for(int i2=NGHOSTS;i2<Nxx_plus_2NGHOSTS2"""+gridsuffix+r"""-NGHOSTS;i2++) {
+      for(int i2=NGHOSTS;i2<Nxx_plus_2NGHOSTS2-NGHOSTS;i2++) {
         ph_array[i2-NGHOSTS] = xx[2][i2];
 
         // Compute real & imaginary parts of psi_4, output to diagnostic_output_gfs
-        const REAL psi4r = (diagnostic_output_gfs[IDX4S"""+gridsuffix+r"""(PSI4_PART0REGF, i0,i1,i2)] +
-                            diagnostic_output_gfs[IDX4S"""+gridsuffix+r"""(PSI4_PART1REGF, i0,i1,i2)] +
-                            diagnostic_output_gfs[IDX4S"""+gridsuffix+r"""(PSI4_PART2REGF, i0,i1,i2)]);
-        const REAL psi4i = (diagnostic_output_gfs[IDX4S"""+gridsuffix+r"""(PSI4_PART0IMGF, i0,i1,i2)] +
-                            diagnostic_output_gfs[IDX4S"""+gridsuffix+r"""(PSI4_PART1IMGF, i0,i1,i2)] +
-                            diagnostic_output_gfs[IDX4S"""+gridsuffix+r"""(PSI4_PART2IMGF, i0,i1,i2)]);
+        const REAL psi4r = (diagnostic_output_gfs[IDX4S(PSI4_PART0REGF, i0,i1,i2)] +
+                            diagnostic_output_gfs[IDX4S(PSI4_PART1REGF, i0,i1,i2)] +
+                            diagnostic_output_gfs[IDX4S(PSI4_PART2REGF, i0,i1,i2)]);
+        const REAL psi4i = (diagnostic_output_gfs[IDX4S(PSI4_PART0IMGF, i0,i1,i2)] +
+                            diagnostic_output_gfs[IDX4S(PSI4_PART1IMGF, i0,i1,i2)] +
+                            diagnostic_output_gfs[IDX4S(PSI4_PART2IMGF, i0,i1,i2)]);
 
         // Store result to "2D" array (actually 1D array with 2D storage):
-        const int idx2d = (i1-NGHOSTS)*(Nxx_plus_2NGHOSTS2"""+gridsuffix+r"""-2*NGHOSTS)+(i2-NGHOSTS);
+        const int idx2d = (i1-NGHOSTS)*(Nxx_plus_2NGHOSTS2-2*NGHOSTS)+(i2-NGHOSTS);
         psi4r_at_R_ext[idx2d] = psi4r;
         psi4i_at_R_ext[idx2d] = psi4i;
       }
     }
     // Step 3: Perform integrations across all l,m modes from l=2 up to and including L_MAX (global variable):
-    lowlevel_decompose_psi4_into_swm2_modes(Nxx_plus_2NGHOSTS1"""+gridsuffix+r""",Nxx_plus_2NGHOSTS2"""+gridsuffix+r""",
-                                            dxx1"""+gridsuffix+r""",dxx2"""+gridsuffix+r""",
+    lowlevel_decompose_psi4_into_swm2_modes(Nxx_plus_2NGHOSTS1,Nxx_plus_2NGHOSTS2,
+                                            dxx1,dxx2,
                                             time, R_ext, th_array, sinth_array, ph_array,
                                             psi4r_at_R_ext,psi4i_at_R_ext);
   }
