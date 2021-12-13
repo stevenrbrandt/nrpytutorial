@@ -676,6 +676,10 @@ def construct_NRPy_basic_defines_h(Ccodesrootdir, enable_SIMD=False, supplementa
             if key not in core_modules_list:
                 output_key(file, key, outC_NRPy_basic_defines_h_dict[key])
 
+        for key in supplemental_dict:
+            output_key(file, key, supplemental_dict[key])
+
+
 def construct_NRPy_function_prototypes_h(Ccodesrootdir):
     if not os.path.isdir(Ccodesrootdir):
         print("Error (in construct_NRPy_function_prototypes_h): Directory \"" + Ccodesrootdir + "\" does not exist.")
