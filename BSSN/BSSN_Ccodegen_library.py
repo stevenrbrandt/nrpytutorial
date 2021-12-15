@@ -195,7 +195,8 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
                                    enable_SIMD=True, enable_split_for_optimizations_doesnt_help=False,
                                    LapseCondition="OnePlusLog", ShiftCondition="GammaDriving2ndOrder_Covariant",
                                    enable_KreissOliger_dissipation=False, enable_stress_energy_source_terms=False,
-                                   leave_Ricci_symbolic=True, OMP_pragma_on="i2"):
+                                   leave_Ricci_symbolic=True, OMP_pragma_on="i2",
+                                   func_name_suffix=""):
     if includes is None:
         includes = []
     if enable_SIMD:
@@ -206,7 +207,7 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
 
     # Set up the C function for the BSSN RHSs
     desc = "Evaluate the BSSN RHSs"
-    name = "rhs_eval"
+    name = "rhs_eval" + func_name_suffix
     params = "const paramstruct *restrict params, "
     if enable_rfm_precompute:
         params += "const rfm_struct *restrict rfmstruct, "
@@ -305,7 +306,8 @@ def Ricci__generate_symbolic_expressions():
 # Register C function Ricci_eval() for evaluating 3-Ricci tensor
 def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."),
                                      enable_rfm_precompute=True, enable_golden_kernels=False, enable_SIMD=True,
-                                     enable_split_for_optimizations_doesnt_help=False, OMP_pragma_on="i2"):
+                                     enable_split_for_optimizations_doesnt_help=False, OMP_pragma_on="i2",
+                                     func_name_suffix=""):
     if includes is None:
         includes = []
     if enable_SIMD:
@@ -316,7 +318,7 @@ def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.
 
     # Set up the C function for the 3-Ricci tensor
     desc = "Evaluate the 3-Ricci tensor"
-    name = "Ricci_eval"
+    name = "Ricci_eval" + func_name_suffix
     params = "const paramstruct *restrict params, "
     if enable_rfm_precompute:
         params += "const rfm_struct *restrict rfmstruct, "
@@ -404,7 +406,7 @@ def BSSN_constraints__generate_symbolic_expressions(enable_stress_energy_source_
 def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."),
                                            enable_rfm_precompute=True, enable_golden_kernels=False, enable_SIMD=True,
                                            enable_stress_energy_source_terms=False,
-                                           output_H_only=False, OMP_pragma_on="i2"):
+                                           output_H_only=False, OMP_pragma_on="i2", func_name_suffix=""):
     if includes is None:
         includes = []
     if enable_SIMD:
@@ -415,7 +417,7 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
 
     # Set up the C function for the BSSN constraints
     desc = "Evaluate the BSSN constraints"
-    name = "BSSN_constraints"
+    name = "BSSN_constraints" + func_name_suffix
     params = "const paramstruct *restrict params, "
     if enable_rfm_precompute:
         params += "const rfm_struct *restrict rfmstruct, "
@@ -448,7 +450,7 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
 # Register C function enforce_detgammahat_constraint for enforcing the conformal 3-metric: det(gammahat)=det(gammabar)
 def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."),
                                                          enable_rfm_precompute=True, enable_golden_kernels=False,
-                                                         OMP_pragma_on="i2"):
+                                                         OMP_pragma_on="i2", func_name_suffix=""):
     # This function disables SIMD, as it includes cbrt() and abs() functions.
     if includes is None:
         includes = []
@@ -458,7 +460,7 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
 
     # Set up the C function for enforcing the det(gammabar) = det(gammahat) BSSN algebraic constraint
     desc = "Enforce the det(gammabar) = det(gammahat) (algebraic) constraint"
-    name = "enforce_detgammahat_constraint"
+    name = "enforce_detgammahat_constraint" + func_name_suffix
     params = "const paramstruct *restrict params, "
     if enable_rfm_precompute:
         params += "const rfm_struct *restrict rfmstruct, "
