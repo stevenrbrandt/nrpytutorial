@@ -186,15 +186,16 @@ def output_finite_difference_functions_h(path=os.path.join(".")):
         element_del = []
         for i, func in enumerate(outC_function_master_list):
             if "__FD_OPERATOR_FUNC__" in func.desc:
-                key_list_del += [func.name]
-                element_del += [func]
+                if func.name not in key_list_del:
+                    key_list_del += [func.name]
+                if func not in element_del:
+                    element_del += [func]
         for func in element_del:
             outC_function_master_list.remove(func)
         for key in key_list_del:
             outC_function_dict.pop(key)
             if key in outC_function_prototype_dict:
                 outC_function_prototype_dict.pop(key)
-
         file.write("#endif // #ifndef __FD_FUNCTIONS_H__\n")
 ################
 
