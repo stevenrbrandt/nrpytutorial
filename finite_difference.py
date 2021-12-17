@@ -51,7 +51,7 @@ def FD_outputC(filename, sympyexpr_list, params="", upwindcontrolvec=""):
     #     outCparams.includebraces==True.
     # See Step 5 for open and close braces
     if outCparams.includebraces == "True":
-        indent = "   "
+        indent = "  "
     else:
         indent = ""
 
