@@ -133,6 +133,10 @@ def EinsteinToolkit_declare_loop_params():
   const int Nxx0 = cctk_lsh[0] - NGHOSTS;
   const int Nxx1 = cctk_lsh[1] - NGHOSTS;
   const int Nxx2 = cctk_lsh[2] - NGHOSTS;
+
+  const int Nxx_plus_2NGHOSTS0 = cctk_lsh[0];
+  const int Nxx_plus_2NGHOSTS1 = cctk_lsh[1];
+  const int Nxx_plus_2NGHOSTS2 = cctk_lsh[2];
 """
 
 def EinsteinToolkit_SIMD_declare_C_params(ThornName):
@@ -160,13 +164,14 @@ def EinsteinToolkit_SIMD_declare_C_params(ThornName):
     return SIMD_declare_C_params_str
 
 
-def set_ETK_func_params_preloop(func_name_suffix):
+def set_ETK_func_params_preloop(func_name_suffix, enable_SIMD=True):
     params = "CCTK_ARGUMENTS"
     preloop = """  DECLARE_CCTK_ARGUMENTS;"""
     ThornName = "Baikal"
     if "BaikalVacuum" in func_name_suffix:
         ThornName = "BaikalVacuum"
-    preloop += EinsteinToolkit_SIMD_declare_C_params(ThornName)
+    if enable_SIMD:
+        preloop += EinsteinToolkit_SIMD_declare_C_params(ThornName)
     preloop += EinsteinToolkit_declare_loop_params()
     return params, preloop
 
@@ -524,15 +529,16 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
                  const REAL *restrict in_gfs, const REAL *restrict auxevol_gfs, REAL *restrict aux_gfs"""
 
     # Construct body:
+
+    BSSN_constraints_SymbExpressions = BSSN_constraints__generate_symbolic_expressions(enable_stress_energy_source_terms,
+                                                                                       output_H_only=output_H_only)
+
     preloop=""
     enableCparameters=True
     # Set up preloop in case we're outputting code for the Einstein Toolkit (ETK)
     if par.parval_from_str("grid::GridFuncMemAccess") == "ETK":
         params, preloop = set_ETK_func_params_preloop(func_name_suffix)
         enableCparameters=False
-
-    BSSN_constraints_SymbExpressions = BSSN_constraints__generate_symbolic_expressions(enable_stress_energy_source_terms,
-                                                                                       output_H_only=output_H_only)
 
     FD_outCparams = "outCverbose=False,enable_SIMD=" + str(enable_SIMD)
     FD_outCparams += ",GoldenKernelsEnable=" + str(enable_golden_kernels)
@@ -549,7 +555,7 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
         preloop=preloop,
         body=body,
         loopopts=get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, OMP_pragma_on),
-        rel_path_to_Cparams=rel_path_to_Cparams)
+        rel_path_to_Cparams=rel_path_to_Cparams, enableCparameters=enableCparameters)
     return pickle_NRPy_env()
 
 
@@ -560,9 +566,10 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
     # This function disables SIMD, as it includes cbrt() and abs() functions.
     if includes is None:
         includes = []
-    enable_FD_functions = bool(par.parval_from_str("finite_difference::enable_FD_functions"))
-    if enable_FD_functions:
-        includes += ["finite_difference_functions.h"]
+    # This function does not use finite differences!
+    # enable_FD_functions = bool(par.parval_from_str("finite_difference::enable_FD_functions"))
+    # if enable_FD_functions:
+    #     includes += ["finite_difference_functions.h"]
 
     # Set up the C function for enforcing the det(gammabar) = det(gammahat) BSSN algebraic constraint
     desc = "Enforce the det(gammabar) = det(gammahat) (algebraic) constraint"
@@ -581,7 +588,7 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
     enableCparameters=True
     # Set up preloop in case we're outputting code for the Einstein Toolkit (ETK)
     if par.parval_from_str("grid::GridFuncMemAccess") == "ETK":
-        params, preloop = set_ETK_func_params_preloop(func_name_suffix)
+        params, preloop = set_ETK_func_params_preloop(func_name_suffix, enable_SIMD=False)
         enableCparameters=False
         
     FD_outCparams = "outCverbose=False,enable_SIMD=False"
