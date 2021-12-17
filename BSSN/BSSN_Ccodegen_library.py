@@ -129,8 +129,7 @@ def BSSN_RHSs__generate_symbolic_expressions(LapseCondition="OnePlusLog",
     # Add Kreiss-Oliger dissipation to the BSSN RHSs:
     if enable_KreissOliger_dissipation:
         thismodule = "KO_Dissipation"
-        # diss_strength = Bq.cf  # <- another attempt. Maybe should multiply by diss_strength?
-        diss_strength = par.Cparameters("REAL", thismodule, "diss_strength", 0.2)*Bq.cf # *Bq.cf*Bq.cf*Bq.cf # cf**1 is found better than cf**4 over the long term.
+        diss_strength = par.Cparameters("REAL", thismodule, "diss_strength", 0.2) # *Bq.cf # *Bq.cf*Bq.cf*Bq.cf # cf**1 is found better than cf**4 over the long term.
 
         alpha_dKOD = ixp.declarerank1("alpha_dKOD")
         cf_dKOD = ixp.declarerank1("cf_dKOD")
