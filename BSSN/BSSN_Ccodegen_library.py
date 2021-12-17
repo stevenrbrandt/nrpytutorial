@@ -60,7 +60,7 @@ def print_msg_with_timing(desc, msg="Symbolic", startstop="start", starttime=0.0
 
 # get_loopopts() sets up options for NRPy+'s loop module
 def get_loopopts(points_to_update, enable_SIMD, enable_rfm_precompute, OMP_pragma_on, enable_xxs=True):
-    loopopts = points_to_update
+    loopopts = points_to_update + ",includebraces=False"
     if enable_SIMD:
         loopopts += ",enable_SIMD"
     if enable_rfm_precompute:
@@ -87,6 +87,89 @@ def register_stress_energy_source_terms_return_T4UU(enable_stress_energy_source_
         else:
             return ixp.declarerank2("T4UU", "sym01", DIM=4)
     return None
+
+def EinsteinToolkit_keep_param__return_type(paramtuple):
+    keep_param = True # We'll not set some parameters in param.ccl;
+                      #   e.g., those that should be #define'd like M_PI.
+    typestring = ""
+    # Separate thorns within the ETK take care of grid/coordinate parameters;
+    #   thus we ignore NRPy+ grid/coordinate parameters:
+    if paramtuple.module == "grid" or paramtuple.module == "reference_metric":
+        keep_param = False
+
+    partype = paramtuple.type
+    if partype == "bool":
+        typestring += "BOOLEAN "
+    elif partype == "REAL":
+        if paramtuple.defaultval != 1e300: # 1e300 is a magic value indicating that the C parameter should be mutable
+            typestring += "CCTK_REAL "
+        else:
+            keep_param = False
+    elif partype == "int":
+        typestring += "CCTK_INT "
+    elif partype == "#define":
+        keep_param = False
+    elif partype == "char":
+        # FIXME: char/string parameter types should in principle be supported
+        print("Error: parameter "+paramtuple.module+"::"+paramtuple.parname+
+              " has unsupported type: \""+ paramtuple.type + "\"")
+        sys.exit(1)
+    else:
+        print("Error: parameter "+paramtuple.module+"::"+paramtuple.parname+
+              " has unsupported type: \""+ paramtuple.type + "\"")
+        sys.exit(1)
+    return keep_param, typestring
+
+
+def EinsteinToolkit_declare_loop_params():
+    return """
+  if(cctk_nghostzones[0] != cctk_nghostzones[1] ||
+     cctk_nghostzones[0] != cctk_nghostzones[2]) {
+    CCTK_ERROR("cctk_nghostzones[i] must be the same in all directions i");
+  }
+
+  const int NGHOSTS = cctk_nghostzones[0];
+
+  const int Nxx0 = cctk_lsh[0] - NGHOSTS;
+  const int Nxx1 = cctk_lsh[1] - NGHOSTS;
+  const int Nxx2 = cctk_lsh[2] - NGHOSTS;
+"""
+
+def EinsteinToolkit_SIMD_declare_C_params(ThornName):
+    SIMD_declare_C_params_str = """
+
+  const CCTK_REAL NOSIMDinvdx0 = 1.0/CCTK_DELTA_SPACE(0);
+  const REAL_SIMD_ARRAY invdx0 = ConstSIMD(NOSIMDinvdx0);
+  const CCTK_REAL NOSIMDinvdx1 = 1.0/CCTK_DELTA_SPACE(1);
+  const REAL_SIMD_ARRAY invdx1 = ConstSIMD(NOSIMDinvdx1);
+  const CCTK_REAL NOSIMDinvdx2 = 1.0/CCTK_DELTA_SPACE(2);
+  const REAL_SIMD_ARRAY invdx2 = ConstSIMD(NOSIMDinvdx2);
+"""
+
+    for i in range(len(par.glb_Cparams_list)):
+        # keep_param is a boolean indicating whether we should accept or reject
+        #    the parameter. singleparstring will contain the string indicating
+        #    the variable type.
+        keep_param, singleparstring = EinsteinToolkit_keep_param__return_type(par.glb_Cparams_list[i])
+
+        if (keep_param) and ("CCTK_REAL" in singleparstring):
+            parname = par.glb_Cparams_list[i].parname
+            SIMD_declare_C_params_str += "  const "+singleparstring + "*NOSIMD"+parname+\
+                " = CCTK_ParameterGet(\""+parname+"\", \""+ThornName+"\", NULL);\n"
+            SIMD_declare_C_params_str += "  const REAL_SIMD_ARRAY "+parname+" = ConstSIMD(*NOSIMD"+parname+");\n"
+    return SIMD_declare_C_params_str
+
+
+def set_ETK_func_params_preloop(func_name_suffix):
+    params = "CCTK_ARGUMENTS"
+    preloop = """  DECLARE_CCTK_ARGUMENTS;"""
+    ThornName = "Baikal"
+    if "BaikalVacuum" in func_name_suffix:
+        ThornName = "BaikalVacuum"
+    preloop += EinsteinToolkit_SIMD_declare_C_params(ThornName)
+    preloop += EinsteinToolkit_declare_loop_params()
+    return params, preloop
+
 
 #################################
 #################################
@@ -215,27 +298,19 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
     params += """
               const REAL *restrict auxevol_gfs,const REAL *restrict in_gfs,REAL *restrict rhs_gfs"""
 
-    preloop=""
-    enableCparameters=True
-    if par.parval_from_str("grid::GridFuncMemAccess") == "ETK":
-        params = "CCTK_ARGUMENTS"
-        preloop = """
-  DECLARE_CCTK_ARGUMENTS;
-  const CCTK_REAL NOSIMDinvdx0 = 1.0/CCTK_DELTA_SPACE(0);
-  const REAL_SIMD_ARRAY invdx0 = ConstSIMD(NOSIMDinvdx0);
-  const CCTK_REAL NOSIMDinvdx1 = 1.0/CCTK_DELTA_SPACE(1);
-  const REAL_SIMD_ARRAY invdx1 = ConstSIMD(NOSIMDinvdx1);
-  const CCTK_REAL NOSIMDinvdx2 = 1.0/CCTK_DELTA_SPACE(2);
-  const REAL_SIMD_ARRAY invdx2 = ConstSIMD(NOSIMDinvdx2);
-"""
-        enableCparameters=False
-    # Construct body:
     betaU, BSSN_RHSs_SymbExpressions = \
         BSSN_RHSs__generate_symbolic_expressions(LapseCondition=LapseCondition, ShiftCondition=ShiftCondition,
                                                  enable_KreissOliger_dissipation=enable_KreissOliger_dissipation,
                                                  enable_stress_energy_source_terms=enable_stress_energy_source_terms,
                                                  leave_Ricci_symbolic=leave_Ricci_symbolic)
 
+    # Construct body:
+    preloop=""
+    enableCparameters=True
+    # Set up preloop in case we're outputting code for the Einstein Toolkit (ETK)
+    if par.parval_from_str("grid::GridFuncMemAccess") == "ETK":
+        params, preloop = set_ETK_func_params_preloop(func_name_suffix)
+        enableCparameters=False
 
     FD_outCparams = "outCverbose=False,enable_SIMD=" + str(enable_SIMD)
     FD_outCparams += ",GoldenKernelsEnable=" + str(enable_golden_kernels)
@@ -344,9 +419,18 @@ def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.
     FD_outCparams = "outCverbose=False,enable_SIMD=" + str(enable_SIMD)
     FD_outCparams += ",GoldenKernelsEnable=" + str(enable_golden_kernels)
     loopopts = get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, OMP_pragma_on)
-    preloop = ""
+
     FDorder = par.parval_from_str("finite_difference::FD_CENTDERIVS_ORDER")
     starttime = print_msg_with_timing("3-Ricci tensor (FD order="+str(FDorder)+")", msg="Ccodegen", startstop="start")
+
+    # Construct body:
+    preloop=""
+    enableCparameters=True
+    # Set up preloop in case we're outputting code for the Einstein Toolkit (ETK)
+    if par.parval_from_str("grid::GridFuncMemAccess") == "ETK":
+        params, preloop = set_ETK_func_params_preloop(func_name_suffix)
+        enableCparameters=False
+
     if enable_split_for_optimizations_doesnt_help and FDorder >= 8:
         loopopts += ",DisableOpenMP"
         Ricci_SymbExpressions_pt1 = []
@@ -378,7 +462,7 @@ def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.
         desc=desc,
         name=name, params=params,
         preloop=preloop, body=body, loopopts=loopopts, postloop=postloop,
-        rel_path_to_Cparams=rel_path_to_Cparams)
+        rel_path_to_Cparams=rel_path_to_Cparams, enableCparameters=enableCparameters)
     return pickle_NRPy_env()
 
 
@@ -440,6 +524,13 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
                  const REAL *restrict in_gfs, const REAL *restrict auxevol_gfs, REAL *restrict aux_gfs"""
 
     # Construct body:
+    preloop=""
+    enableCparameters=True
+    # Set up preloop in case we're outputting code for the Einstein Toolkit (ETK)
+    if par.parval_from_str("grid::GridFuncMemAccess") == "ETK":
+        params, preloop = set_ETK_func_params_preloop(func_name_suffix)
+        enableCparameters=False
+
     BSSN_constraints_SymbExpressions = BSSN_constraints__generate_symbolic_expressions(enable_stress_energy_source_terms,
                                                                                        output_H_only=output_H_only)
 
@@ -455,6 +546,7 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
         includes=includes,
         desc=desc,
         name=name, params=params,
+        preloop=preloop,
         body=body,
         loopopts=get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, OMP_pragma_on),
         rel_path_to_Cparams=rel_path_to_Cparams)
@@ -485,6 +577,13 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
     # Construct body:
     enforce_detg_constraint_symb_expressions = EGC.Enforce_Detgammahat_Constraint_symb_expressions()
 
+    preloop=""
+    enableCparameters=True
+    # Set up preloop in case we're outputting code for the Einstein Toolkit (ETK)
+    if par.parval_from_str("grid::GridFuncMemAccess") == "ETK":
+        params, preloop = set_ETK_func_params_preloop(func_name_suffix)
+        enableCparameters=False
+        
     FD_outCparams = "outCverbose=False,enable_SIMD=False"
     FD_outCparams += ",GoldenKernelsEnable=" + str(enable_golden_kernels)
     starttime = print_msg_with_timing("Enforcing det(gammabar)=det(gammahat) constraint", msg="Ccodegen", startstop="start")
@@ -497,9 +596,10 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
         includes=includes,
         desc=desc,
         name=name, params=params,
+        preloop=preloop,
         body=body,
         loopopts=get_loopopts("AllPoints", enable_SIMD, enable_rfm_precompute, OMP_pragma_on),
-        rel_path_to_Cparams=rel_path_to_Cparams)
+        rel_path_to_Cparams=rel_path_to_Cparams, enableCparameters=enableCparameters)
     return pickle_NRPy_env()
 
 
