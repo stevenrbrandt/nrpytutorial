@@ -222,13 +222,13 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
                                                  enable_stress_energy_source_terms=enable_stress_energy_source_terms,
                                                  leave_Ricci_symbolic=leave_Ricci_symbolic)
 
-    starttime = print_msg_with_timing("BSSN_RHSs", msg="Ccodegen", startstop="start")
 
     FD_outCparams = "outCverbose=False,enable_SIMD=" + str(enable_SIMD)
     FD_outCparams += ",GoldenKernelsEnable=" + str(enable_golden_kernels)
 
     loopopts = get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, OMP_pragma_on)
     FDorder = par.parval_from_str("finite_difference::FD_CENTDERIVS_ORDER")
+    starttime = print_msg_with_timing("BSSN_RHSs (FD order="+str(FDorder)+")", msg="Ccodegen", startstop="start")
     if enable_split_for_optimizations_doesnt_help and FDorder == 6:
         loopopts += ",DisableOpenMP"
         BSSN_RHSs_SymbExpressions_pt1 = []
@@ -256,7 +256,7 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
                               params=FD_outCparams,
                               upwindcontrolvec=betaU)
         postloop = ""
-    print_msg_with_timing("BSSN_RHSs", msg="Ccodegen", startstop="stop", starttime=starttime)
+    print_msg_with_timing("BSSN_RHSs (FD order="+str(FDorder)+")", msg="Ccodegen", startstop="stop", starttime=starttime)
 
     add_to_Cfunction_dict(
         includes=includes,
@@ -329,10 +329,10 @@ def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.
     Ricci_SymbExpressions = Ricci__generate_symbolic_expressions()
     FD_outCparams = "outCverbose=False,enable_SIMD=" + str(enable_SIMD)
     FD_outCparams += ",GoldenKernelsEnable=" + str(enable_golden_kernels)
-    starttime = print_msg_with_timing("3-Ricci tensor", msg="Ccodegen", startstop="start")
     loopopts = get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, OMP_pragma_on)
     preloop = ""
     FDorder = par.parval_from_str("finite_difference::FD_CENTDERIVS_ORDER")
+    starttime = print_msg_with_timing("3-Ricci tensor (FD order="+str(FDorder)+")", msg="Ccodegen", startstop="start")
     if enable_split_for_optimizations_doesnt_help and FDorder >= 8:
         loopopts += ",DisableOpenMP"
         Ricci_SymbExpressions_pt1 = []
@@ -357,7 +357,7 @@ def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.
         body = fin.FD_outputC("returnstring", Ricci_SymbExpressions,
                               params=FD_outCparams)
         postloop = ""
-    print_msg_with_timing("3-Ricci tensor", msg="Ccodegen", startstop="stop", starttime=starttime)
+    print_msg_with_timing("3-Ricci tensor (FD order="+str(FDorder)+")", msg="Ccodegen", startstop="stop", starttime=starttime)
 
     add_to_Cfunction_dict(
         includes=includes,
@@ -372,7 +372,8 @@ def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.
 def BSSN_constraints__generate_symbolic_expressions(enable_stress_energy_source_terms=False, output_H_only=False):
     ######################################
     # START: GENERATE SYMBOLIC EXPRESSIONS
-    starttime = print_msg_with_timing("BSSN constraints", msg="Symbolic", startstop="start")
+    FDorder = par.parval_from_str("finite_difference::FD_CENTDERIVS_ORDER")
+    starttime = print_msg_with_timing("BSSN constraints (FD order="+str(FDorder)+")", msg="Symbolic", startstop="start")
 
     # Define the Hamiltonian constraint and output the optimized C code.
     par.set_parval_from_str("BSSN.BSSN_quantities::LeaveRicciSymbolic", "True")
@@ -395,7 +396,7 @@ def BSSN_constraints__generate_symbolic_expressions(enable_stress_energy_source_
                                              lhrh(lhs=gri.gfaccess("aux_gfs", "MU1"), rhs=bssncon.MU[1]),
                                              lhrh(lhs=gri.gfaccess("aux_gfs", "MU2"), rhs=bssncon.MU[2])]
     par.set_parval_from_str("BSSN.BSSN_quantities::LeaveRicciSymbolic", "False")
-    print_msg_with_timing("BSSN constraints", msg="Symbolic", startstop="stop", starttime=starttime)
+    print_msg_with_timing("BSSN constraints (FD order="+str(FDorder)+")", msg="Symbolic", startstop="stop", starttime=starttime)
     # END: GENERATE SYMBOLIC EXPRESSIONS
     ######################################
     return BSSN_constraints_SymbExpressions
