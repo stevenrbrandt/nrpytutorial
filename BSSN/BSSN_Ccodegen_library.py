@@ -215,6 +215,20 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
     params += """
               const REAL *restrict auxevol_gfs,const REAL *restrict in_gfs,REAL *restrict rhs_gfs"""
 
+    preloop=""
+    enableCparameters=True
+    if par.parval_from_str("grid::GridFuncMemAccess") == "ETK":
+        params = "CCTK_ARGUMENTS"
+        preloop = """
+  DECLARE_CCTK_ARGUMENTS;
+  const CCTK_REAL NOSIMDinvdx0 = 1.0/CCTK_DELTA_SPACE(0);
+  const REAL_SIMD_ARRAY invdx0 = ConstSIMD(NOSIMDinvdx0);
+  const CCTK_REAL NOSIMDinvdx1 = 1.0/CCTK_DELTA_SPACE(1);
+  const REAL_SIMD_ARRAY invdx1 = ConstSIMD(NOSIMDinvdx1);
+  const CCTK_REAL NOSIMDinvdx2 = 1.0/CCTK_DELTA_SPACE(2);
+  const REAL_SIMD_ARRAY invdx2 = ConstSIMD(NOSIMDinvdx2);
+"""
+        enableCparameters=False
     # Construct body:
     betaU, BSSN_RHSs_SymbExpressions = \
         BSSN_RHSs__generate_symbolic_expressions(LapseCondition=LapseCondition, ShiftCondition=ShiftCondition,
@@ -238,7 +252,7 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
                 BSSN_RHSs_SymbExpressions_pt1.append(lhrh(lhs=lhsrhs.lhs, rhs=lhsrhs.rhs))
             else:
                 BSSN_RHSs_SymbExpressions_pt2.append(lhrh(lhs=lhsrhs.lhs, rhs=lhsrhs.rhs))
-        preloop = """#pragma omp parallel
+        preloop += """#pragma omp parallel
     {
 """
         preloopbody = fin.FD_outputC("returnstring", BSSN_RHSs_SymbExpressions_pt1,
@@ -251,7 +265,7 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
                               upwindcontrolvec=betaU)
         postloop = "\n    } // END #pragma omp parallel\n"
     else:
-        preloop = ""
+        preloop += ""
         body = fin.FD_outputC("returnstring", BSSN_RHSs_SymbExpressions,
                               params=FD_outCparams,
                               upwindcontrolvec=betaU)
@@ -263,7 +277,7 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
         desc=desc,
         name=name, params=params,
         preloop=preloop, body=body, loopopts=loopopts, postloop=postloop,
-        rel_path_to_Cparams=rel_path_to_Cparams)
+        rel_path_to_Cparams=rel_path_to_Cparams, enableCparameters=enableCparameters)
     return pickle_NRPy_env()
 
 
@@ -372,8 +386,7 @@ def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.
 def BSSN_constraints__generate_symbolic_expressions(enable_stress_energy_source_terms=False, output_H_only=False):
     ######################################
     # START: GENERATE SYMBOLIC EXPRESSIONS
-    FDorder = par.parval_from_str("finite_difference::FD_CENTDERIVS_ORDER")
-    starttime = print_msg_with_timing("BSSN constraints (FD order="+str(FDorder)+")", msg="Symbolic", startstop="start")
+    starttime = print_msg_with_timing("BSSN constraints", msg="Symbolic", startstop="start")
 
     # Define the Hamiltonian constraint and output the optimized C code.
     par.set_parval_from_str("BSSN.BSSN_quantities::LeaveRicciSymbolic", "True")
@@ -396,7 +409,7 @@ def BSSN_constraints__generate_symbolic_expressions(enable_stress_energy_source_
                                              lhrh(lhs=gri.gfaccess("aux_gfs", "MU1"), rhs=bssncon.MU[1]),
                                              lhrh(lhs=gri.gfaccess("aux_gfs", "MU2"), rhs=bssncon.MU[2])]
     par.set_parval_from_str("BSSN.BSSN_quantities::LeaveRicciSymbolic", "False")
-    print_msg_with_timing("BSSN constraints (FD order="+str(FDorder)+")", msg="Symbolic", startstop="stop", starttime=starttime)
+    print_msg_with_timing("BSSN constraints", msg="Symbolic", startstop="stop", starttime=starttime)
     # END: GENERATE SYMBOLIC EXPRESSIONS
     ######################################
     return BSSN_constraints_SymbExpressions
@@ -432,10 +445,11 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
 
     FD_outCparams = "outCverbose=False,enable_SIMD=" + str(enable_SIMD)
     FD_outCparams += ",GoldenKernelsEnable=" + str(enable_golden_kernels)
-    starttime = print_msg_with_timing("BSSN constraints", msg="Ccodegen", startstop="start")
+    FDorder = par.parval_from_str("finite_difference::FD_CENTDERIVS_ORDER")
+    starttime = print_msg_with_timing("BSSN constraints (FD order="+str(FDorder)+")", msg="Ccodegen", startstop="start")
     body = fin.FD_outputC("returnstring", BSSN_constraints_SymbExpressions,
                           params=FD_outCparams)
-    print_msg_with_timing("BSSN constraints", msg="Ccodegen", startstop="stop", starttime=starttime)
+    print_msg_with_timing("BSSN constraints (FD order="+str(FDorder)+")", msg="Ccodegen", startstop="stop", starttime=starttime)
 
     add_to_Cfunction_dict(
         includes=includes,
