@@ -471,13 +471,14 @@ def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.
 
 
 # Generate symbolic expressions for BSSN Hamiltonian & momentum constraints
-def BSSN_constraints__generate_symbolic_expressions(enable_stress_energy_source_terms=False, output_H_only=False):
+def BSSN_constraints__generate_symbolic_expressions(enable_stress_energy_source_terms=False, leave_Ricci_symbolic=True,
+                                                    output_H_only=False):
     ######################################
     # START: GENERATE SYMBOLIC EXPRESSIONS
     starttime = print_msg_with_timing("BSSN constraints", msg="Symbolic", startstop="start")
 
     # Define the Hamiltonian constraint and output the optimized C code.
-    par.set_parval_from_str("BSSN.BSSN_quantities::LeaveRicciSymbolic", "True")
+    par.set_parval_from_str("BSSN.BSSN_quantities::LeaveRicciSymbolic", str(leave_Ricci_symbolic))
     import BSSN.BSSN_constraints as bssncon
 
     # Returns None if enable_stress_energy_source_terms==False; otherwise returns symb expressions for T4UU
@@ -506,7 +507,7 @@ def BSSN_constraints__generate_symbolic_expressions(enable_stress_energy_source_
 # Register C function BSSN_constraints() for evaluating BSSN Hamiltonian & momentum constraints
 def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.join("."),
                                            enable_rfm_precompute=True, enable_golden_kernels=False, enable_SIMD=True,
-                                           enable_stress_energy_source_terms=False,
+                                           enable_stress_energy_source_terms=False, leave_Ricci_symbolic=True,
                                            output_H_only=False, OMP_pragma_on="i2", func_name_suffix=""):
     if includes is None:
         includes = []
@@ -530,6 +531,7 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
     # Construct body:
 
     BSSN_constraints_SymbExpressions = BSSN_constraints__generate_symbolic_expressions(enable_stress_energy_source_terms,
+                                                                                       leave_Ricci_symbolic=leave_Ricci_symbolic,
                                                                                        output_H_only=output_H_only)
 
     preloop=""
