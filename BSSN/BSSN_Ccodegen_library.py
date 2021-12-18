@@ -371,9 +371,8 @@ def Ricci__generate_symbolic_expressions():
     import BSSN.BSSN_quantities as Bq
     par.set_parval_from_str("BSSN.BSSN_quantities::LeaveRicciSymbolic", "False")
 
-    # We use betaU as our upwinding control vector:
+    # Register all BSSN gridfunctions if not registered already
     Bq.BSSN_basic_tensors()
-
     # Next compute Ricci tensor
     Bq.RicciBar__gammabarDD_dHatD__DGammaUDD__DGammaU()
     # END: GENERATE SYMBOLIC EXPRESSIONS
