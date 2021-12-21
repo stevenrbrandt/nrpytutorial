@@ -130,9 +130,9 @@ def EinsteinToolkit_declare_loop_params():
 
   const int NGHOSTS = cctk_nghostzones[0];
 
-  const int Nxx0 = cctk_lsh[0] - NGHOSTS;
-  const int Nxx1 = cctk_lsh[1] - NGHOSTS;
-  const int Nxx2 = cctk_lsh[2] - NGHOSTS;
+  const int Nxx0 = cctk_lsh[0] - 2*NGHOSTS;
+  const int Nxx1 = cctk_lsh[1] - 2*NGHOSTS;
+  const int Nxx2 = cctk_lsh[2] - 2*NGHOSTS;
 
   const int Nxx_plus_2NGHOSTS0 = cctk_lsh[0];
   const int Nxx_plus_2NGHOSTS1 = cctk_lsh[1];
