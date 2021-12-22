@@ -128,26 +128,26 @@ def EinsteinToolkit_declare_loop_params():
     CCTK_ERROR("cctk_nghostzones[i] must be the same in all directions i");
   }
 
-  const int NGHOSTS = cctk_nghostzones[0];
+  const CCTK_INT NGHOSTS CCTK_ATTRIBUTE_UNUSED = cctk_nghostzones[0];
 
-  const int Nxx0 = cctk_lsh[0] - 2*NGHOSTS;
-  const int Nxx1 = cctk_lsh[1] - 2*NGHOSTS;
-  const int Nxx2 = cctk_lsh[2] - 2*NGHOSTS;
+  const CCTK_INT Nxx0 CCTK_ATTRIBUTE_UNUSED = cctk_lsh[0] - 2*NGHOSTS;
+  const CCTK_INT Nxx1 CCTK_ATTRIBUTE_UNUSED = cctk_lsh[1] - 2*NGHOSTS;
+  const CCTK_INT Nxx2 CCTK_ATTRIBUTE_UNUSED = cctk_lsh[2] - 2*NGHOSTS;
 
-  const int Nxx_plus_2NGHOSTS0 = cctk_lsh[0];
-  const int Nxx_plus_2NGHOSTS1 = cctk_lsh[1];
-  const int Nxx_plus_2NGHOSTS2 = cctk_lsh[2];
+  const CCTK_INT Nxx_plus_2NGHOSTS0 CCTK_ATTRIBUTE_UNUSED = cctk_lsh[0];
+  const CCTK_INT Nxx_plus_2NGHOSTS1 CCTK_ATTRIBUTE_UNUSED = cctk_lsh[1];
+  const CCTK_INT Nxx_plus_2NGHOSTS2 CCTK_ATTRIBUTE_UNUSED = cctk_lsh[2];
 """
 
 def EinsteinToolkit_SIMD_declare_C_params(ThornName):
     SIMD_declare_C_params_str = """
 
-  const CCTK_REAL NOSIMDinvdx0 = 1.0/CCTK_DELTA_SPACE(0);
-  const REAL_SIMD_ARRAY invdx0 = ConstSIMD(NOSIMDinvdx0);
-  const CCTK_REAL NOSIMDinvdx1 = 1.0/CCTK_DELTA_SPACE(1);
-  const REAL_SIMD_ARRAY invdx1 = ConstSIMD(NOSIMDinvdx1);
-  const CCTK_REAL NOSIMDinvdx2 = 1.0/CCTK_DELTA_SPACE(2);
-  const REAL_SIMD_ARRAY invdx2 = ConstSIMD(NOSIMDinvdx2);
+  const CCTK_REAL NOSIMDinvdx0 CCTK_ATTRIBUTE_UNUSED = 1.0/CCTK_DELTA_SPACE(0);
+  const REAL_SIMD_ARRAY invdx0 CCTK_ATTRIBUTE_UNUSED = ConstSIMD(NOSIMDinvdx0);
+  const CCTK_REAL NOSIMDinvdx1 CCTK_ATTRIBUTE_UNUSED = 1.0/CCTK_DELTA_SPACE(1);
+  const REAL_SIMD_ARRAY invdx1 CCTK_ATTRIBUTE_UNUSED = ConstSIMD(NOSIMDinvdx1);
+  const CCTK_REAL NOSIMDinvdx2 CCTK_ATTRIBUTE_UNUSED = 1.0/CCTK_DELTA_SPACE(2);
+  const REAL_SIMD_ARRAY invdx2 CCTK_ATTRIBUTE_UNUSED = ConstSIMD(NOSIMDinvdx2);
 """
 
     for i in range(len(par.glb_Cparams_list)):
@@ -159,8 +159,8 @@ def EinsteinToolkit_SIMD_declare_C_params(ThornName):
         if (keep_param) and ("CCTK_REAL" in singleparstring):
             parname = par.glb_Cparams_list[i].parname
             SIMD_declare_C_params_str += "  const "+singleparstring + "*NOSIMD"+parname+\
-                " = CCTK_ParameterGet(\""+parname+"\", \""+ThornName+"\", NULL);\n"
-            SIMD_declare_C_params_str += "  const REAL_SIMD_ARRAY "+parname+" = ConstSIMD(*NOSIMD"+parname+");\n"
+                " CCTK_ATTRIBUTE_UNUSED = CCTK_ParameterGet(\""+parname+"\", \""+ThornName+"\", NULL);\n"
+            SIMD_declare_C_params_str += "  const REAL_SIMD_ARRAY "+parname+" CCTK_ATTRIBUTE_UNUSED = ConstSIMD(*NOSIMD"+parname+");\n"
     return SIMD_declare_C_params_str
 
 
