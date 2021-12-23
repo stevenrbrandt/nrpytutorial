@@ -27,7 +27,7 @@ import grid as gri               # NRPy+: Functions having to do with numerical 
 import indexedexp as ixp         # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
 import reference_metric as rfm   # NRPy+: Reference metric support
 from pickling import pickle_NRPy_env   # NRPy+: Pickle/unpickle NRPy+ environment, for parallel codegen
-import os, time                  # Standard Python modules for multiplatform OS-level functions, benchmarking
+import os, time, sys             # Standard Python modules for multiplatform OS-level functions, benchmarking
 import sympy as sp               # SymPy: The Python computer algebra package upon which NRPy+ depends
 import BSSN.BSSN_RHSs as rhs
 import BSSN.BSSN_gauge_RHSs as gaugerhs
