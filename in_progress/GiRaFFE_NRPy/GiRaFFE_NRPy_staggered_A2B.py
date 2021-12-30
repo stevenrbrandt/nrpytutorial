@@ -5,7 +5,7 @@ nrpy_dir_path = os.path.join("..")
 if nrpy_dir_path not in sys.path:
     sys.path.append(nrpy_dir_path)
 
-from outputC import outC_function_outdir_dict, outC_function_dict, outC_function_prototype_dict # NRPy+: Core C code output module
+from outputC import outC_function_outdir_dict, outC_function_dict, outC_function_prototype_dict, outC_function_master_list, outC_function_element # NRPy+: Core C code output module
 import cmdline_helper as cmd     # NRPy+: Multi-platform Python command-line interface
 Ccodesdir = "GiRaFFE_standalone_Ccodes/A2B"
 cmd.mkdir(os.path.join(Ccodesdir))
@@ -171,6 +171,9 @@ includes = """#include "NRPy_basic_defines.h"
 """
 
 def add_to_Cfunction_dict__GiRaFFE_NRPy_staggered_A2B():
+    outC_function_master_list.append(outC_function_element("empty", "empty", "empty", "empty", name, "empty",
+                             "empty", "empty", "empty", "empty",
+                             "empty", "empty"))
     outC_function_outdir_dict[name] = "default"
     outC_function_dict[name] = includes+body.replace("../set_Cparameters.h","set_Cparameters.h")
     outC_function_prototype_dict[name] = prototype

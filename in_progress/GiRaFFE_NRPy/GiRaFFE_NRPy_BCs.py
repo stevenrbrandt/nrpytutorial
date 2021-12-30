@@ -6,7 +6,7 @@ nrpy_dir_path = os.path.join("..")
 if nrpy_dir_path not in sys.path:
     sys.path.append(nrpy_dir_path)
 
-from outputC import outC_function_outdir_dict, outC_function_dict, outC_function_prototype_dict
+from outputC import outC_function_outdir_dict, outC_function_dict, outC_function_prototype_dict, outC_function_master_list, outC_function_element
 
 name = "GiRaFFE_boundary_conditions.h"
 body = """// Currently, we're using basic Cartesian boundary conditions, pending fixes by Zach.
@@ -318,10 +318,16 @@ includes = """#include "NRPy_basic_defines.h"
 """
 
 def add_to_Cfunction_dict__GiRaFFE_NRPy_BCs():
+    outC_function_master_list.append(outC_function_element("empty", "empty", "empty", "empty", potential_name, "empty",
+                             "empty", "empty", "empty", "empty",
+                             "empty", "empty"))
     outC_function_outdir_dict[potential_name] = "default"
     outC_function_dict[potential_name] = includes+potential_body.replace("../set_Cparameters.h","set_Cparameters.h")
     outC_function_prototype_dict[potential_name] = potential_prototype
 
+    outC_function_master_list.append(outC_function_element("empty", "empty", "empty", "empty", velocity_name, "empty",
+                             "empty", "empty", "empty", "empty",
+                             "empty", "empty"))
     outC_function_outdir_dict[velocity_name] = "default"
     outC_function_dict[velocity_name] = includes+velocity_body.replace("../set_Cparameters.h","set_Cparameters.h")
     outC_function_prototype_dict[velocity_name] = velocity_prototype
