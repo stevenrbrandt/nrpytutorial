@@ -591,7 +591,7 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
     if par.parval_from_str("grid::GridFuncMemAccess") == "ETK":
         params, preloop = set_ETK_func_params_preloop(func_name_suffix, enable_SIMD=False)
         enableCparameters=False
-        
+
     FD_outCparams = "outCverbose=False,enable_SIMD=False"
     FD_outCparams += ",GoldenKernelsEnable=" + str(enable_golden_kernels)
     starttime = print_msg_with_timing("Enforcing det(gammabar)=det(gammahat) constraint", msg="Ccodegen", startstop="start")
