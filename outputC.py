@@ -66,10 +66,14 @@ def indent_Ccode(Ccode, indent="  "):
     outstring = ""
     for i in range(len(Ccodesplit)):
         if Ccodesplit[i] != "":
-            outstring += indent + Ccodesplit[i] + '\n'
+            if Ccodesplit[i].lstrip().startswith("#"):
+                # Remove all indentation from preprocessor statements (lines that start with "#")
+                outstring += Ccodesplit[i].lstrip() + '\n'
+            else:
+                outstring += indent + Ccodesplit[i] + '\n'
         else:
             outstring += '\n'
-    return outstring
+    return outstring.rstrip(" ")  # make sure to remove trailing whitespace!
 
 
 def check_if_string__error_if_not(allegedstring, stringdesc):
