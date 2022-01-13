@@ -60,14 +60,14 @@ def declare_BSSN_gridfunctions_if_not_declared_already():
             return hDD, aDD, lambdaU, vetU, betU, trK, cf, alpha
 
     # Step 2.a: Register indexed quantities, using ixp.register_... functions
-    hDD = ixp.register_gridfunctions_for_single_rank2("EVOL", "hDD", "sym01")
-    aDD = ixp.register_gridfunctions_for_single_rank2("EVOL", "aDD", "sym01")
-    lambdaU = ixp.register_gridfunctions_for_single_rank1("EVOL", "lambdaU")
-    vetU = ixp.register_gridfunctions_for_single_rank1("EVOL", "vetU")
-    betU = ixp.register_gridfunctions_for_single_rank1("EVOL", "betU")
+    hDD = ixp.register_gridfunctions_for_single_rank2("EVOL", "hDD", "sym01", f_infinity=0.0, wavespeed=1.0)
+    aDD = ixp.register_gridfunctions_for_single_rank2("EVOL", "aDD", "sym01", f_infinity=0.0, wavespeed=1.0)
+    lambdaU = ixp.register_gridfunctions_for_single_rank1("EVOL", "lambdaU", f_infinity=0.0, wavespeed=1.0)
+    vetU = ixp.register_gridfunctions_for_single_rank1("EVOL", "vetU", f_infinity=0.0, wavespeed=1.0)
+    betU = ixp.register_gridfunctions_for_single_rank1("EVOL", "betU", f_infinity=0.0, wavespeed=1.0)
 
     # Step 2.b: Register scalar quantities, using gri.register_gridfunctions()
-    trK, cf, alpha = gri.register_gridfunctions("EVOL", ["trK", "cf", "alpha"])
+    trK, cf, alpha = gri.register_gridfunctions("EVOL", ["trK", "cf", "alpha"], f_infinity=[0.0, 1.0, 1.0], wavespeed=[1.0, 1.0, sp.sqrt(2.0)])
 
     return hDD, aDD, lambdaU, vetU, betU, trK, cf, alpha
 
@@ -379,6 +379,7 @@ def RicciBar__gammabarDD_dHatD__DGammaUDD__DGammaU():
     if par.parval_from_str(thismodule + "::LeaveRicciSymbolic") == "True":
         for i in range(len(gri.glb_gridfcs_list)):
             if "RbarDD00" in gri.glb_gridfcs_list[i].name:
+                RbarDD = ixp.declarerank2("RbarDD", "sym01")
                 return
 
         RbarDD = ixp.register_gridfunctions_for_single_rank2("AUXEVOL", "RbarDD", "sym01")

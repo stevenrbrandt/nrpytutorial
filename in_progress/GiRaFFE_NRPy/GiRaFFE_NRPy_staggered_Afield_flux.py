@@ -5,17 +5,18 @@ nrpy_dir_path = os.path.join("..")
 if nrpy_dir_path not in sys.path:
     sys.path.append(nrpy_dir_path)
 
+from outputC import outC_function_outdir_dict, outC_function_dict, outC_function_prototype_dict, outC_function_master_list, outC_function_element # NRPy+: Core C code output module
 import cmdline_helper as cmd     # NRPy+: Multi-platform Python command-line interface
 Ccodesdir = "GiRaFFE_standalone_Ccodes/RHSs"
 cmd.mkdir(os.path.join(Ccodesdir))
 
 name = "A_i_rhs_no_gauge_terms"
-prototype = """static void A_i_rhs_no_gauge_terms(const int A_dirn,const paramstruct *params,gf_and_gz_struct *out_prims_r,gf_and_gz_struct *out_prims_l,
+prototype = """void A_i_rhs_no_gauge_terms(const int A_dirn,const paramstruct *params,gf_and_gz_struct *out_prims_r,gf_and_gz_struct *out_prims_l,
                                    REAL *psi6_pointer,REAL *cmax_1,REAL *cmin_1,REAL *cmax_2,REAL *cmin_2, REAL *A3_rhs);"""
 body = r"""/* Compute the part of A_i_rhs that excludes the gauge terms. I.e., we set
  *   A_i_rhs = \partial_t A_i = \psi^{6} (v^z B^x - v^x B^z)   here.
  */
-static void A_i_rhs_no_gauge_terms(const int A_dirn,const paramstruct *params,gf_and_gz_struct *out_prims_r,gf_and_gz_struct *out_prims_l,
+void A_i_rhs_no_gauge_terms(const int A_dirn,const paramstruct *params,gf_and_gz_struct *out_prims_r,gf_and_gz_struct *out_prims_l,
                                    REAL *psi6_pointer,REAL *cmax_1,REAL *cmin_1,REAL *cmax_2,REAL *cmin_2, REAL *A3_rhs) {
   #include "../set_Cparameters.h"
 
@@ -127,6 +128,9 @@ includes = """#include "NRPy_basic_defines.h"
 """
 
 def add_to_Cfunction_dict__GiRaFFE_NRPy_staggered_Afield_flux():
+    outC_function_master_list.append(outC_function_element("empty", "empty", "empty", "empty", name, "empty",
+                             "empty", "empty", "empty", "empty",
+                             "empty", "empty"))
     outC_function_outdir_dict[name] = "default"
     outC_function_dict[name] = includes+body.replace("../set_Cparameters.h","set_Cparameters.h")
     outC_function_prototype_dict[name] = prototype

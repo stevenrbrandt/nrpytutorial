@@ -1156,60 +1156,65 @@ def out_default_free_parameters_for_rfm(free_parameters_file,
                                         domain_size=1.0,sinh_width=0.4,sinhv2_const_dr=0.05,SymTP_bScale=0.5):
     CoordSystem = par.parval_from_str("reference_metric::CoordSystem")
 
-    with open(free_parameters_file, "a") as file:
-        file.write("""
+    outstr = """
 // Set free-parameter values.
 
 const REAL domain_size    = """ + str(domain_size) + """;
 const REAL sinh_width     = """ + str(sinh_width) + """;
 const REAL sinhv2_const_dr= """ + str(sinhv2_const_dr) + """;
-const REAL SymTP_bScale   = """ + str(SymTP_bScale) + ";\n")
+const REAL SymTP_bScale   = """ + str(SymTP_bScale) + ";\n"
 
-        coordparams = ""
-        if CoordSystem == "Spherical":
-            coordparams += """
+    coordparams = ""
+    if CoordSystem == "Spherical":
+        coordparams += """
 params.RMAX = domain_size;\n"""
-        elif "SinhSpherical" in CoordSystem:
-            coordparams += """
+    elif "SinhSpherical" in CoordSystem:
+        coordparams += """
 params.AMPL = domain_size;
 params.SINHW=  sinh_width;\n"""
-            if CoordSystem == "SinhSphericalv2":
-                coordparams += "        params.const_dr = sinhv2_const_dr;\n"
-        elif "SymTP" in CoordSystem:
-            coordparams += """
+        if CoordSystem == "SinhSphericalv2":
+            coordparams += "        params.const_dr = sinhv2_const_dr;\n"
+    elif "SymTP" in CoordSystem:
+        coordparams += """
 params.bScale =  SymTP_bScale;
 params.AMAX   =  domain_size;\n"""
-            if CoordSystem == "SinhSymTP":
-                coordparams += "        params.SINHWAA = sinh_width;\n"
-        elif CoordSystem == "Cartesian":
-            coordparams += """
+        if CoordSystem == "SinhSymTP":
+            coordparams += "        params.SINHWAA = sinh_width;\n"
+    elif CoordSystem == "Cartesian":
+        coordparams += """
 params.xmin = -domain_size, params.xmax = domain_size;
 params.ymin = -domain_size, params.ymax = domain_size;
 params.zmin = -domain_size, params.zmax = domain_size;\n"""
-        elif CoordSystem =="SinhCartesian":
-            coordparams += """
+    elif CoordSystem =="SinhCartesian":
+        coordparams += """
 params.AMPLX  = domain_size;
 params.SINHWX = sinh_width;
 params.AMPLY  = domain_size;
 params.SINHWY = sinh_width;
 params.AMPLZ  = domain_size;
 params.SINHWZ = sinh_width;\n"""
-        elif CoordSystem == "Cylindrical":
-            coordparams += """
+    elif CoordSystem == "Cylindrical":
+        coordparams += """
 params.ZMIN   = -domain_size;
 params.ZMAX   =  domain_size;
 params.RHOMAX =  domain_size;\n"""
-        elif "SinhCylindrical" in CoordSystem:
-            coordparams += """
+    elif "SinhCylindrical" in CoordSystem:
+        coordparams += """
 params.AMPLRHO = domain_size;
 params.SINHWRHO= sinh_width;
 params.AMPLZ   = domain_size;
 params.SINHWZ  = sinh_width;\n"""
-            if CoordSystem == "SinhCylindricalv2":
-                coordparams += """
+        if CoordSystem == "SinhCylindricalv2":
+            coordparams += """
 params.const_drho = sinhv2_const_dr;
 params.const_dz   = sinhv2_const_dr;\n"""
-        file.write(coordparams + "\n")
+    outstr += coordparams + "\n"
+    if free_parameters_file == "returnstring":
+        return outstr
+    else:
+        with open(free_parameters_file, "a") as file:
+            file.write(outstr)
+
 
 
 ############################
@@ -1431,7 +1436,7 @@ def add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=os.p
         name  ="set_Nxx_dxx_invdx_params__and__xx"+gridsuffix,
         params="const int EigenCoord, const int Nxx[3],paramstruct *restrict params, REAL *restrict xx[3]",
         body  =body,
-        enableCparameters=False, uses_rfm=True)  # Cparameters here must be #include'd in body, not at top of function as usual.
+        enableCparameters=False)  # Cparameters here must be #include'd in body, not at top of function as usual.
 
 def add_to_Cfunc_dict_xx_to_Cart(rel_path_to_Cparams=os.path.join("./")):
     gridsuffix = ""  # Disable for now
@@ -1494,10 +1499,20 @@ def out_timestep_func_to_file(outfile):
         file.write(outC_function_dict["find_timestep"])
 
 
-def register_C_functions_and_NRPy_basic_defines(rel_path_to_Cparams=os.path.join("./"), enable_rfm_precompute=False,
-                                                use_unit_wavespeed_for_find_timestep=False):
-    add_to_Cfunction_dict__find_timestep(rel_path_to_Cparams=rel_path_to_Cparams, enable_mask=False,
-                                         output_dt_local_h_only=False,
+def register_NRPy_basic_defines(enable_rfm_precompute=False):
+    Nbd = ""
+    if enable_rfm_precompute:
+        if par.parval_from_str(thismodule+"::rfm_precompute_to_Cfunctions_and_NRPy_basic_defines") == "True":
+            Nbd += NRPy_basic_defines_str
+        else:
+            Nbd += "#include \"" + os.path.join("rfm_files", "rfm_struct__declare.h") + "\"\n"
+
+    outC_NRPy_basic_defines_h_dict["reference_metric"] = Nbd
+
+
+def register_C_functions(rel_path_to_Cparams=os.path.join("./"), enable_rfm_precompute=False,
+                         use_unit_wavespeed_for_find_timestep=False, enable_mask=False, append_coordsuffix=False):
+    add_to_Cfunction_dict__find_timestep(rel_path_to_Cparams=rel_path_to_Cparams, enable_mask=enable_mask,
                                          use_unit_wavespeed=use_unit_wavespeed_for_find_timestep)
     add_to_Cfunc_dict_xx_to_Cart(rel_path_to_Cparams=rel_path_to_Cparams)
     add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=rel_path_to_Cparams)
@@ -1532,6 +1547,3 @@ def register_C_functions_and_NRPy_basic_defines(rel_path_to_Cparams=os.path.join
                 params="const paramstruct *restrict params, rfm_struct *restrict rfmstruct",
                 body=indent_Ccode(rfm_struct__freemem.replace("rfmstruct.", "rfmstruct->")),
                 rel_path_to_Cparams=rel_path_to_Cparams)
-            outC_NRPy_basic_defines_h_dict["reference_metric"] = NRPy_basic_defines_str
-        else:
-            outC_NRPy_basic_defines_h_dict["reference_metric"] = """#include "rfm_files/rfm_struct__declare.h"\n"""

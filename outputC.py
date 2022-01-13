@@ -10,7 +10,7 @@
 #           list of symbols imported when
 #           "from outputC import *" is called.
 __all__ = ['lhrh', 'outCparams', 'nrpyAbs', 'superfast_uniq', 'check_if_string__error_if_not',
-           'outputC','parse_outCparams_string',
+           'outputC', 'parse_outCparams_string',
            'outC_NRPy_basic_defines_h_dict',
            'outC_function_prototype_dict', 'outC_function_dict', 'Cfunction', 'add_to_Cfunction_dict', 'outCfunction']
 
@@ -66,10 +66,14 @@ def indent_Ccode(Ccode, indent="  "):
     outstring = ""
     for i in range(len(Ccodesplit)):
         if Ccodesplit[i] != "":
-            outstring += str(indent + Ccodesplit[i] + '\n')
+            if Ccodesplit[i].lstrip().startswith("#"):
+                # Remove all indentation from preprocessor statements (lines that start with "#")
+                outstring += Ccodesplit[i].lstrip() + '\n'
+            else:
+                outstring += indent + Ccodesplit[i] + '\n'
         else:
-            outstring += '\n'  # Avoid adding trailing whitespace
-    return outstring
+            outstring += '\n'
+    return outstring.rstrip(" ")  # make sure to remove trailing whitespace!
 
 
 def check_if_string__error_if_not(allegedstring, stringdesc):
@@ -442,9 +446,11 @@ outC_NRPy_basic_defines_h_dict = {}
 outC_function_prototype_dict = {}
 outC_function_dict           = {}
 outC_function_outdir_dict    = {}
+outC_function_element = namedtuple('outC_function_element', 'includes prefunc desc c_type name params preloop body loopopts postloop enableCparameters rel_path_to_Cparams')
+outC_function_master_list = []
 
 def Cfunction(includes=None, prefunc="", desc="", c_type="void", name=None, params=None, preloop="", body=None,
-              loopopts="", postloop="", enableCparameters=True, rel_path_to_Cparams=os.path.join("./"), uses_rfm=False):
+              loopopts="", postloop="", enableCparameters=True, rel_path_to_Cparams=os.path.join("./")):
     if name is None or params is None or body is None: # use "is None" instead of "==None", as the former is more correct.
         print("Cfunction() error: strings must be provided for function name, parameters, and body")
         sys.exit(1)
@@ -452,7 +458,7 @@ def Cfunction(includes=None, prefunc="", desc="", c_type="void", name=None, para
 
     include_Cparams_str = ""
     if enableCparameters:
-        if "enable_SIMD" in loopopts:
+        if "enable_SIMD" in loopopts or "SIMD_width" in body:  # If using manual SIMD looping, SIMD_width will appear in body.
             include_Cparams_str = "#include \"" + os.path.join(rel_path_to_Cparams, "set_Cparameters-SIMD.h") + "\"\n"
         else:
             include_Cparams_str = "#include \"" + os.path.join(rel_path_to_Cparams, "set_Cparameters.h") + "\"\n"
@@ -468,8 +474,11 @@ def Cfunction(includes=None, prefunc="", desc="", c_type="void", name=None, para
             if "<" in inc:  # for C++ style code e.g., #include <cstdio>
                 complete_func += "#include " + inc + "\n"
             else:
+                if "NRPy_basic_defines.h" in inc or "NRPy_function_prototypes.h" in inc or \
+                        "SIMD_intrinsics.h" in inc:
+                    inc = os.path.join(rel_path_to_Cparams, inc)
                 complete_func += "#include \"" + inc + "\"\n"
-        complete_func += "\n"
+        # complete_func += "\n"
 
     if prefunc != "":
         complete_func += prefunc + "\n"
@@ -487,29 +496,45 @@ def Cfunction(includes=None, prefunc="", desc="", c_type="void", name=None, para
 
     return func_prototype+";", complete_func
 
+
 def add_to_Cfunction_dict(includes=None, prefunc="", desc="", c_type="void", name=None, params=None,
                           preloop="", body=None, loopopts="", postloop="",
                           path_from_rootsrcdir_to_this_Cfunc="default", enableCparameters=True,
-                          rel_path_to_Cparams=os.path.join("./"), uses_rfm=False):
-    outC_function_outdir_dict[name] = path_from_rootsrcdir_to_this_Cfunc
-    outC_function_prototype_dict[name], outC_function_dict[name] = \
-        Cfunction(includes, prefunc, desc, c_type, name, params, preloop, body, loopopts, postloop,
-                  enableCparameters, rel_path_to_Cparams, uses_rfm)
+                          rel_path_to_Cparams=os.path.join("./")):
+
+    namesuffix = ""
+
+    if outC_function_element(includes, prefunc, desc, c_type, name + namesuffix, params,
+                             preloop, body, loopopts, postloop,
+                             enableCparameters, rel_path_to_Cparams) in outC_function_master_list:
+        print("OUCH! Found " + name + namesuffix + " in outC_function_master_list.")
+
+    outC_function_master_list.append(outC_function_element(includes, prefunc, desc, c_type, name + namesuffix, params,
+                                                           preloop, body, loopopts, postloop,
+                                                           enableCparameters, rel_path_to_Cparams))
+
+    outC_function_outdir_dict[name + namesuffix] = path_from_rootsrcdir_to_this_Cfunc
+    outC_function_prototype_dict[name + namesuffix], outC_function_dict[name + namesuffix] = \
+        Cfunction(includes, prefunc, desc, c_type, name + namesuffix, params, preloop, body, loopopts, postloop,
+                  enableCparameters, rel_path_to_Cparams)
+
 
 def outCfunction(outfile="", includes=None, prefunc="", desc="",
                  c_type="void", name=None, params=None, preloop="", body=None, loopopts="", postloop="",
-                 enableCparameters=True, rel_path_to_Cparams=os.path.join("./"), uses_rfm=False):
-    _ignoreprototype,Cfunc = Cfunction(includes, prefunc, desc, c_type, name, params, preloop, body,
-                                       loopopts, postloop, enableCparameters, rel_path_to_Cparams, uses_rfm)
+                 enableCparameters=True, rel_path_to_Cparams=os.path.join("./")):
+    _ignoreprototype, Cfunc = Cfunction(includes, prefunc, desc, c_type, name, params, preloop, body,
+                                        loopopts, postloop, enableCparameters, rel_path_to_Cparams)
     if outfile == "returnstring":
         return Cfunc
     with open(outfile, "w") as file:
         file.write(Cfunc)
         print("Output C function "+name+"() to file "+outfile)
 
+
 def construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_free_parameters_h=False,
                                                compiler_opt_option="fastdebug", addl_CFLAGS=None,
-                                               addl_libraries=None, mkdir_Ccodesrootdir=True, use_make=True, CC="gcc"):
+                                               addl_libraries=None, mkdir_Ccodesrootdir=True, use_make=True, CC="gcc",
+                                               include_dirs=None):
     if "main" not in outC_function_dict:
         print("construct_Makefile_from_outC_function_dict() error: C codes will not compile if main() function not defined!")
         print("    Make sure that the main() function registered to outC_function_dict has name \"main\".")
@@ -528,19 +553,24 @@ def construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_fr
         Makefile_list_of_files.append(path_and_file)
         return os.path.join(Ccodesrootdir, path_and_file)
 
-    for key, item in outC_function_dict.items():
-        # Convention: Output all C files ending in _gridN into the gridN/ subdirectory.
-        if "grid" in key.split("_")[-1] and not "grids" in key:
-            subdir = key.split("_")[-1]
-            with open(add_to_Makefile(Ccodesrootdir, os.path.join(subdir, key+".c")), "w") as file:
-                file.write(item)
-        elif outC_function_outdir_dict[key] != "default":
-            subdir = outC_function_outdir_dict[key]
-            with open(add_to_Makefile(Ccodesrootdir, os.path.join(subdir, key+".c")), "w") as file:
-                file.write(item)
-        else:
-            with open(add_to_Makefile(Ccodesrootdir, os.path.join(key+".c")), "w") as file:
-                file.write(item)
+    list_of_uniq_functions = []
+    for item in outC_function_master_list:
+        if item.name not in list_of_uniq_functions:
+            # Convention: Output all C files ending in _gridN into the gridN/ subdirectory.
+            if "__rfm__" in item.name:
+                subdir = item.name.split("__rfm__")[-1]
+                import cmdline_helper as cmd
+                cmd.mkdir(os.path.join(Ccodesrootdir, subdir))
+                with open(add_to_Makefile(Ccodesrootdir, os.path.join(subdir, item.name+".c")), "w") as file:
+                    file.write(outC_function_dict[item.name])
+            elif outC_function_outdir_dict[item.name] != "default":
+                subdir = outC_function_outdir_dict[item.name]
+                with open(add_to_Makefile(Ccodesrootdir, os.path.join(subdir, item.name+".c")), "w") as file:
+                    file.write(outC_function_dict[item.name])
+            else:
+                with open(add_to_Makefile(Ccodesrootdir, os.path.join(item.name+".c")), "w") as file:
+                    file.write(outC_function_dict[item.name])
+            list_of_uniq_functions += [item.name]
     CFLAGS      = " -O2 -march=native -g -fopenmp -Wall -Wno-unused-variable"
     DEBUGCFLAGS = " -O2 -g -Wall -Wno-unused-variable -Wno-unknown-pragmas"  # OpenMP requires -fopenmp, and when disabling
                                                                              # -fopenmp, unknown pragma warnings appear.
@@ -561,6 +591,9 @@ def construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_fr
             sys.exit(1)
         for FLAG in addl_CFLAGS:
             CHOSEN_CFLAGS += " "+FLAG
+            CFLAGS += " " + FLAG
+            DEBUGCFLAGS += " " + FLAG
+            FASTCFLAGS += " " + FLAG
     all_str = exec_name + " "
     dep_list = []
     compile_list = []
@@ -572,15 +605,18 @@ def construct_Makefile_from_outC_function_dict(Ccodesrootdir, exec_name, uses_fr
             if c_file == "main.c":
                 addl_headers += " free_parameters.h"
         dep_list.append(object_file + ": " + c_file + addl_headers)
-        compile_list.append("\t$(CC) $(CFLAGS)  -c " + c_file + " -o " + object_file)
+        compile_list.append("\t$(CC) $(CFLAGS) $(INCLUDEDIRS)  -c " + c_file + " -o " + object_file)
 
-    linked_libraries = " -lm"
+    linked_libraries = ""
     if addl_libraries is not None:
         if not isinstance(addl_libraries, list):
             print("Error: construct_Makefile_from_outC_function_dict(): addl_libraries must be a list!")
             sys.exit(1)
         for lib in addl_libraries:
             linked_libraries += " " + lib
+    linked_libraries += " -lm"
+    if "openmp" in CHOSEN_CFLAGS:
+        linked_libraries += " -lgomp"
 
     if use_make:
         with open(os.path.join(Ccodesrootdir, "Makefile"), "w") as Makefile:
@@ -589,12 +625,23 @@ CFLAGS = """ + CHOSEN_CFLAGS + """
 #CFLAGS = """ + CFLAGS + """
 #CFLAGS = """ + DEBUGCFLAGS + """
 #CFLAGS = """ + FASTCFLAGS + "\n")
+            include_dirs_str = ""
+            if include_dirs is not None:
+                if not isinstance(include_dirs, list):
+                    print("Error: construct_Makefile_from_outC_function_dict(): include_dirs must be a list!")
+                    sys.exit(1)
+                for include_dir in include_dirs:
+                    include_dirs_str += "-I" + include_dir + " "
+                include_dirs_str = include_dirs_str[:-1]
+            Makefile.write("INCLUDEDIRS = " + include_dirs_str + "\n")
             Makefile.write("all: " + all_str + "\n")
             for idx, dep in enumerate(dep_list):
                 Makefile.write(dep + "\n")
                 Makefile.write(compile_list[idx] + "\n\n")
             Makefile.write(exec_name + ": " + all_str.replace(exec_name, "") + "\n")
-            Makefile.write("\t$(CC) $(CFLAGS) " + all_str.replace(exec_name, "") + " -o " + exec_name + linked_libraries + "\n")
+            ## LINKER STEP:
+            Makefile.write("\t$(CC) " + all_str.replace(exec_name, "") + " -o " + exec_name + linked_libraries + "\n")
+            ## MAKE CLEAN:
             Makefile.write("\nclean:\n\trm -f *.o */*.o *~ */*~ ./#* *.txt *.dat *.avi *.png " + exec_name + "\n")
     else:
         with open(os.path.join(Ccodesrootdir, "backup_script_nomake.sh"), "w") as backup:
@@ -607,7 +654,6 @@ CFLAGS = """ + CHOSEN_CFLAGS + """
 def construct_NRPy_basic_defines_h(Ccodesrootdir, enable_SIMD=False, supplemental_dict=None):
     if supplemental_dict is None:
         supplemental_dict = {}
-
     if not os.path.isdir(Ccodesrootdir):
         print("Error (in construct_NRPy_basic_defines_h): Directory \"" + Ccodesrootdir + "\" does not exist.")
         sys.exit(1)
@@ -623,12 +669,20 @@ def construct_NRPy_basic_defines_h(Ccodesrootdir, enable_SIMD=False, supplementa
         if enable_SIMD:
             file.write("// construct_NRPy_basic_defines_h(...,enable_SIMD=True) was called so we #include SIMD intrinsics:\n")
             file.write("""#include "SIMD/SIMD_intrinsics.h"\n""")
-        for key in ["outputC", "NRPy_param_funcs", "grid", "finite_difference", "reference_metric", "CurviBoundaryConditions", "MoL"]:
+        # The ordering here is based largely on data structure dependencies. E.g., griddata_struct contains bc_struct.
+        core_modules_list = ["outputC", "NRPy_param_funcs", "finite_difference", "reference_metric",
+                             "CurviBoundaryConditions", "MoL", "interpolate", "grid"]
+        for key in core_modules_list:
             if key in outC_NRPy_basic_defines_h_dict:
+                output_key(file, key, outC_NRPy_basic_defines_h_dict[key])
+
+        for key in outC_NRPy_basic_defines_h_dict:
+            if key not in core_modules_list:
                 output_key(file, key, outC_NRPy_basic_defines_h_dict[key])
 
         for key in supplemental_dict:
             output_key(file, key, supplemental_dict[key])
+
 
 def construct_NRPy_function_prototypes_h(Ccodesrootdir):
     if not os.path.isdir(Ccodesrootdir):
@@ -655,6 +709,13 @@ def outputC_register_C_functions_and_NRPy_basic_defines():
 #endif
 #ifndef M_SQRT1_2
 #define M_SQRT1_2 0.707106781186547524400844362104849039L
+#endif
+
+#ifndef MIN
+#define MIN(A, B) ( ((A) < (B)) ? (A) : (B) )
+#endif
+#ifndef MAX
+#define MAX(A, B) ( ((A) > (B)) ? (A) : (B) )
 #endif
 
 #ifdef __cplusplus
@@ -757,7 +818,7 @@ def NRPy_param_funcs_register_C_functions_and_NRPy_basic_defines(directory=os.pa
             else:
                 c_type = par.glb_Cparams_list[i].type
             comment = "  // " + par.glb_Cparams_list[i].module + "::" + par.glb_Cparams_list[i].parname
-            CCodelines.append("    " + c_type + " " + par.glb_Cparams_list[i].parname + ";" + comment + "\n")
+            CCodelines.append("  " + c_type + " " + par.glb_Cparams_list[i].parname + ";" + comment + "\n")
     for line in sorted(CCodelines):
         Nbd_str += line
     Nbd_str += "} paramstruct;\n"

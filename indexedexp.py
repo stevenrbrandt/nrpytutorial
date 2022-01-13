@@ -250,10 +250,12 @@ def apply_symmetry_condition_to_derivatives(IDX_OBJ):
                             IDX_OBJ[i0][i1][i2][i3] = sp.sympify(0)
     return IDX_OBJ
 
+
 def declarerank1(symbol, DIM=-1):
     return declare_indexedexp(rank=1, symbol=symbol, dimension=DIM)
 
-def register_gridfunctions_for_single_rank1(gf_type,gf_basename, DIM=-1):
+
+def register_gridfunctions_for_single_rank1(gf_type,gf_basename, DIM=-1, f_infinity=0.0, wavespeed=1.0):
     # Step 0: Verify the gridfunction basename is valid:
     gri.verify_gridfunction_basename_is_valid(gf_basename)
 
@@ -267,15 +269,17 @@ def register_gridfunctions_for_single_rank1(gf_type,gf_basename, DIM=-1):
     gf_list = []
     for i in range(DIM):
         gf_list.append(str(IDX_OBJ_TMP[i]))
-    gri.register_gridfunctions(gf_type, gf_list, rank=1, is_indexed=True, DIM=DIM)
+    gri.register_gridfunctions(gf_type, gf_list, rank=1, is_indexed=True, DIM=DIM, f_infinity=f_infinity, wavespeed=wavespeed)
 
     # Step 3: Return array of SymPy variables
     return IDX_OBJ_TMP
 
+
 def declarerank2(symbol, symmetry, DIM=-1):
     return declare_indexedexp(rank=2, symbol=symbol, symmetry=symmetry, dimension=DIM)
 
-def register_gridfunctions_for_single_rank2(gf_type,gf_basename, symmetry_option, DIM=-1):
+
+def register_gridfunctions_for_single_rank2(gf_type, gf_basename, symmetry_option, DIM=-1, f_infinity=0.0, wavespeed=1.0):
     # Step 0: Verify the gridfunction basename is valid:
     gri.verify_gridfunction_basename_is_valid(gf_basename)
 
@@ -298,7 +302,9 @@ def register_gridfunctions_for_single_rank2(gf_type,gf_basename, symmetry_option
                     save = False
             if save == True:
                 gf_list.append(str(IDX_OBJ_TMP[i][j]))
-    gri.register_gridfunctions(gf_type,gf_list,rank=2, is_indexed=True, DIM=DIM)
+
+    gri.register_gridfunctions(gf_type, gf_list, rank=2, is_indexed=True, DIM=DIM,
+                               f_infinity=f_infinity, wavespeed=wavespeed)
 
     # Step 3: Return array of SymPy variables
     return IDX_OBJ_TMP

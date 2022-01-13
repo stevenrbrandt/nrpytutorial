@@ -35,9 +35,15 @@ body_a = """/*****************************************
 #define MAXNUMINDICES 5
 //    ^^^^^^^^^^^^^ Be _sure_ to define MAXNUMINDICES appropriately!
 
+#ifndef MIN
 #define MIN(a,b) ( ((a) < (b)) ? (a) : (b) )
+#endif
+#ifndef MIN
 #define MAX(a,b) ( ((a) > (b)) ? (a) : (b) )
-#define SQR(x) ((x) * (x))"""
+#endif
+#ifndef SQR
+#define SQR(x) ((x) * (x))
+#endif"""
 body_b = """// You'll find the #define's for LOOP_DEFINE and SET_INDEX_ARRAYS_NRPY inside:
 #include "loop_defines_reconstruction_NRPy.h"
 
@@ -277,13 +283,16 @@ def GiRaFFE_NRPy_PPM(Ccodesdir):
     with open(os.path.join(Ccodesdir,loops_name),"w") as file:
         file.write(loops_body)
 
-from outputC import outC_function_outdir_dict, outC_function_dict, outC_function_prototype_dict
+from outputC import outC_function_outdir_dict, outC_function_dict, outC_function_prototype_dict, outC_function_master_list, outC_function_element
 
 includes = """#include "NRPy_basic_defines.h"
 #include "GiRaFFE_basic_defines.h"
 """
 
 def add_to_Cfunction_dict__GiRaFFE_NRPy_PPM(outdir):
+    outC_function_master_list.append(outC_function_element("empty", "empty", "empty", "empty", name, "empty",
+                             "empty", "empty", "empty", "empty",
+                             "empty", "empty"))
     outC_function_outdir_dict[name] = "default"
     outC_function_dict[name] = includes+body_a+body_b.replace("../set_Cparameters.h","set_Cparameters.h")
     outC_function_prototype_dict[name] = prototype

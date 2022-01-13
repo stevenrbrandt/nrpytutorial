@@ -93,6 +93,9 @@ def Convert_Spherical_or_Cartesian_ADM_to_BSSN_curvilinear(CoordType_in, Sph_r_t
     #         they are still in the Spherical or Cartesian basis. We can now directly apply
     #         Jacobian transformations to get them in the correct xx0,xx1,xx2 basis:
 
+    # Make these globals so we can recover the ADM quantities in the destination basis if desired.
+    global alpha, betaU, BU, gammaDD, KDD
+
     # alpha is a scalar, so no Jacobian transformation is necessary.
     alpha = alphaSphorCart
 
