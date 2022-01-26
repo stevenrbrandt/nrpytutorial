@@ -1,3 +1,4 @@
+import os
 from cactusthorn import CactusThorn
 
 thorn = CactusThorn("TestOne","WaveToyNRPy")
@@ -24,5 +25,5 @@ evol_eqns = [
 
 thorn.add_func("wave_evol", body=evol_eqns, schedule_bin='evol', doc='Do the wave evol')
 
-cactus_home = os.path.join(os["HOME"],"Cactus")
+cactus_home = os.path.join(os.environ["HOME"],"cactus","Cactus")
 thorn.generate(cactus_home)
