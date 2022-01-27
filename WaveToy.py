@@ -20,7 +20,7 @@ uu_dDD = ixp.declarerank2("uu_dDD","sym01")
 
 evol_eqns = [
     lhrh(lhs=uu_rhs, rhs=vv),
-    lhrh(lhs=vv_rhs, rhs=(uu_dDD[0][0] + uu_dDD[1][1] + uu_dDD[2][2]))
+    lhrh(lhs=vv_rhs, rhs=wave_speed**2*(uu_dDD[0][0] + uu_dDD[1][1] + uu_dDD[2][2]))
 ]
 
 thorn.add_func("wave_evol", body=evol_eqns, schedule_bin='evol', doc='Do the wave evol')

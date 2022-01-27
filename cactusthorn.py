@@ -10,6 +10,7 @@ from outputC import indent_Ccode
 import sympy
 from outputC import lhrh
 import grid as gri
+import NRPy_param_funcs as par
 
 today = date.today().strftime("%B %d, %Y")
 
@@ -193,6 +194,8 @@ class CactusFunc:
     def __init__(self, name, body, schedule_bin, doc):
         self.name = name
         self.body = body
+        self.writegfs = set()
+        self.readgfs = set()
         self.schedule_bin = schedule_bin
         self.doc = doc
 
@@ -215,11 +218,25 @@ class CactusThorn:
 
     def add_func(self, name, body, schedule_bin, doc):
         self._add_src(name + ".cc")
+        writegfs = set()
+        readgfs = set()
+        has_fd = False
         if type(body)==list:
             new_body = []
             for item in body:
+                assert type(item) == lhrh, "Equations should be stored in outputC.lhrh objects."
+                writegfs.add(str(item.lhs))
+                for sym in item.rhs.free_symbols:
+                    rdsym = str(sym)
+                    # Check if the symbol name is a derivative
+                    g = re.match(r'(.*)_dD+\d+$', rdsym)
+                    if g:
+                        readgfs.add(g.group(1))
+                    else:
+                        readgfs.add(rdsym)
                 if type(item.lhs) == sympy.core.symbol.Symbol:
-                    new_body += [lhrh(lhs=gri.gfaccess("rhs_gfs",str(item.lhs)), rhs=item.rhs)]
+                    new_lhs=gri.gfaccess(varname=str(item.lhs))
+                    new_body += [lhrh(lhs=new_lhs, rhs=item.rhs)]
                 else:
                     new_body += [item]
             body = new_body
@@ -234,14 +251,25 @@ class CactusThorn:
             }} }} }}
             """.strip()
         elif type(body)==str:
+            # Pass the body through literally
             pass
         else:
             assert False, "Body must be list or str"
         func = CactusFunc(name, body, schedule_bin, doc)
         self.src_files[-1].add_func(func)
+        func.readgfs = readgfs
+        func.writegfs = writegfs
 
     def declare_param(self, name, default, doc, vmin=None, vmax=None, options=None):
         self.params += [(name, default, doc, vmin, vmax, options)]
+        ty = type(default)
+        if ty == int:
+            c_type = "int"
+        elif ty == float:
+            c_type = "REAL"
+        else:
+            raise Exception("Unkown parameter type: "+str(ty))
+        par.Cparameters(c_type,self.thornname,[name],default)
         return symbols(name)
 
     def use_coords(self):
@@ -253,11 +281,12 @@ class CactusThorn:
         #for gf_name in gf_names:
         #    gfs += [Function(gf_name)(x,y,z)]
         #return gfs
-        self.gf_names += gf_names
+        for gf_name in gf_names:
+            self.gf_names.add(gf_name)
         return grid.register_gridfunctions(gtype, gf_names)
 
     def __init__(self, arrangement, thornname, author=None, email=None, license='BSD'):
-        self.gf_names = []
+        self.gf_names = set()
         self.coords = symbols("x y z")
         self.arrangement = arrangement
         self.thornname = thornname
@@ -339,10 +368,23 @@ class CactusThorn:
                     print(f"storage: {gf_name}GF[3]", file=fd)
                 for src in self.src_files:
                     fsrc = os.path.join(self.src_dir, src.name)
+
+                    readgfs = set()
+                    writegfs = set()
+
                     for func in src.funcs:
                         print(file=fd)
                         print(f"schedule {func.name} in {func.schedule_bin} {{",file=fd)
                         print(f"   LANG: C",file=fd)
+                        for readgf in func.readgfs:
+                            # The symbols in readgfs might not actually be grid
+                            # functions. Make sure that they are registered as
+                            # such before generating read/write decls.
+                            if readgf in self.gf_names:
+                                print(f"   READS: {readgf}GF(everywhere)",file=fd)
+                        for writegf in func.writegfs:
+                            if writegf in self.gf_names:
+                                print(f"   WRITES: {writegf}GF(interior)",file=fd)
                         print(f'}} "{func.doc}"',file=fd)
             if not os.path.exists(self.doc_tex):
                 doc_src = doc_init
@@ -369,7 +411,8 @@ class CactusThorn:
                     for func in src.funcs:
                         print(file=fd)
                         print(f"void {func.name}(CCTK_ARGUMENTS) {{",file=fd)
-                        print(f"  DECLARE_CCTK_ARGUMENTS;",file=fd)
+                        print(f"  DECLARE_CCTK_ARGUMENTS_{func.name};",file=fd)
+                        print(f"  DECLARE_CCTK_PARAMETERS;",file=fd)
                         for ii in range(3):
                             print(f"  CCTK_REAL invdx{ii} = 1/CCTK_DELTA_SPACE({ii});",file=fd)
                         print(f"  {func.body}",file=fd)
