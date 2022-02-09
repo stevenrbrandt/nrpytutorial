@@ -6,7 +6,7 @@ from sympy import symbols, Function, diff
 import grid
 import NRPy_param_funcs as par
 import finite_difference as fin
-from outputC import indent_Ccode
+from outputC import indent_Ccode, add_to_Cfunction_dict, outCfunction, construct_NRPy_function_prototypes_h, construct_NRPy_Cfunctions
 import sympy
 from outputC import lhrh
 import grid as gri
@@ -404,6 +404,11 @@ class CactusThorn:
             for src in self.src_files:
                 fsrc = os.path.join(self.src_dir, src.name)
                 # switch to add_to_Cfunction_dict
+                add_to_Cfunction_dict(body='/* body */',includes=['#include <cctk.h>'], \
+                    name='foo',params='/* params */',path_from_rootsrcdir_to_this_Cfunc="/tmp")
+                construct_NRPy_function_prototypes_h("/tmp")
+                construct_NRPy_Cfunctions("/tmp")
+                #outCfunction(outfile="x.cc",name='foo2',params='()',body='/* body 2 */')
                 with open(fsrc, "w") as fd:
                     print("#include <cctk.h>", file=fd)
                     print("#include <cctk_Arguments.h>", file=fd)

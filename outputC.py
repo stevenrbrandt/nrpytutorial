@@ -514,6 +514,8 @@ def add_to_Cfunction_dict(includes=None, prefunc="", desc="", c_type="void", nam
                                                            enableCparameters, rel_path_to_Cparams))
 
     outC_function_outdir_dict[name + namesuffix] = path_from_rootsrcdir_to_this_Cfunc
+    print(name, namesuffix, path_from_rootsrcdir_to_this_Cfunc)
+    print(outC_function_outdir_dict)
     outC_function_prototype_dict[name + namesuffix], outC_function_dict[name + namesuffix] = \
         Cfunction(includes, prefunc, desc, c_type, name + namesuffix, params, preloop, body, loopopts, postloop,
                   enableCparameters, rel_path_to_Cparams)
@@ -526,6 +528,7 @@ def outCfunction(outfile="", includes=None, prefunc="", desc="",
                                         loopopts, postloop, enableCparameters, rel_path_to_Cparams)
     if outfile == "returnstring":
         return Cfunc
+    print("Writing file:",outfile,"in dir",os.getcwd())
     with open(outfile, "w") as file:
         file.write(Cfunc)
         print("Output C function "+name+"() to file "+outfile)
@@ -824,3 +827,9 @@ def NRPy_param_funcs_register_C_functions_and_NRPy_basic_defines(directory=os.pa
     Nbd_str += "} paramstruct;\n"
 
     outC_NRPy_basic_defines_h_dict["NRPy_param_funcs"] = Nbd_str
+
+def construct_NRPy_Cfunctions(outDir):
+    for item in outC_function_master_list:
+        d=item._asdict()
+        d["outfile"] = os.path.join(outDir, d["name"]+".cc")
+        outCfunction(**d)
