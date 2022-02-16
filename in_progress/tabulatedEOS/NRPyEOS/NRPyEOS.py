@@ -7,11 +7,10 @@
 # equation of state tables.
 
 # Step 1: Initialize NRPy+/Python modules
-import shutil, os, sys                   # Standard Python modules for multiplatform OS-level functions, benchmarking
+import os, sys                           # Standard Python modules for multiplatform OS-level functions, benchmarking
 from collections import namedtuple       # Standard Python: Enable namedtuple data type
 sys.path.append(os.path.join("..","..")) # Add NRPy+'s base directory to Python's path
 import outputC as outC                   # NRPy+: Core C code output module
-import cmdline_helper as cmd             # NRPy+: Multi-platform Python command-line interface
 
 # Step 2: Identify EOS table quantities
 # Step 2.a: Create the EOS named tuple
@@ -1233,16 +1232,16 @@ def Cfunc_free_memory():
                                params=params,body=body,enableCparameters=False)
 
 # Step 7: Add all C functions to the dictionary
-def NRPyEOS_generate_interpolators_and_add_all_Cfuncs_to_dict(Ccodesdir,known_T_params_list=None,unknown_T_params_list=None):
+def NRPyEOS_generate_interpolators_and_add_all_Cfuncs_to_dict(Ccodesdir,known_T_params_list=None,unknown_T_auxvars_and_params_list=None):
     # Step 7.a: Functions for which the temperature is known
     if known_T_params_list is not None:
         for param_list in known_T_params_list:
             Cfunc_known_T(param_list)
 
     # Step 7.b: Functions for which the temperature is unknown
-    if unknown_T_params_list is not None:
-        for param_list in unknown_T_params_list:
-            Cfunc_unknown_T(param_list)
+    if unknown_T_auxvars_and_params_list is not None:
+        for param_list in unknown_T_auxvars_and_params_list:
+            Cfunc_unknown_T(param_list[0],param_list[1])
 
     # Step 7.c: Interpolation helpers
     gen_Cheader_interpolation_helpers(Ccodesdir)
