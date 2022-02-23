@@ -21,6 +21,7 @@ from cse_helpers import cse_preprocess,cse_postprocess  # NRPy+: CSE preprocessi
 import sympy as sp                            # SymPy: The Python computer algebra package upon which NRPy+ depends
 import re, sys, os, stat                      # Standard Python: regular expressions, system, and multiplatform OS funcs
 from collections import namedtuple            # Standard Python: Enable namedtuple data type
+from suffixes import dosubs
 
 lhrh = namedtuple('lhrh', 'lhs rhs')
 outCparams = namedtuple('outCparams', 'preindent includebraces declareoutputvars outCfileaccess outCverbose CSE_enable CSE_varprefix CSE_sorting CSE_preprocess enable_SIMD SIMD_find_more_subs SIMD_find_more_FMAsFMSs SIMD_debug enable_TYPE gridsuffix')
@@ -375,6 +376,7 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
                 outstring += outtypestring + output_varname_str[i] + " = " + \
                              str(expr_convert_to_SIMD_intrins(result,map_sym_to_rat,varprefix,outCparams.SIMD_find_more_FMAsFMSs)) + ";\n"
             else:
+                result = dosubs(result)
                 outstring += outtypestring+ccode_postproc(sp.ccode(result,output_varname_str[i],
                                                                    user_functions=custom_functions_for_SymPy_ccode))+"\n"
         # Complication: SIMD functions require numerical constants to be stored in SIMD arrays

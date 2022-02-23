@@ -8,6 +8,7 @@ import NRPy_param_funcs as par      # NRPy+: Parameter interface
 import sympy as sp                  # Import SymPy, a computer algebra system written entirely in Python
 from collections import namedtuple  # Standard Python `collections` module: defines named tuples data structure
 import os                           # Standard Python module for multiplatform OS-level functions
+from suffixes import setsuffix
 
 # Initialize globals related to the grid
 glb_gridfcs_list = []
@@ -94,6 +95,8 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = ""):
             gfarrayname = "aux_gfs"
         elif gftype == "AUXEVOL":
             gfarrayname = "auxevol_gfs"
+        elif gftype == "EXTERNAL":
+            gfarrayname = "ext_gfs"
         # Return gfarrayname[IDX3(varname,i0)] for DIM=1, gfarrayname[IDX3(varname,i0,i1)] for DIM=2, etc.
         retstring += gfarrayname + "[IDX" + str(DIM+1) + "S(" + varname.upper()+"GF" + ", "
     elif par.parval_from_str("GridFuncMemAccess") == "ETK":
@@ -103,6 +106,8 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = ""):
             sys.exit(1)
         if gfarrayname == "rhs_gfs":
             retstring += varname + "_rhsGF" + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
+        elif gftype == "EXTERNAL":
+            retstring += varname + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
         else:
             retstring += varname + "GF" + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
     else:
@@ -190,13 +195,18 @@ def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_inf
             verify_gridfunction_basename_is_valid(gf_names[i])
 
     # Step 3: Verify that gridfunction type is valid.
-    if gf_type not in ('EVOL', 'AUX', 'AUXEVOL'):
+    if gf_type not in ('EVOL', 'AUX', 'AUXEVOL','EXTERNAL'):
         print("Error in registering gridfunction(s) with unsupported type "+gf_type+".")
         print("Supported gridfunction types include:")
         print("    \"EVOL\": for evolved quantities (i.e., quantities stepped forward in time),")
         print("    \"AUXEVOL\": for auxiliary quantities needed at all points by evolved quantities,")
         print("    \"AUX\": for all other quantities needed at all gridpoints.")
+        print("    \"EXTERNAL\": for all quantities defined in other modules.")
         sys.exit(1)
+
+    if gf_type == "EXTERNAL":
+        for gf_name in gf_names:
+            setsuffix(gf_name, "_ext")
 
     # Step 4: Check for duplicate grid function registrations. If:
     #         a) A duplicate is found, error out. Otherwise
@@ -254,6 +264,7 @@ def gridfunction_lists():
     evolved_variables_list   = []
     auxiliary_variables_list = []
     auxevol_variables_list = []
+    external_variables_list = []
     for i in range(len(glb_gridfcs_list)):
         if glb_gridfcs_list[i].gftype == "EVOL":
             evolved_variables_list.append(glb_gridfcs_list[i].name)
@@ -261,16 +272,19 @@ def gridfunction_lists():
             auxiliary_variables_list.append(glb_gridfcs_list[i].name)
         if glb_gridfcs_list[i].gftype == "AUXEVOL":
             auxevol_variables_list.append(glb_gridfcs_list[i].name)
+        if glb_gridfcs_list[i].gftype == "EXTERNAL":
+            external_variables_list.append(glb_gridfcs_list[i].name)
 
     # Next we alphabetize the lists
     evolved_variables_list.sort()
     auxiliary_variables_list.sort()
     auxevol_variables_list.sort()
+    external_variables_list.sort()
 
-    return evolved_variables_list, auxiliary_variables_list, auxevol_variables_list
+    return evolved_variables_list, auxiliary_variables_list, auxevol_variables_list, external_variables_list
 
 def gridfunction_defines():
-    evolved_variables_list, auxiliary_variables_list, auxevol_variables_list = gridfunction_lists()
+    evolved_variables_list, auxiliary_variables_list, auxevol_variables_list, external_variables_list  = gridfunction_lists()
 
     outstr  = """// EVOLVED VARIABLES:
 #define NUM_EVOL_GFS """ + str(len(evolved_variables_list)) + "\n"
@@ -286,6 +300,11 @@ def gridfunction_defines():
 #define NUM_AUXEVOL_GFS """ + str(len(auxevol_variables_list)) + "\n"
     for i in range(len(auxevol_variables_list)):
         outstr += "#define " + auxevol_variables_list[i].upper() + "GF\t" + str(i) + "\n"
+
+    outstr += """\n\n// EXTERNAL VARIABLES:
+#define NUM_EXTERNAL_GFS """ + str(len(auxevol_variables_list)) + "\n"
+    for i in range(len(external_variables_list)):
+        outstr += "#define " + external_variables_list[i].upper() + "GF\t" + str(i) + "\n"
 
     if(len(evolved_variables_list)) > 0:
         outstr += """\n\n// SET gridfunctions_f_infinity[i] = value of gridfunction i in the limit r->infinity:

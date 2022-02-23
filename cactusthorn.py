@@ -405,10 +405,10 @@ class CactusThorn:
             for src in self.src_files:
                 fsrc = os.path.join(self.src_dir, src.name)
                 # switch to add_to_Cfunction_dict
-                add_to_Cfunction_dict(body='/* body */',includes=['#include <cctk.h>'], \
-                    name='foo',params='/* params */',path_from_rootsrcdir_to_this_Cfunc="/tmp")
-                construct_NRPy_function_prototypes_h("/tmp")
-                construct_NRPy_Cfunctions("/tmp")
+                #add_to_Cfunction_dict(body='/* body */',includes=['#include <cctk.h>'], \
+                #    name='foo',params='/* params */',path_from_rootsrcdir_to_this_Cfunc="/tmp")
+                #construct_NRPy_function_prototypes_h("/tmp")
+                #construct_NRPy_Cfunctions("/tmp")
                 #outCfunction(outfile="x.cc",name='foo2',params='()',body='/* body 2 */')
                 with open(fsrc, "w") as fd:
                     print("#include <cctk.h>", file=fd)

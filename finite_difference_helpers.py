@@ -9,6 +9,7 @@
 # Author: Zachariah B. Etienne
 #         zachetie **at** gmail **dot* com
 from outputC import superfast_uniq, outputC, outC_function_dict, add_to_Cfunction_dict  # NRPy+: Core C code output module
+from suffixes import getsuffix
 import NRPy_param_funcs as par      # NRPy+: parameter interface
 import sympy as sp                  # SymPy: The Python computer algebra package upon which NRPy+ depends
 import grid as gri                  # NRPy+: Functions having to do with numerical grids
@@ -233,9 +234,9 @@ def read_from_memory_Ccode_onept(gfname,idx, FDparams):
     gf_array_name = "in_gfs" # Default array name.
     gfaccess_str = gri.gfaccess(gf_array_name,gfname,ijkl_string(idx4, FDparams))
     if FDparams.enable_SIMD == "True":
-        retstring = type__var(gfname, FDparams) + varsuffix(idx4, FDparams) + " = ReadSIMD(&" + gfaccess_str + ");"
+        retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = ReadSIMD(&" + gfaccess_str + ");"
     else:
-        retstring = type__var(gfname, FDparams) + varsuffix(idx4, FDparams) + " = " + gfaccess_str + ";"
+        retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = " + gfaccess_str + " /* xyx */;"
     return retstring+"\n"
 
 def ijkl_string(idx4, FDparams):
@@ -268,7 +269,7 @@ def ijkl_string(idx4, FDparams):
         retstring += "i" + str(i) + "+" + str(idx4[i])
     return retstring.replace("+-", "-").replace("+0", "")
 
-def varsuffix(idx4, FDparams):
+def varsuffix(name, idx4, FDparams):
     """Generate string for suffixing single point read in from memory
     Example: If a gridfunction is named hDD00, and we want to read from memory data at i0+1,i1,i2-1,
     we store the value of this gridfunction as hDD00_i0p1_i1_i2m1; this function provides the suffix.
@@ -284,9 +285,10 @@ def varsuffix(idx4, FDparams):
     >>> varsuffix([-2,0,-1,-300], FDparams)
     \'_i0m2_i1_i2m1\'
     """
+    base_suffix = getsuffix(name)
     if idx4 == [0, 0, 0, 0]:
-        return ""
-    return "_" + ijkl_string(idx4, FDparams).replace(",", "_").replace("+", "p").replace("-", "m")
+        return base_suffix 
+    return base_suffix + "_" + ijkl_string(idx4, FDparams).replace(",", "_").replace("+", "p").replace("-", "m")
 
 def read_gfs_from_memory(list_of_base_gridfunction_names_in_derivs, fdstencl, sympyexpr_list, FDparams):
     # with open(list_of_base_gridfunction_names_in_derivs[0]+".txt","w") as file:
@@ -474,7 +476,7 @@ def construct_FD_exprs_as_SymPy_exprs(list_of_deriv_vars,
         FDlhsvarnames.append(type__var(list_of_deriv_vars[i], FDparams))
         var = list_of_base_gridfunction_names_in_derivs[i]
         for j in range(len(fdcoeffs[i])):
-            varname = str(var) + varsuffix(fdstencl[i][j], FDparams)
+            varname = str(var) + varsuffix(str(var),fdstencl[i][j], FDparams)
             FDexprs[i] += fdcoeffs[i][j] * sp.sympify(varname)
 
         # Multiply each expression by the appropriate power
@@ -527,7 +529,7 @@ def add_FD_func_to_outC_function_dict(list_of_deriv_vars,
 
         rhs_expr = sp.sympify(0)
         for j in range(len(fdcoeffs[which_op_idx])):
-            var = sp.sympify("f" + varsuffix(fdstencl[which_op_idx][j], FDparams))
+            var = sp.sympify("f" + varsuffix("f",fdstencl[which_op_idx][j], FDparams))
             rhs_expr += fdcoeffs[which_op_idx][j] * var
 
         # Multiply each expression by the appropriate power
@@ -573,7 +575,7 @@ def add_FD_func_to_outC_function_dict(list_of_deriv_vars,
                         funccall += "invdx" + str(d) + ","
                 gfname = list_of_base_gridfunction_names_in_derivs[i]
                 for j in range(len(fdcoeffs[which_op_idx])):
-                    funccall += gfname + varsuffix(fdstencl[which_op_idx][j], FDparams)
+                    funccall += gfname + varsuffix(gfname, fdstencl[which_op_idx][j], FDparams)
                     if j != len(fdcoeffs[which_op_idx])-1:
                         funccall += ","
                 funccall += ");"
