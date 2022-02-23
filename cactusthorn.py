@@ -828,32 +828,16 @@ schedule {self.thornname}_RegisterVars in MoL_Register
 
             for src in self.src_files.values():
                 fsrc = os.path.join(self.src_dir, src.name)
-                with SafeWrite(fsrc,do_format=True) as fd:
-                    if gri.ET_driver == "Carpet":
-                        print("#include <cctk.h>", file=fd)
-                        print("#include <cctk_Arguments.h>", file=fd)
-                        print("#include <cctk_Parameters.h>", file=fd)
-                        print("#include <iostream>", file=fd)
-                    elif gri.ET_driver == "CarpetX":
-                        print("#include <fixmath.hxx>", file=fd)
-                        print("#include <cctk.h>", file=fd)
-                        print("#include <cctk_Arguments.h>", file=fd)
-                        print("#include <cctk_Parameters.h>", file=fd)
-                        print("", file=fd)
-                        print("#define CARPETX_GF3D5", file=fd)
-                        print("#include <loop_device.hxx>", file=fd)
-                        # Activate this line to disable SIMD parallelization
-                        # print("#define SIMD_CPU", file=fd)
-                        print("#include <simd.hxx>", file=fd)
-                        print("", file=fd)
-                        print("#include <cmath>", file=fd)
-                        print("#include <tuple>", file=fd)
-                        print("", file=fd)
-                        print("using namespace Arith;", file=fd)
-                        print("using namespace Loop;", file=fd)
-                        print("using std::cbrt, std::fmax, std::fmin, std::sqrt;", file=fd)
-                    else:
-                        assert "Bad value for grid.ET_driver={grid.ET_driver}"
+                # switch to add_to_Cfunction_dict
+                #add_to_Cfunction_dict(body='/* body */',includes=['#include <cctk.h>'], \
+                #    name='foo',params='/* params */',path_from_rootsrcdir_to_this_Cfunc="/tmp")
+                #construct_NRPy_function_prototypes_h("/tmp")
+                #construct_NRPy_Cfunctions("/tmp")
+                #outCfunction(outfile="x.cc",name='foo2',params='()',body='/* body 2 */')
+                with open(fsrc, "w") as fd:
+                    print("#include <cctk.h>", file=fd)
+                    print("#include <cctk_Arguments.h>", file=fd)
+                    print("#include <cctk_Parameters.h>", file=fd)
                     for func in src.funcs:
                         print(file=fd)
                         print(f"void {func.name}(CCTK_ARGUMENTS) {{",file=fd)

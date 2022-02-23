@@ -247,10 +247,8 @@ def read_from_memory_Ccode_onept(gfname,idx, FDparams, idxs=set()):
     idxs.add(",".join([str(ii) for ii in idx4]))
     if FDparams.enable_SIMD == "True":
         retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = ReadSIMD(&" + gfaccess_str + ");"
-    elif gri.find_gftype(gfname) == "SCALAR_TMP":
-        retstring = ""
     else:
-        retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = " + gfaccess_str + ";"
+        retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = " + gfaccess_str + " /* xyx */;"
     return retstring+"\n"
 
 def ijk_carpetx(idx4):

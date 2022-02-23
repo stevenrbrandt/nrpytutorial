@@ -9,12 +9,6 @@ import sympy as sp                  # Import SymPy, a computer algebra system wr
 from collections import namedtuple  # Standard Python `collections` module: defines named tuples data structure
 import os                           # Standard Python module for multiplatform OS-level functions
 from suffixes import setsuffix
-import re
-
-renames = {}
-
-def rename(n1,n2):
-    renames[n1] = n2
 
 # Initialize globals related to the grid
 ET_driver = ""
@@ -170,12 +164,6 @@ def _gfaccess(gfarrayname, varname, ijklstring, context):
             gfarrayname = "auxevol_gfs"
         elif gftype == "EXTERNAL":
             gfarrayname = "ext_gfs"
-        elif gftype == "CORE":
-            gfarrayname = "core_gfs"
-        elif gftype == "TILE_TMP":
-            gfarrayname = "tile_tmp_gfs"
-        elif gftype == "SCALAR_TMP":
-            gfarrayname = "scalar_tmp_gfs"
         # Return gfarrayname[IDX3(varname,i0)] for DIM=1, gfarrayname[IDX3(varname,i0,i1)] for DIM=2, etc.
         retstring += gfarrayname + "[IDX" + str(DIM+1) + "S(" + varname.upper()+"GF" + ", "
     elif par.parval_from_str("GridFuncMemAccess") == "ETK":
@@ -183,46 +171,12 @@ def _gfaccess(gfarrayname, varname, ijklstring, context):
         if DIM != 3:
             print("Error: GridFuncMemAccess = ETK currently requires that gridfunctions be 3D. Can be easily extended.")
             sys.exit(1)
-        if ET_driver == "Carpet":
-            if gfarrayname == "rhs_gfs":
-                retstring += varname + "_rhsGF" + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
-            elif gftype == "EXTERNAL":
-                retstring += varname + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
-            elif gftype == "CORE":
-                print("Error: gftype = CORE should only be used with the CarpetX driver.")
-                sys.exit(1)
-            elif gftype == "TILE_TMP":
-                print("Error: gftype = TILE_TMP should only be used with the CarpetX driver.")
-                sys.exit(1)
-            elif gftype == "SCALAR_TMP":
-                print("Error: gftype = SCALAR_TMP should only be used with the CarpetX driver.")
-                sys.exit(1)
-            else:
-                retstring += varname + "GF" + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
-        elif ET_driver == "CarpetX":
-            vartype = par.parval_from_str("PRECISION")
-            mask = "mask, " if vartype == "CCTK_REALVEC" else ""
-            if gfarrayname == "rhs_gfs":
-                return retstring + varname + "_rhsGF" + "("+mask+get_centering(varname)+"_index)"
-            elif gftype == "EXTERNAL":
-                return retstring + varname + "("+mask+find_centering(varname)+"_index)"
-            elif gftype == "CORE":
-                return retstring + "p." + varname
-            elif gftype == "TILE_TMP":
-                if ijklstring == "":
-                    return retstring + varname + "("+mask+find_centering(varname)+"_tmp_index)"
-                else:
-                    return retstring + varname + "("+mask+find_centering(varname)+"_tmp_layout, p.I{ijklstring})"
-            elif gftype == "SCALAR_TMP":
-                if context == "USE":
-                    return retstring + "const " + vartype + " " + varname + " CCTK_ATTRIBUTE_UNUSED "
-                else:
-                    return None
-            else:
-                if ijklstring == "":
-                    return retstring + varname + "GF("+mask+find_centering(varname)+"_index)"
-                else:
-                    return retstring + varname + "GF("+mask+find_centering(varname)+"_layout, p.I"+ijklstring+")"
+        if gfarrayname == "rhs_gfs":
+            retstring += varname + "_rhsGF" + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
+        elif gftype == "EXTERNAL":
+            retstring += varname + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
+        else:
+            retstring += varname + "GF" + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
     else:
         print("grid::GridFuncMemAccess = "+par.parval_from_str("GridFuncMemAccess")+" not supported")
         sys.exit(1)
@@ -333,34 +287,18 @@ def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_inf
             verify_gridfunction_basename_is_valid(gf_names[i])
 
     # Step 3: Verify that gridfunction type is valid.
-    if gf_type not in ('EVOL', 'AUX', 'AUXEVOL', 'EXTERNAL', 'CORE', 'TILE_TMP', 'SCALAR_TMP'):
+    if gf_type not in ('EVOL', 'AUX', 'AUXEVOL','EXTERNAL'):
         print("Error in registering gridfunction(s) with unsupported type "+gf_type+".")
         print("Supported gridfunction types include:")
         print("    \"EVOL\": for evolved quantities (i.e., quantities stepped forward in time),")
         print("    \"AUXEVOL\": for auxiliary quantities needed at all points by evolved quantities,")
         print("    \"AUX\": for all other quantities needed at all gridpoints.")
         print("    \"EXTERNAL\": for all quantities defined in other modules.")
-        print("    \"CORE\": for all quantities defined inside the CarpetX driver.")
-        print("    \"TILE_TMP\": for all temporary quantities defined for CarpetX tiles.")
-        print("    \"SCALAR_TMP\": for all temporary quantities defined for doubles.")
-        #sys.exit(1)
-        raise Exception("unsupported type")
+        sys.exit(1)
 
     if gf_type == "EXTERNAL":
         for gf_name in gf_names:
             setsuffix(gf_name, "_ext")
-
-    if gf_type == "CORE":
-        for gf_name in gf_names:
-            setsuffix(gf_name, "_core")
-
-    if gf_type == "TILE_TMP":
-        for gf_name in gf_names:
-            setsuffix(gf_name, "_tile_tmp")
-
-    if gf_type == "SCALAR_TMP":
-        for gf_name in gf_names:
-            setsuffix(gf_name, "")
 
     # Step 4: Check for duplicate grid function registrations. If:
     #         a) A duplicate is found, error out. Otherwise
@@ -422,41 +360,26 @@ def gridfunction_lists():
     auxiliary_variables_list = []
     auxevol_variables_list = []
     external_variables_list = []
-    core_variables_list = []
-    tmp_variables_list = []
-    for gf in glb_gridfcs_list:
-        gf_type = gf.gftype
-        gf_name = gf.name
-        if gf_type == "EVOL":
-            evolved_variables_list.append(gf_name)
-        elif gf_type == "AUX":
-            auxiliary_variables_list.append(gf_name)
-        elif gf_type == "AUXEVOL":
-            auxevol_variables_list.append(gf_name)
-        elif gf_type == "EXTERNAL":
-            external_variables_list.append(gf_name)
-        elif gf_type == "CORE":
-           core_variables_list.append(gf_name)
-        elif gf_type == "TILE_TMP":
-           tile_tmp_variables_list.append(gf_name)
-        elif gf_type == "SCALAR_TMP":
-           scalar_tmp_variables_list.append(gf_name)
-        else:
-           raise Exception("Bad gftype '"+gf_type+"'")
+    for i in range(len(glb_gridfcs_list)):
+        if glb_gridfcs_list[i].gftype == "EVOL":
+            evolved_variables_list.append(glb_gridfcs_list[i].name)
+        if glb_gridfcs_list[i].gftype == "AUX":
+            auxiliary_variables_list.append(glb_gridfcs_list[i].name)
+        if glb_gridfcs_list[i].gftype == "AUXEVOL":
+            auxevol_variables_list.append(glb_gridfcs_list[i].name)
+        if glb_gridfcs_list[i].gftype == "EXTERNAL":
+            external_variables_list.append(glb_gridfcs_list[i].name)
 
     # Next we alphabetize the lists
     evolved_variables_list.sort()
     auxiliary_variables_list.sort()
     auxevol_variables_list.sort()
     external_variables_list.sort()
-    core_variables_list.sort()
-    tile_tmp_variables_list.sort()
-    scalar_tmp_variables_list.sort()
 
-    return evolved_variables_list, auxiliary_variables_list, auxevol_variables_list, external_variables_list, core_variables_list, tile_tmp_variables_list, scalar_tmp_variables_list
+    return evolved_variables_list, auxiliary_variables_list, auxevol_variables_list, external_variables_list
 
 def gridfunction_defines():
-    evolved_variables_list, auxiliary_variables_list, auxevol_variables_list, external_variables_list, core_variables_list, tile_tmp_variables_list, scalar_tmp_variables_list  = gridfunction_lists()
+    evolved_variables_list, auxiliary_variables_list, auxevol_variables_list, external_variables_list  = gridfunction_lists()
 
     outstr  = """// EVOLVED VARIABLES:
 #define NUM_EVOL_GFS """ + str(len(evolved_variables_list)) + "\n"
@@ -474,10 +397,9 @@ def gridfunction_defines():
         outstr += "#define " + auxevol_variables_list[i].upper() + "GF\t" + str(i) + "\n"
 
     outstr += """\n\n// EXTERNAL VARIABLES:
-#define NUM_EXTERNAL_GFS """ + str(len(external_variables_list)) + "\n"
+#define NUM_EXTERNAL_GFS """ + str(len(auxevol_variables_list)) + "\n"
     for i in range(len(external_variables_list)):
         outstr += "#define " + external_variables_list[i].upper() + "GF\t" + str(i) + "\n"
-#Do I need to do this for CORE vars? I don't think so.
 
     if(len(evolved_variables_list)) > 0:
         outstr += """\n\n// SET gridfunctions_f_infinity[i] = value of gridfunction i in the limit r->infinity:

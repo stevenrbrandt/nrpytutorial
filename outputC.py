@@ -569,7 +569,7 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
                              str(expr_convert_to_SIMD_intrins(result,map_sym_to_rat,varprefix,outCparams.SIMD_find_more_FMAsFMSs)) + ";\n"
             else:
                 result = dosubs(result)
-                outstring += outtypestring+ccode_postproc(sp.ccode(result,names_group[i],
+                outstring += outtypestring+ccode_postproc(sp.ccode(result,output_varname_str[i],
                                                                    user_functions=custom_functions_for_SymPy_ccode))+"\n"
         # Finish processing a group
 
