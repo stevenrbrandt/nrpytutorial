@@ -226,14 +226,15 @@ class CactusThorn:
             for item in body:
                 assert type(item) == lhrh, "Equations should be stored in outputC.lhrh objects."
                 writegfs.add(str(item.lhs))
-                for sym in item.rhs.free_symbols:
-                    rdsym = str(sym)
-                    # Check if the symbol name is a derivative
-                    g = re.match(r'(.*)_dD+\d+$', rdsym)
-                    if g:
-                        readgfs.add(g.group(1))
-                    else:
-                        readgfs.add(rdsym)
+                if hasattr(item.rhs, "free_symbols"):
+                    for sym in item.rhs.free_symbols:
+                        rdsym = str(sym)
+                        # Check if the symbol name is a derivative
+                        g = re.match(r'(.*)_dD+\d+$', rdsym)
+                        if g:
+                            readgfs.add(g.group(1))
+                        else:
+                            readgfs.add(rdsym)
                 if type(item.lhs) == sympy.core.symbol.Symbol:
                     new_lhs=gri.gfaccess(varname=str(item.lhs))
                     new_body += [lhrh(lhs=new_lhs, rhs=item.rhs)]
