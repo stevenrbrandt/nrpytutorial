@@ -555,16 +555,17 @@ class CactusThorn:
     def use_coords(self):
         return self.coords
 
-    def register_gridfunctions(self, gtype, gf_names, centering=None, external_module=None):
-        check_centering(centering)
+    def register_gridfunctions(self, gtype, gf_names, external_module=None):
+        #x, y, z = self.use_coords()
+        #gfs = []
+        #for gf_name in gf_names:
+        #    gfs += [Function(gf_name)(x,y,z)]
+        #return gfs
+        for gf_name in gf_names:
+            self.gf_names.add(gf_name)
         if external_module is not None:
-            assert gtype == "EXTERNAL"
-            thorn = external_module
-        else:
-            thorn = self.thornname
-        if external_module is not None:
-            self.external_modules[external_module]=1
-        return grid.register_gridfunctions(gtype, gf_names, external_module=external_module,centering=centering)
+            self.external_modules += [external_module]
+        return grid.register_gridfunctions(gtype, gf_names, external_module=external_module)
 
     def __init__(self, arrangement, thornname, author=None, email=None, license='BSD'):
         self.sync = {}
@@ -576,7 +577,7 @@ class CactusThorn:
         self.src_files = {}
         self.last_src_file = None
         self.params = []
-        self.external_modules = {}
+        self.external_modules = []
 
         self.param_ccl = os.path.join(self.thorn_dir, "param.ccl")
         self.interface_ccl = os.path.join(self.thorn_dir, "interface.ccl")
@@ -675,75 +676,12 @@ class CactusThorn:
                         print(f'CCTK_REAL {name} "{doc}" {{ {vmin}:{vmax} :: "" }} {default}', file=fd)
             with SafeWrite(self.interface_ccl) as fd:
                 print(f"# Interface definitions for thorn {self.thornname}",file=fd)
-                print(f"IMPLEMENTS: {self.thornname}",file=fd)
-                for v in grid.glb_gridfcs_list:
-                    if v.external_module is not None:
-                        self.external_modules[v.external_module]=1
-                print(f"INHERITS: {', '.join(sorted(list(self.external_modules.keys())))}",file=fd)
-                if gri.ET_driver == "CarpetX":
-                    print(f"USES INCLUDE HEADER: loop_device.hxx",file=fd)
-                    print(f"USES INCLUDE HEADER: simd.hxx",file=fd)
-                elif gri.ET_driver == "Carpet":
-                    print("CCTK_INT FUNCTION MoLRegisterEvolved(CCTK_INT IN EvolvedIndex, CCTK_INT IN RHSIndex)",file=fd)
-                    print("USES FUNCTION MoLRegisterEvolved",file=fd)
-
-                all_group_names = ixp.get_all_group_names()
-
-                for gf_group in all_group_names:
-                    #TODO: change lines with "if gf_name in ["x","y","z"]:" to check if gftype=="CORE"
-                    if gf_group in ["x","y","z"]:
-                        continue
-                    if ixp.find_gftype_for_group(gf_group,die=False) in ["TILE_TMP","SCALAR_TMP"]:
-                        continue
-
-                    rhs="rhs_" + gf_group 
-                    if re.match(r'rhs_.*',gf_group):
-                        tag = "TAGS='checkpoint=\"no\"'"
-                        rhs_pairs.add(gf_group)
-                    elif rhs in all_group_names:
-                        tag = f"TAGS='rhs=\"{self.thornname}::{rhs}GF\"'"
-                    else:
-                        # We assume that variables without RHS are not part of the state vector
-                        tag = f"TAGS='checkpoint=\"no\"'"
-
-                    module = ixp.find_gfmodule_for_group(gf_group,die=False)
-                    if module is None or module == self.thornname:
-                        gfs = ixp.get_gfnames_for_group(gf_group)
-                        gfs_str = "GF, ".join(list(gfs))
-                        if grid.ET_driver == "Carpet":
-                            print(f'REAL {gf_group}GF TYPE=gf TIMELEVELS=3 {{ {gfs_str}GF }} "{gf_group}"', file=fd)
-                        elif grid.ET_driver == "CarpetX":
-                            # CarpetX does not use sub-cycling in time, so it only needs one time level
-                            _centering = ixp.find_centering_for_group(gf_group)
-                            if _centering is None:
-                                _centering = ''
-                            else:
-                                _centering=f"CENTERING={{ {_centering} }}"
-                            print(f'REAL {gf_group}GF TYPE=gf TIMELEVELS=1 {tag} {_centering} {{ {gfs_str}GF }} "{gf_group}"', file=fd)
-
-            if grid.ET_driver == "Carpet":
-                with SafeWrite(self.register_cc,do_format=True) as fd:
-                    print(f"""
-#include "cctk.h"
-#include "cctk_Arguments.h"
-#include "cctk_Functions.h"
-#include "cctk_Parameters.h"
-
-void {self.thornname}_RegisterVars(CCTK_ARGUMENTS)
-{{
-  DECLARE_CCTK_ARGUMENTS_{self.thornname}_RegisterVars;
-  DECLARE_CCTK_PARAMETERS;
-  int ierr, var, rhs;""".strip(),file=fd)
-                    for rhs_var in sorted(rhs_pairs):
-                        var = rhs_var[4:]
-                        assert "rhs_" + var == rhs_var, f"rhs_{var} != {rhs_var}"
-                        print("   ",f"""
-  var   = CCTK_VarIndex("{self.thornname}::{var}GF");
-  rhs   = CCTK_VarIndex("{self.thornname}::{rhs_var}GF");
-  ierr += MoLRegisterEvolved(var, rhs);
-                        """.strip(),file=fd)
-                    print("}",file=fd)
-            with SafeWrite(self.schedule_ccl) as fd:
+                print(f"implements: {self.thornname}",file=fd)
+                #print("inherits: Coordinates",file=fd)
+                print(f"inherits: {', '.join(self.external_modules)}",file=fd)
+                for gf_name in self.gf_names:
+                    print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=3 {{ {gf_name}GF }} "{gf_name}"', file=fd)
+            with open(self.schedule_ccl,"w") as fd:
                 print(f"# Schedule definitions for thorn {self.thornname}",file=fd)
                 for gf_name in sorted(grid.find_gfnames()):
                     if grid.ET_driver == "CarpetX" and gf_name in ["x","y","z"]:

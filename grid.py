@@ -20,19 +20,7 @@ scalar_tmp_variables_list = []
 glb_gridfc = namedtuple('gridfunction', 'gftype name rank DIM f_infinity wavespeed centering external_module')
 
 glb_gridfcs_list = []
-def glb_gridfcs_map():
-    m = {}
-    for gf in glb_gridfcs_list:
-        m[gf.name] = gf
-    assert len(glb_gridfcs_list) == len(m)
-    return m
-
-# Grids may have centerings. These will be C=cell-centered or V=vertex centered, with either one C or V per dimension
-gf_centering = {}
-
-# griddata_struct contains data needed by each grid
-glb_griddata = namedtuple('griddata', 'module string')
-glb_griddata_struct_list = []
+glb_gridfc = namedtuple('gridfunction', 'gftype name rank DIM f_infinity wavespeed external_module')
 
 # griddata_struct contains data needed by each grid
 glb_griddata = namedtuple('griddata', 'module string')
@@ -226,9 +214,7 @@ def find_centering(gf_name):
         return gf.centering
 
 import sys
-def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_infinity=None, wavespeed=None, centering=None, external_module=None):
-    global gf_centering
-
+def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_infinity=None, wavespeed=None, external_module=None):
     # Step 0: Sanity check
     if (rank > 0 and not is_indexed) or (rank == 0 and is_indexed):
         print("Error: Attempted to register *indexed* gridfunction(s) with rank 0, or *scalar* gridfunctions with rank>0.")
@@ -309,10 +295,7 @@ def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_inf
             assert gf_type == glb_gridfcs_map()[gf_name].gftype, \
                 'Error: Tried to register the gridfunction "'+gf_names[i]+'" twice with different types'
         # If no duplicate found, append to "gridfunctions" list:
-        var_data = (glb_gridfc(gf_type, gf_name, rank, DIM, f_infinity[i], wavespeed[i], centering[i], external_module))
-        glb_gridfcs_map()[gf_name] = var_data
-        if gf_name not in glb_gridfcs_map():
-            glb_gridfcs_list.append(var_data)
+        glb_gridfcs_list.append(glb_gridfc(gf_type, gf_names[i], rank, DIM, f_infinity[i], wavespeed[i], external_module))
 
     # Step 5: Return SymPy object corresponding to symbol or
     #         list of symbols representing gridfunction in

@@ -17,7 +17,7 @@ zero = thorn.declare_param('zero',default=0,vmin=0,vmax=0,doc="zero")
 # EVOL evolved gfs (3 time levels)
 uu_rhs, vv_rhs = thorn.register_gridfunctions("AUX", ["uu_rhs", "vv_rhs"])
 uu, vv = thorn.register_gridfunctions("EVOL", ["uu", "vv"])
-x,y,z = thorn.register_gridfunctions("EXTERNAL", ["x","y","z"])
+x,y,z = thorn.register_gridfunctions("EXTERNAL", ["x","y","z"],external_module="grid")
 
 
 from outputC import lhrh
@@ -68,5 +68,5 @@ init_eqns = [
 thorn.add_func("wave_init", body=init_eqns, schedule_bin='init', doc='Do the wave init')
 thorn.add_func("wave_evol", body=evol_eqns, schedule_bin='evol', doc='Do the wave evol')
 
-cactus_home = "/project/sbrandt/cactusamrex/Cactus"
-thorn.generate(cactus_home,config="steve")
+cactus_home = "/project/sbrandt/release/Cactus"
+thorn.generate(cactus_home,config="sim-cpu")
