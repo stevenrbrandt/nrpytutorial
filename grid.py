@@ -12,7 +12,7 @@ from suffixes import setsuffix
 
 # Initialize globals related to the grid
 glb_gridfcs_list = []
-glb_gridfc = namedtuple('gridfunction', 'gftype name rank DIM f_infinity wavespeed')
+glb_gridfc = namedtuple('gridfunction', 'gftype name rank DIM f_infinity wavespeed external_module')
 
 thismodule = __name__
 par.initialize_param(par.glb_param("char", thismodule, "GridFuncMemAccess", "SENRlike"))
@@ -154,7 +154,7 @@ def verify_gridfunction_basename_is_valid(gf_basename):
         sys.exit(1)
 
 import sys
-def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_infinity=None, wavespeed=None):
+def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_infinity=None, wavespeed=None, external_module=None):
     # Step 0: Sanity check
     if (rank > 0 and not is_indexed) or (rank == 0 and is_indexed):
         print("Error: Attempted to register *indexed* gridfunction(s) with rank 0, or *scalar* gridfunctions with rank>0.")
@@ -217,7 +217,7 @@ def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_inf
                 print("Error: Tried to register the gridfunction \""+gf_names[i]+"\" twice (ignored type)\n\n")
                 sys.exit(1)
         # If no duplicate found, append to "gridfunctions" list:
-        glb_gridfcs_list.append(glb_gridfc(gf_type, gf_names[i], rank, DIM, f_infinity[i], wavespeed[i]))
+        glb_gridfcs_list.append(glb_gridfc(gf_type, gf_names[i], rank, DIM, f_infinity[i], wavespeed[i], external_module))
 
     # Step 5: Return SymPy object corresponding to symbol or
     #         list of symbols representing gridfunction in

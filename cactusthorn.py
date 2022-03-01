@@ -276,7 +276,7 @@ class CactusThorn:
     def use_coords(self):
         return self.coords
 
-    def register_gridfunctions(self, gtype, gf_names):
+    def register_gridfunctions(self, gtype, gf_names, external_module=None):
         #x, y, z = self.use_coords()
         #gfs = []
         #for gf_name in gf_names:
@@ -284,7 +284,9 @@ class CactusThorn:
         #return gfs
         for gf_name in gf_names:
             self.gf_names.add(gf_name)
-        return grid.register_gridfunctions(gtype, gf_names)
+        if external_module is not None:
+            self.external_modules += [external_module]
+        return grid.register_gridfunctions(gtype, gf_names, external_module=external_module)
 
     def __init__(self, arrangement, thornname, author=None, email=None, license='BSD'):
         self.gf_names = set()
@@ -295,6 +297,7 @@ class CactusThorn:
 
         self.src_files = []
         self.params = []
+        self.external_modules = []
 
         self.param_ccl = os.path.join(self.thorn_dir, "param.ccl")
         self.interface_ccl = os.path.join(self.thorn_dir, "interface.ccl")
@@ -360,7 +363,8 @@ class CactusThorn:
             with open(self.interface_ccl,"w") as fd:
                 print(f"# Interface definitions for thorn {self.thornname}",file=fd)
                 print(f"implements: {self.thornname}",file=fd)
-                print("inherits: Coordinates",file=fd)
+                #print("inherits: Coordinates",file=fd)
+                print(f"inherits: {', '.join(self.external_modules)}",file=fd)
                 for gf_name in self.gf_names:
                     print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=3 {{ {gf_name}GF }} "{gf_name}"', file=fd)
             with open(self.schedule_ccl,"w") as fd:
