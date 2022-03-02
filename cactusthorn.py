@@ -277,19 +277,19 @@ class CactusThorn:
         return self.coords
 
     def register_gridfunctions(self, gtype, gf_names, external_module=None):
-        #x, y, z = self.use_coords()
-        #gfs = []
-        #for gf_name in gf_names:
-        #    gfs += [Function(gf_name)(x,y,z)]
-        #return gfs
+        if external_module is not None:
+            assert gtype == "EXTERNAL"
+            thorn = external_module
+        else:
+            thorn = self.thornname
         for gf_name in gf_names:
-            self.gf_names.add(gf_name)
+            self.gf_names[gf_name] = thorn
         if external_module is not None:
             self.external_modules += [external_module]
         return grid.register_gridfunctions(gtype, gf_names, external_module=external_module)
 
     def __init__(self, arrangement, thornname, author=None, email=None, license='BSD'):
-        self.gf_names = set()
+        self.gf_names = {}
         self.coords = symbols("x y z")
         self.arrangement = arrangement
         self.thornname = thornname
@@ -339,6 +339,13 @@ class CactusThorn:
         if self.email is None:
             self.email = os.environ['USER']
 
+    def get_full_name(self,gf_name):
+        gfthorn = self.gf_names[gf_name]
+        if gfthorn == self.thornname:
+            return f"{gfthorn}::{gf_name}GF"
+        else:
+            return f"{gfthorn}::{gf_name}"
+
     def generate(self,dirname=None,config="sim"):
         cwd = None
         try:
@@ -366,11 +373,13 @@ class CactusThorn:
                 #print("inherits: Coordinates",file=fd)
                 print(f"inherits: {', '.join(self.external_modules)}",file=fd)
                 for gf_name in self.gf_names:
-                    print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=3 {{ {gf_name}GF }} "{gf_name}"', file=fd)
+                    if self.gf_names[gf_name] == self.thornname:
+                        print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=3 {{ {gf_name}GF }} "{gf_name}"', file=fd)
             with open(self.schedule_ccl,"w") as fd:
                 print(f"# Schedule definitions for thorn {self.thornname}",file=fd)
                 for gf_name in self.gf_names:
-                    print(f"storage: {gf_name}GF[3]", file=fd)
+                    if self.gf_names[gf_name] == self.thornname:
+                        print(f"storage: {gf_name}GF[3]", file=fd)
                 for src in self.src_files:
                     fsrc = os.path.join(self.src_dir, src.name)
 
@@ -386,10 +395,12 @@ class CactusThorn:
                             # functions. Make sure that they are registered as
                             # such before generating read/write decls.
                             if readgf in self.gf_names:
-                                print(f"   READS: {readgf}GF(everywhere)",file=fd)
+                                full_name = self.get_full_name(readgf)
+                                print(f"   READS: {full_name}(everywhere)",file=fd)
                         for writegf in func.writegfs:
                             if writegf in self.gf_names:
-                                print(f"   WRITES: {writegf}GF(interior)",file=fd)
+                                full_name = self.get_full_name(writegf)
+                                print(f"   WRITES: {full_name}(interior)",file=fd)
                         print(f'}} "{func.doc}"',file=fd)
             if not os.path.exists(self.doc_tex):
                 doc_src = doc_init
