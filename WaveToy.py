@@ -1,6 +1,10 @@
 import os
+import grid
 from cactusthorn import CactusThorn
 from sympy import sympify, cos
+
+# Current options are Carpet and CarpetX
+grid.ET_driver = "Carpet"
 
 thorn = CactusThorn("TestOne","WaveToyNRPy")
 
@@ -15,10 +19,12 @@ zero = thorn.declare_param('zero',default=0,vmin=0,vmax=0,doc="zero")
 # AUXEVOL needed for the evo, can be freed after evaluating rhs (1 time level)
 # AUX uu_rhs (1 time level)
 # EVOL evolved gfs (3 time levels)
-uu_rhs, vv_rhs = thorn.register_gridfunctions("AUX", ["uu_rhs", "vv_rhs"])
-uu, vv = thorn.register_gridfunctions("EVOL", ["uu", "vv"])
-x,y,z = thorn.register_gridfunctions("EXTERNAL", ["x","y","z"],external_module="grid")
-
+uu_rhs, vv_rhs = thorn.register_gridfunctions("AUX", ["uu_rhs", "vv_rhs"], centering="CCC")
+uu, vv = thorn.register_gridfunctions("EVOL", ["uu", "vv"], centering="CCC")
+if grid.ET_driver is "Carpet":
+    x,y,z = thorn.register_gridfunctions("EXTERNAL", ["x","y","z"], external_module="grid")
+if grid.ET_driver is "CarpetX":
+    x,y,z = thorn.register_gridfunctions("CORE", ["x","y","z"])
 
 from outputC import lhrh
 import indexedexp as ixp
@@ -68,5 +74,5 @@ init_eqns = [
 thorn.add_func("wave_init", body=init_eqns, schedule_bin='init', doc='Do the wave init')
 thorn.add_func("wave_evol", body=evol_eqns, schedule_bin='evol', doc='Do the wave evol')
 
-cactus_home = "/project/sbrandt/release/Cactus"
-thorn.generate(cactus_home,config="sim-cpu")
+cactus_home = "/home/scupp3/nrpy/amrex/Cactus"
+thorn.generate(cactus_home,config="sim")
