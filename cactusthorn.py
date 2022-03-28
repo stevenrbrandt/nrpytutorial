@@ -217,6 +217,7 @@ class CactusThorn:
             assert False, "Bad type for src"
 
     def add_func(self, name, body, schedule_bin, doc):
+        centering = None
         self._add_src(name + ".cc")
         writegfs = set()
         readgfs = set()
@@ -236,6 +237,7 @@ class CactusThorn:
                         else:
                             readgfs.add(rdsym)
                 if type(item.lhs) == sympy.core.symbol.Symbol:
+#TODO: need to set centering somehow
                     new_lhs=gri.gfaccess(varname=str(item.lhs))
                     new_body += [lhrh(lhs=new_lhs, rhs=item.rhs)]
                 else:
@@ -243,14 +245,24 @@ class CactusThorn:
             body = new_body
             kernel = fin.FD_outputC("returnstring",body)
             decl = ""
-            body = f"""
-            {decl}
-            for(int i2=cctk_nghostzones[2];i2<cctk_lsh[2]-cctk_nghostzones[2];i2++) {{
-            for(int i1=cctk_nghostzones[1];i1<cctk_lsh[1]-cctk_nghostzones[1];i1++) {{
-            for(int i0=cctk_nghostzones[0];i0<cctk_lsh[0]-cctk_nghostzones[0];i0++) {{
-            {kernel}
-            }} }} }}
-            """.strip()
+            if gri.ET_driver is "Carpet":
+                body = f"""
+                {decl}
+                for(int i2=cctk_nghostzones[2];i2<cctk_lsh[2]-cctk_nghostzones[2];i2++) {{
+                for(int i1=cctk_nghostzones[1];i1<cctk_lsh[1]-cctk_nghostzones[1];i1++) {{
+                for(int i0=cctk_nghostzones[0];i0<cctk_lsh[0]-cctk_nghostzones[0];i0++) {{
+                {kernel}
+                }} }} }}
+                """.strip()
+            elif gri.ET_driver is "CarpetX":
+                body = f"""
+                {decl}
+                grid.loop_int_device<CCC_centered[0], CCC_centered[1], CCC_centered[2]>(
+                grid.nghostzones, [=] CCTK_DEVICE CCTK_HOST(
+                const PointDesc &p) CCTK_ATTRIBUTE_ALWAYS_INLINE {{
+                {kernel}
+                }}
+                """.strip()
         elif type(body)==str:
             # Pass the body through literally
             pass
@@ -276,7 +288,7 @@ class CactusThorn:
     def use_coords(self):
         return self.coords
 
-    def register_gridfunctions(self, gtype, gf_names, external_module=None):
+    def register_gridfunctions(self, gtype, gf_names, centering=None, external_module=None):
         if external_module is not None:
             assert gtype == "EXTERNAL"
             thorn = external_module
@@ -284,6 +296,10 @@ class CactusThorn:
             thorn = self.thornname
         for gf_name in gf_names:
             self.gf_names[gf_name] = thorn
+            if centering is not None:
+                self.centering[gf_name] = centering
+            else:
+                self.centering[gf_name] = "CCC" #TODO: should it be a default or an error?
         if external_module is not None:
             self.external_modules += [external_module]
         return grid.register_gridfunctions(gtype, gf_names, external_module=external_module)
@@ -297,6 +313,7 @@ class CactusThorn:
 
         self.src_files = []
         self.params = []
+        self.centering = {}
         self.external_modules = []
 
         self.param_ccl = os.path.join(self.thorn_dir, "param.ccl")
@@ -370,11 +387,10 @@ class CactusThorn:
             with open(self.interface_ccl,"w") as fd:
                 print(f"# Interface definitions for thorn {self.thornname}",file=fd)
                 print(f"implements: {self.thornname}",file=fd)
-                #print("inherits: Coordinates",file=fd)
                 print(f"inherits: {', '.join(self.external_modules)}",file=fd)
                 for gf_name in self.gf_names:
                     if self.gf_names[gf_name] == self.thornname:
-                        print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=3 {{ {gf_name}GF }} "{gf_name}"', file=fd)
+                        print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=3 CENTERING={{ {self.centering[gf_name]} }} {{ {gf_name}GF }} "{gf_name}"', file=fd)
             with open(self.schedule_ccl,"w") as fd:
                 print(f"# Schedule definitions for thorn {self.thornname}",file=fd)
                 for gf_name in self.gf_names:
@@ -426,13 +442,23 @@ class CactusThorn:
                 #construct_NRPy_Cfunctions("/tmp")
                 #outCfunction(outfile="x.cc",name='foo2',params='()',body='/* body 2 */')
                 with open(fsrc, "w") as fd:
-                    print("#include <cctk.h>", file=fd)
-                    print("#include <cctk_Arguments.h>", file=fd)
-                    print("#include <cctk_Parameters.h>", file=fd)
+                    if gri.ET_driver is "Carpet":
+                        print("#include <cctk.h>", file=fd)
+                        print("#include <cctk_Arguments.h>", file=fd)
+                        print("#include <cctk_Parameters.h>", file=fd)
+                    elif gri.ET_driver is "CarpetX":
+                        print("#include <fixmath.hxx>", file=fd)
+                        print("#include <cctk.h>", file=fd)
+                        print("#include <cctk_Arguments.h>", file=fd)
+                        print("#include <cctk_Parameters.h>", file=fd)
+                        print("#include <loop_device.hxx>", file=fd)
                     for func in src.funcs:
                         print(file=fd)
                         print(f"void {func.name}(CCTK_ARGUMENTS) {{",file=fd)
-                        print(f"  DECLARE_CCTK_ARGUMENTS_{func.name};",file=fd)
+                        if gri.ET_driver is "Carpet":
+                            print(f"  DECLARE_CCTK_ARGUMENTS_{func.name};",file=fd)
+                        elif gri.ET_driver is "CarpetX":
+                            print(f"  DECLARE_CCTK_ARGUMENTSX_{func.name};",file=fd)
                         print(f"  DECLARE_CCTK_PARAMETERS;",file=fd)
                         for ii in range(3):
                             print(f"  CCTK_REAL invdx{ii} = 1/CCTK_DELTA_SPACE({ii});",file=fd)
