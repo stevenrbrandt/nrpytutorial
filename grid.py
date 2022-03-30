@@ -107,7 +107,7 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = ""):
         if DIM != 3:
             print("Error: GridFuncMemAccess = ETK currently requires that gridfunctions be 3D. Can be easily extended.")
             sys.exit(1)
-        if ET_driver is "Carpet":
+        if ET_driver == "Carpet":
             if gfarrayname == "rhs_gfs":
                 retstring += varname + "_rhsGF" + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
             elif gftype == "EXTERNAL":
@@ -117,7 +117,7 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = ""):
                 sys.exit(1)
             else:
                 retstring += varname + "GF" + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
-        elif ET_driver is "CarpetX":
+        elif ET_driver == "CarpetX":
             if gfarrayname == "rhs_gfs":
                 return retstring + varname + "_rhsGF" + "[p.I]"
             elif gftype == "EXTERNAL":

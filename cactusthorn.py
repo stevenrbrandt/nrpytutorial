@@ -245,7 +245,7 @@ class CactusThorn:
             body = new_body
             kernel = fin.FD_outputC("returnstring",body)
             decl = ""
-            if gri.ET_driver is "Carpet":
+            if gri.ET_driver == "Carpet":
                 body = f"""
                 {decl}
                 for(int i2=cctk_nghostzones[2];i2<cctk_lsh[2]-cctk_nghostzones[2];i2++) {{
@@ -254,7 +254,7 @@ class CactusThorn:
                 {kernel}
                 }} }} }}
                 """.strip()
-            elif gri.ET_driver is "CarpetX":
+            elif gri.ET_driver == "CarpetX":
                 body = f"""
                 {decl}
                 grid.loop_int_device<CCC_centered[0], CCC_centered[1], CCC_centered[2]>(
@@ -457,9 +457,9 @@ class CactusThorn:
                     for func in src.funcs:
                         print(file=fd)
                         print(f"void {func.name}(CCTK_ARGUMENTS) {{",file=fd)
-                        if gri.ET_driver is "Carpet":
+                        if gri.ET_driver == "Carpet":
                             print(f"  DECLARE_CCTK_ARGUMENTS_{func.name};",file=fd)
-                        elif gri.ET_driver is "CarpetX":
+                        elif gri.ET_driver == "CarpetX":
                             print(f"  DECLARE_CCTK_ARGUMENTSX_{func.name};",file=fd)
                         print(f"  DECLARE_CCTK_PARAMETERS;",file=fd)
                         for ii in range(3):
