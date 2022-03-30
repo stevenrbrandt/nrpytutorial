@@ -44,5 +44,10 @@ init_eqns = [
 thorn.add_func("wave_init", body=init_eqns, schedule_bin='init', doc='Do the wave init')
 thorn.add_func("wave_evol", body=evol_eqns, schedule_bin='evol', doc='Do the wave evol')
 
-cactus_home = "/home/scupp3/nrpy/amrex/Cactus"
-thorn.generate(cactus_home,config="sim")
+assert "CACTUS_HOME" in os.environ, "Please set the CACTUS_HOME variable to point to your Cactus installation"
+cactus_home = os.environ["CACTUS_HOME"]
+cactus_sim = os.environ.get("CACTUS_SIM","sim")
+cactus_thornlist = os.environ.get("CACTUS_THORNLIST", None)
+
+#cactus_home = "/project/sbrandt/release/Cactus"
+thorn.generate(cactus_home,cactus_config=cactus_sim,cactus_thornlist=cactus_thornlist)

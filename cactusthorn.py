@@ -363,7 +363,7 @@ class CactusThorn:
         else:
             return f"{gfthorn}::{gf_name}"
 
-    def generate(self,dirname=None,config="sim"):
+    def generate(self,dirname=None,cactus_config="sim",cactus_thornlist=None):
         cwd = None
         try:
             if dirname is not None:
@@ -467,19 +467,23 @@ class CactusThorn:
 
             # Create the thorn_list entry if needed
             entry = f"{self.arrangement}/{self.thornname}"
-            thorn_list = os.path.join("configs", config, "ThornList")
-            if os.path.exists(thorn_list):
-                with open(thorn_list, "r") as fd:
-                    contents = fd.read()
-                if re.search(f'^{entry}\\b', contents, re.MULTILINE):
-                    print(f"Thorn {entry} is already in {thorn_list}")
-                else:
-                    print(f"Appending {entry} to {thorn_list}")
-                    with open(thorn_list, "a") as fd:
-                        print(entry, file=fd)
-            else:
-                print(f"Thornlist {thorn_list} does not exist. Entry {entry} not added.")
+            thorn_list = os.path.join("configs", cactus_config, "ThornList")
+            self.update_thornlist(entry, thorn_list)
+            if cactus_thornlist is not None:
+                self.update_thornlist(entry, cactus_thornlist)
         finally:
             if cwd is not None:
                 os.chdir(cwd)
 
+    def update_thornlist(self, entry, thorn_list):
+        if os.path.exists(thorn_list):
+            with open(thorn_list, "r") as fd:
+                contents = fd.read()
+            if re.search(f'^{entry}\\b', contents, re.MULTILINE):
+                print(f"Thorn {entry} is already in {os.getcwd()}/{thorn_list}")
+            else:
+                print(f"Appending {entry} to {os.getcwd()}/{thorn_list}")
+                with open(thorn_list, "a") as fd:
+                    print(entry, file=fd)
+        else:
+            print(f"Thornlist {os.getcwd()}/{thorn_list} does not exist. Entry {entry} not added.")
