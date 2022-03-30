@@ -261,7 +261,7 @@ class CactusThorn:
                 grid.nghostzones, [=] CCTK_DEVICE CCTK_HOST(
                 const PointDesc &p) CCTK_ATTRIBUTE_ALWAYS_INLINE {{
                 {kernel}
-                }}
+                }});
                 """.strip()
         elif type(body)==str:
             # Pass the body through literally
@@ -376,6 +376,8 @@ class CactusThorn:
             if not os.path.exists(self.configuration_ccl):
                 with open(self.configuration_ccl,"w") as fd:
                     print(f"# Configuration definitions for thorn {self.thornname}",file=fd)
+                    if gri.ET_driver == "CarpetX":
+                        print(f"REQUIRES CarpetX",file=fd)
             with open(self.param_ccl,"w") as fd:
                 print(f"# Parameter definitions for thorn {self.thornname}",file=fd)
                 for name, default, doc, vmin, vmax, options in self.params:
@@ -388,6 +390,8 @@ class CactusThorn:
                 print(f"# Interface definitions for thorn {self.thornname}",file=fd)
                 print(f"implements: {self.thornname}",file=fd)
                 print(f"inherits: {', '.join(self.external_modules)}",file=fd)
+                if gri.ET_driver == "CarpetX":
+                    print(f"USES INCLUDE HEADER: loop_device.hxx",file=fd)
                 for gf_name in self.gf_names:
                     if self.gf_names[gf_name] == self.thornname:
                         print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=3 CENTERING={{ {self.centering[gf_name]} }} {{ {gf_name}GF }} "{gf_name}"', file=fd)
@@ -452,6 +456,7 @@ class CactusThorn:
                         print("#include <cctk_Arguments.h>", file=fd)
                         print("#include <cctk_Parameters.h>", file=fd)
                         print("#include <loop_device.hxx>", file=fd)
+                        print("\nusing namespace Loop;", file=fd)
                     else:
                         assert "Bad value for grid.ET_driver={grid.ET_driver}"
                     for func in src.funcs:
