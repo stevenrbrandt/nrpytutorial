@@ -442,16 +442,18 @@ class CactusThorn:
                 #construct_NRPy_Cfunctions("/tmp")
                 #outCfunction(outfile="x.cc",name='foo2',params='()',body='/* body 2 */')
                 with open(fsrc, "w") as fd:
-                    if gri.ET_driver is "Carpet":
+                    if gri.ET_driver == "Carpet":
                         print("#include <cctk.h>", file=fd)
                         print("#include <cctk_Arguments.h>", file=fd)
                         print("#include <cctk_Parameters.h>", file=fd)
-                    elif gri.ET_driver is "CarpetX":
+                    elif gri.ET_driver == "CarpetX":
                         print("#include <fixmath.hxx>", file=fd)
                         print("#include <cctk.h>", file=fd)
                         print("#include <cctk_Arguments.h>", file=fd)
                         print("#include <cctk_Parameters.h>", file=fd)
                         print("#include <loop_device.hxx>", file=fd)
+                    else:
+                        assert "Bad value for grid.ET_driver={grid.ET_driver}"
                     for func in src.funcs:
                         print(file=fd)
                         print(f"void {func.name}(CCTK_ARGUMENTS) {{",file=fd)
