@@ -11,6 +11,7 @@ import sympy
 from outputC import lhrh
 import grid as gri
 import NRPy_param_funcs as par
+from safewrite import SafeWrite
 
 today = date.today().strftime("%B %d, %Y")
 
@@ -373,12 +374,11 @@ class CactusThorn:
             os.makedirs(self.src_dir, exist_ok=True)
             os.makedirs(self.test_dir, exist_ok=True)
             os.makedirs(self.doc_dir, exist_ok=True)
-            if not os.path.exists(self.configuration_ccl):
-                with open(self.configuration_ccl,"w") as fd:
-                    print(f"# Configuration definitions for thorn {self.thornname}",file=fd)
-                    if gri.ET_driver == "CarpetX":
-                        print(f"REQUIRES CarpetX",file=fd)
-            with open(self.param_ccl,"w") as fd:
+            with SafeWrite(self.configuration_ccl) as fd:
+                print(f"# Configuration definitions for thorn {self.thornname}",file=fd)
+                if gri.ET_driver == "CarpetX":
+                    print(f"REQUIRES CarpetX",file=fd)
+            with SafeWrite(self.param_ccl) as fd:
                 print(f"# Parameter definitions for thorn {self.thornname}",file=fd)
                 for name, default, doc, vmin, vmax, options in self.params:
                     t = typeof(default, vmin, vmax)
@@ -386,7 +386,7 @@ class CactusThorn:
                         print(f'CCTK_INT {name} "{doc}" {{ {vmin}:{vmax} :: "" }} {default}', file=fd)
                     elif t == float:
                         print(f'CCTK_REAL {name} "{doc}" {{ {vmin}:{vmax} :: "" }} {default}', file=fd)
-            with open(self.interface_ccl,"w") as fd:
+            with SafeWrite(self.interface_ccl) as fd:
                 print(f"# Interface definitions for thorn {self.thornname}",file=fd)
                 print(f"implements: {self.thornname}",file=fd)
                 print(f"inherits: {', '.join(self.external_modules)}",file=fd)
@@ -395,7 +395,7 @@ class CactusThorn:
                 for gf_name in self.gf_names:
                     if self.gf_names[gf_name] == self.thornname:
                         print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=3 CENTERING={{ {self.centering[gf_name]} }} {{ {gf_name}GF }} "{gf_name}"', file=fd)
-            with open(self.schedule_ccl,"w") as fd:
+            with SafeWrite(self.schedule_ccl) as fd:
                 print(f"# Schedule definitions for thorn {self.thornname}",file=fd)
                 for gf_name in self.gf_names:
                     if self.gf_names[gf_name] == self.thornname:
@@ -430,7 +430,7 @@ class CactusThorn:
                 doc_src = re.sub(r'{date}',today,doc_src)
                 with open(self.doc_tex, "w") as fd:
                     print(doc_src, file=fd)
-            with open(self.makefile, "w") as fd:
+            with SafeWrite(self.makefile) as fd:
                 # for item in outC_function_master_list
                 print(makefile_init, end='', file=fd) 
                 for src in self.src_files:
@@ -445,7 +445,7 @@ class CactusThorn:
                 #construct_NRPy_function_prototypes_h("/tmp")
                 #construct_NRPy_Cfunctions("/tmp")
                 #outCfunction(outfile="x.cc",name='foo2',params='()',body='/* body 2 */')
-                with open(fsrc, "w") as fd:
+                with SafeWrite(fsrc) as fd:
                     if gri.ET_driver == "Carpet":
                         print("#include <cctk.h>", file=fd)
                         print("#include <cctk_Arguments.h>", file=fd)
