@@ -6,7 +6,7 @@ from sympy import sympify, cos
 # Current options are Carpet and CarpetX
 grid.ET_driver = os.environ.get("CACTUS_DRIVER","Carpet")
 
-thorn = CactusThorn("TestOne","WaveToyNRPy2")
+thorn = CactusThorn("TestOne","WaveToyNRPy")
 
 FD_order = thorn.declare_param('FD_order',default=4,vmin=2,vmax=8,doc="The finite difference order")
 

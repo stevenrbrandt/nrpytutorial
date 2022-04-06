@@ -240,7 +240,6 @@ class CactusThorn:
                         else:
                             readgfs.add(rdsym)
                 if type(item.lhs) == sympy.core.symbol.Symbol:
-#TODO: need to set centering somehow
                     new_lhs=gri.gfaccess(varname=str(item.lhs))
                     new_body += [lhrh(lhs=new_lhs, rhs=item.rhs)]
                 else:
@@ -267,9 +266,10 @@ class CactusThorn:
                     wtag = 'bnd'
                 else:
                     assert False, "where should be in ['interior', 'everywhere', 'boundary']"
+                #TODO: need to decide how to do loops with centering other than VVV
                 body = f"""
                 {decl}
-                grid.loop_{wtag}_device<CCC_centered[0], CCC_centered[1], CCC_centered[2]>(
+                grid.loop_{wtag}_device<VVV_centered[0], VVV_centered[1], VVV_centered[2]>(
                 grid.nghostzones, [=] CCTK_DEVICE CCTK_HOST(
                 const PointDesc &p) CCTK_ATTRIBUTE_ALWAYS_INLINE {{
                 {kernel}
@@ -311,7 +311,7 @@ class CactusThorn:
             if centering is not None:
                 self.centering[gf_name] = centering
             else:
-                self.centering[gf_name] = "CCC" #TODO: should it be a default or an error?
+                self.centering[gf_name] = "VVV"
         if external_module is not None:
             self.external_modules += [external_module]
         return grid.register_gridfunctions(gtype, gf_names, external_module=external_module)
@@ -405,6 +405,7 @@ class CactusThorn:
                 if gri.ET_driver == "CarpetX":
                     print(f"USES INCLUDE HEADER: loop_device.hxx",file=fd)
                 for gf_name in self.gf_names:
+                    #TODO: change lines with "if gf_name in ["x","y","z"]:" to check if gftype=="CORE"
                     if gf_name in ["x","y","z"]:
                         continue
                     rhs=gf_name + "_rhs"

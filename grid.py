@@ -126,15 +126,6 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = ""):
                 return retstring + "p." + varname
             else:
                 return retstring + varname + "GF" + "(p.I)"
-#        print(ET_driver)
-#        if gfarrayname == "rhs_gfs":
-#            return retstring + varname + "_rhsGF" + "[p.I]"
-#        elif gftype == "EXTERNAL":
-#            return retstring + varname + "[p.I]"
-#        elif gftype == "CORE":
-#            return retstring + "p." + varname
-#        else:
-#            return retstring + varname + "GF" + "[p.I]"
     else:
         print("grid::GridFuncMemAccess = "+par.parval_from_str("GridFuncMemAccess")+" not supported")
         sys.exit(1)
@@ -347,7 +338,7 @@ def gridfunction_defines():
 #define NUM_EXTERNAL_GFS """ + str(len(external_variables_list)) + "\n"
     for i in range(len(external_variables_list)):
         outstr += "#define " + external_variables_list[i].upper() + "GF\t" + str(i) + "\n"
-#If CarpetX: Do I need to do this for CORE vars? I don't think so.
+#Do I need to do this for CORE vars? I don't think so.
 
     if(len(evolved_variables_list)) > 0:
         outstr += """\n\n// SET gridfunctions_f_infinity[i] = value of gridfunction i in the limit r->infinity:
