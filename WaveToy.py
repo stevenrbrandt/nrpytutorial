@@ -6,7 +6,7 @@ from sympy import sympify, cos
 # Current options are Carpet and CarpetX
 grid.ET_driver = os.environ.get("CACTUS_DRIVER","Carpet")
 
-thorn = CactusThorn("TestOne","WaveToyNRPy")
+thorn = CactusThorn("TestOne","WaveToyNRPy2")
 
 FD_order = thorn.declare_param('FD_order',default=4,vmin=2,vmax=8,doc="The finite difference order")
 
@@ -21,12 +21,7 @@ zero = thorn.declare_param('zero',default=0,vmin=0,vmax=0,doc="zero")
 # EVOL evolved gfs (3 time levels)
 uu_rhs, vv_rhs = thorn.register_gridfunctions("AUX", ["uu_rhs", "vv_rhs"], centering="CCC")
 uu, vv = thorn.register_gridfunctions("EVOL", ["uu", "vv"], centering="CCC")
-if grid.ET_driver == "Carpet":
-    x,y,z = thorn.register_gridfunctions("EXTERNAL", ["x","y","z"], external_module="grid")
-elif grid.ET_driver == "CarpetX":
-    x,y,z = thorn.register_gridfunctions("CORE", ["x","y","z"])
-else:
-    assert "Bad value for grid.ET_driver={grid.ET_driver}"
+x,y,z = thorn.get_xyz()
 
 from outputC import lhrh
 import indexedexp as ixp

@@ -306,8 +306,8 @@ class CactusThorn:
         return grid.register_gridfunctions(gtype, gf_names, external_module=external_module)
 
     def __init__(self, arrangement, thornname, author=None, email=None, license='BSD'):
+        self.ET_driver = grid.ET_driver
         self.gf_names = {}
-        self.coords = symbols("x y z")
         self.arrangement = arrangement
         self.thornname = thornname
         self.thorn_dir = os.path.join("arrangements", self.arrangement, self.thornname)
@@ -365,6 +365,7 @@ class CactusThorn:
             return f"{gfthorn}::{gf_name}"
 
     def generate(self,dirname=None,cactus_config="sim",cactus_thornlist=None):
+        assert self.ET_driver == grid.ET_driver
         cwd = None
         try:
             if dirname is not None:
@@ -481,6 +482,16 @@ class CactusThorn:
         finally:
             if cwd is not None:
                 os.chdir(cwd)
+
+    def get_xyz(self):
+        assert self.ET_driver == grid.ET_driver
+        if grid.ET_driver == "Carpet":
+            x,y,z = self.register_gridfunctions("EXTERNAL", ["x","y","z"], external_module="grid")
+        elif grid.ET_driver == "CarpetX":
+            x,y,z = self.register_gridfunctions("CORE", ["x","y","z"])
+        else:
+            assert "Bad value for grid.ET_driver={grid.ET_driver}"
+        return x,y,z
 
     def update_thornlist(self, entry, thorn_list):
         if os.path.exists(thorn_list):
