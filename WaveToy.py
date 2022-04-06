@@ -34,12 +34,20 @@ evol_eqns = [
 ]
 
 init_eqns = [
+    lhrh(lhs=vv_rhs, rhs=sympify(0)),
+    lhrh(lhs=uu_rhs, rhs=sympify(0)),
     lhrh(lhs=vv, rhs=sympify(0)),
     lhrh(lhs=uu, rhs=cos(-(x-x0)**2-(y-y0)**2-(z-z0)**2)),
 ]
 
-thorn.add_func("wave_init", body=init_eqns, schedule_bin='initial', doc='Do the wave init')
-thorn.add_func("wave_evol", body=evol_eqns, schedule_bin='evol', doc='Do the wave evol')
+bound_eqns = [
+    lhrh(lhs=vv_rhs, rhs=sympify(0)),
+    lhrh(lhs=uu_rhs, rhs=sympify(0)),
+]
+
+thorn.add_func("wave_init", body=init_eqns, where='everywhere', schedule_bin='initial', doc='Do the wave init')
+thorn.add_func("wave_bound", body=bound_eqns, where='boundary', schedule_bin='ODESolvers_RHS after wave_evol', doc='Do the b/c')
+thorn.add_func("wave_evol", body=evol_eqns, where='interior', schedule_bin='ODESolvers_RHS', doc='Do the wave evol')
 
 assert "CACTUS_HOME" in os.environ, "Please set the CACTUS_HOME variable to point to your Cactus installation"
 cactus_home = os.environ["CACTUS_HOME"]

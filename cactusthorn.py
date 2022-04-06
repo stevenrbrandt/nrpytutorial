@@ -204,8 +204,10 @@ class CactusSrc:
     def __init__(self, name):
         self.name = name
         self.funcs = []
-    def add_func(self, func):
+        self.where = None
+    def add_func(self, func, where):
         self.funcs += [func]
+        self.where = where
 
 class CactusThorn:
 
@@ -217,7 +219,7 @@ class CactusThorn:
         else:
             assert False, "Bad type for src"
 
-    def add_func(self, name, body, schedule_bin, doc):
+    def add_func(self, name, body, schedule_bin, doc, where='interior'):
         centering = None
         self._add_src(name + ".cc")
         writegfs = set()
@@ -255,10 +257,19 @@ class CactusThorn:
                 {kernel}
                 }} }} }}
                 """.strip()
+                assert where == "interior", "Only interior suppprted right now"
             elif gri.ET_driver == "CarpetX":
+                if where == 'everywhere':
+                    wtag = 'all'
+                elif where == 'interior':
+                    wtag = 'int'
+                elif where == 'boundary':
+                    wtag = 'bnd'
+                else:
+                    assert False, "where should be in ['interior', 'everywhere', 'boundary']"
                 body = f"""
                 {decl}
-                grid.loop_int_device<CCC_centered[0], CCC_centered[1], CCC_centered[2]>(
+                grid.loop_{wtag}_device<CCC_centered[0], CCC_centered[1], CCC_centered[2]>(
                 grid.nghostzones, [=] CCTK_DEVICE CCTK_HOST(
                 const PointDesc &p) CCTK_ATTRIBUTE_ALWAYS_INLINE {{
                 {kernel}
@@ -270,7 +281,7 @@ class CactusThorn:
         else:
             assert False, "Body must be list or str"
         func = CactusFunc(name, body, schedule_bin, doc)
-        self.src_files[-1].add_func(func)
+        self.src_files[-1].add_func(func, where)
         func.readgfs = readgfs
         func.writegfs = writegfs
 
@@ -394,13 +405,32 @@ class CactusThorn:
                 if gri.ET_driver == "CarpetX":
                     print(f"USES INCLUDE HEADER: loop_device.hxx",file=fd)
                 for gf_name in self.gf_names:
+                    if gf_name in ["x","y","z"]:
+                        continue
+                    rhs=gf_name + "_rhs"
+                    if re.match(r'.*_rhs',gf_name):
+                        tag = "TAGS='checkpoint=\"no\"'"
+                    elif rhs in self.gf_names:
+                        tag = f"TAGS='rhs=\"{self.thornname}::{rhs}GF\"' "
+                    else:
+                        tag = ""
                     if self.gf_names[gf_name] == self.thornname:
-                        print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=3 CENTERING={{ {self.centering[gf_name]} }} {{ {gf_name}GF }} "{gf_name}"', file=fd)
+                        if grid.ET_driver == "Carpet":
+                            print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=3 {{ {gf_name}GF }} "{gf_name}"', file=fd)
+                        elif grid.ET_driver == "CarpetX":
+                            # CarpetX does not use sub-cycling in time, so it only needs one time level
+                            print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=1 {tag} CENTERING={{ {self.centering[gf_name]} }} {{ {gf_name}GF }} "{gf_name}"', file=fd)
+
             with SafeWrite(self.schedule_ccl) as fd:
                 print(f"# Schedule definitions for thorn {self.thornname}",file=fd)
                 for gf_name in self.gf_names:
+                    if gf_name in ["x","y","z"]:
+                        continue
                     if self.gf_names[gf_name] == self.thornname:
-                        print(f"storage: {gf_name}GF[3]", file=fd)
+                        if grid.ET_driver == "Carpet":
+                            print(f"storage: {gf_name}GF[3]", file=fd)
+                        else:
+                            print(f"storage: {gf_name}GF[1]", file=fd)
                 for src in self.src_files:
                     fsrc = os.path.join(self.src_dir, src.name)
 
@@ -409,9 +439,16 @@ class CactusThorn:
 
                     for func in src.funcs:
                         print(file=fd)
-                        print(f"schedule {func.name} in {func.schedule_bin} {{",file=fd)
+                        # TODO: Add the other special bins here
+                        if func.schedule_bin.lower() in ["initial"]:
+                            atin = "at"
+                        else:
+                            atin = "in"
+                        print(f"schedule {func.name} {atin} {func.schedule_bin} {{",file=fd)
                         print(f"   LANG: C",file=fd)
                         for readgf in func.readgfs:
+                            if readgf in ["x","y","z"]:
+                                continue
                             # The symbols in readgfs might not actually be grid
                             # functions. Make sure that they are registered as
                             # such before generating read/write decls.
@@ -421,7 +458,11 @@ class CactusThorn:
                         for writegf in func.writegfs:
                             if writegf in self.gf_names:
                                 full_name = self.get_full_name(writegf)
-                                print(f"   WRITES: {full_name}(interior)",file=fd)
+                                print(f"   WRITES: {full_name}({src.where})",file=fd)
+                        if src.where == "interior":
+                            for writegf in func.writegfs:
+                                if writegf in self.gf_names:
+                                    pass #print(f"    SYNC: {full_name}",file=fd)
                         print(f'}} "{func.doc}"',file=fd)
             if not os.path.exists(self.doc_tex):
                 doc_src = doc_init
@@ -468,6 +509,7 @@ class CactusThorn:
                         elif gri.ET_driver == "CarpetX":
                             print(f"  DECLARE_CCTK_ARGUMENTSX_{func.name};",file=fd)
                         print(f"  DECLARE_CCTK_PARAMETERS;",file=fd)
+                        print(f"  std::cout << \"Callling {func.name}!!!\" << std::endl;",file=fd)
                         for ii in range(3):
                             print(f"  CCTK_REAL invdx{ii} = 1/CCTK_DELTA_SPACE({ii});",file=fd)
                         print(f"  {func.body}",file=fd)
