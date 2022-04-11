@@ -341,6 +341,7 @@ def symm_matrix_inverter3x3(a):
                 a[0][0]*a[1][2]**2 - a[0][1]**2*a[2][2] + \
                 a[0][0]*a[1][1]*a[2][2]
     if outDET == 0:
+        # print(a)
         raise NonInvertibleMatrixError('matrix has determinant zero')
 
     outINV = [[sp.sympify(0) for i in range(3)] for j in range(3)]
@@ -357,6 +358,32 @@ def symm_matrix_inverter3x3(a):
     outINV[2][1] = outINV[1][2]
     return outINV, outDET
 
+
+# Validation test code for symm_matrix_inverter4x4():
+# import indexedexp as ixp
+# R4DD = ixp.declarerank2("R4DD", "sym01", DIM=4)
+#
+# # Compute R4DD's inverse:
+# R4DDinv, det = ixp.symm_matrix_inverter4x4(R4DD)
+#
+# # Next matrix multiply: IsUnit = R^{-1} R
+# IsUnit = ixp.zerorank2(DIM=4)
+# for i in range(4):
+#     for j in range(4):
+#         for k in range(4):
+#             IsUnit[i][j] += R4DDinv[i][k] * R4DD[k][j]
+#             # If you'd like to check R R^{-1} instead:
+#             # IsUnit[i][j] += R4DD[i][k] * R4DDinv[k][j]
+#
+# # Next check, is IsUnit == Unit matrix?!
+# from UnitTesting.assert_equal import check_zero
+# for diag in range(4):
+#     print(check_zero(IsUnit[diag][diag]-1))
+# for offdiag_i in range(4):
+#     for offdiag_j in range(4):
+#         if offdiag_i != offdiag_j:
+#             print(check_zero(IsUnit[offdiag_i][offdiag_j]))
+# # ^^ all should output as True.
 def symm_matrix_inverter4x4(a):
     # It is far more efficient to write out the matrix determinant and inverse by hand
     #   instead of using SymPy's built-in functions, since the matrix is symmetric.
