@@ -45,6 +45,11 @@ bound_eqns = [
     lhrh(lhs=uu_rhs, rhs=sympify(0)),
 ]
 
+# access a variable with a different centering using interpolation
+# looping cell-centered, access vertex-centered, not vice-versa
+# all rhs variables should have the same centering
+# wave toy with fluxes, fluxes are faces
+# schedule something in post-regrid, apply bc's
 thorn.add_func("wave_init", body=init_eqns, where='everywhere', schedule_bin='initial', doc='Do the wave init')
 thorn.add_func("wave_bound", body=bound_eqns, where='boundary', schedule_bin='ODESolvers_RHS after wave_evol', doc='Do the b/c')
 thorn.add_func("wave_evol", body=evol_eqns, where='interior', schedule_bin='ODESolvers_RHS', doc='Do the wave evol')

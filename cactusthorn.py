@@ -1,4 +1,5 @@
 # An attempt at a WaveToy using the NRPy+ infrastructure
+# TODO: Parity on grid functions
 
 import os, re
 from datetime import date
