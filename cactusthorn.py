@@ -249,15 +249,61 @@ class CactusThorn:
             kernel = fin.FD_outputC("returnstring",body)
             decl = ""
             if gri.ET_driver == "Carpet":
-                body = f"""
-                {decl}
-                for(int i2=cctk_nghostzones[2];i2<cctk_lsh[2]-cctk_nghostzones[2];i2++) {{
-                for(int i1=cctk_nghostzones[1];i1<cctk_lsh[1]-cctk_nghostzones[1];i1++) {{
-                for(int i0=cctk_nghostzones[0];i0<cctk_lsh[0]-cctk_nghostzones[0];i0++) {{
-                {kernel}
-                }} }} }}
-                """.strip()
-                assert where == "interior", "Only interior suppprted right now"
+                if where == "interior":
+                    body = f"""
+                    {decl}
+                    for(int i2=cctk_nghostzones[2];i2<cctk_lsh[2]-cctk_nghostzones[2];i2++) {{
+                    for(int i1=cctk_nghostzones[1];i1<cctk_lsh[1]-cctk_nghostzones[1];i1++) {{
+                    for(int i0=cctk_nghostzones[0];i0<cctk_lsh[0]-cctk_nghostzones[0];i0++) {{
+                    {kernel}
+                    }} }} }}
+                    """.strip()
+                elif where == "everywhere":
+                    body = f"""
+                    {decl}
+                    for(int i2=0;i2<cctk_lsh[2];i2++) {{
+                    for(int i1=0;i1<cctk_lsh[1];i1++) {{
+                    for(int i0=0;i0<cctk_lsh[0];i0++) {{
+                    {kernel}
+                    }} }} }}
+                    """.strip()
+                elif where == "boundary":
+                    body = f"""
+                    {decl}
+                    for(int i2=0;i2<cctk_nghostzones[2];i2++) {{
+                    for(int i1=0;i1<cctk_lsh[1];i1++) {{
+                    for(int i0=0;i0<cctk_lsh[0];i0++) {{
+                    {kernel}
+                    }} }} }}
+                    for(int i2=0;i2<cctk_lsh[2];i2++) {{
+                    for(int i1=0;i1<cctk_nghostzones[1];i1++) {{
+                    for(int i0=0;i0<cctk_lsh[0];i0++) {{
+                    {kernel}
+                    }} }} }}
+                    for(int i2=0;i2<cctk_lsh[2];i2++) {{
+                    for(int i1=0;i1<cctk_lsh[1];i1++) {{
+                    for(int i0=0;i0<cctk_nghostzones[0];i0++) {{
+                    {kernel}
+                    }} }} }}
+                     
+                    for(int i2=cctk_lsh[2]-cctk_nghostzones[2];i2<cctk_lsh[2];i2++) {{
+                    for(int i1=0;i1<cctk_lsh[1];i1++) {{
+                    for(int i0=0;i0<cctk_lsh[0];i0++) {{
+                    {kernel}
+                    }} }} }}
+                    for(int i2=0;i2<cctk_lsh[2];i2++) {{
+                    for(int i1=cctk_lsh[1]-cctk_nghostzones[1];i1<cctk_lsh[1];i1++) {{
+                    for(int i0=0;i0<cctk_lsh[0];i0++) {{
+                    {kernel}
+                    }} }} }}
+                    for(int i2=0;i2<cctk_lsh[2];i2++) {{
+                    for(int i1=0;i1<cctk_lsh[1];i1++) {{
+                    for(int i0=cctk_lsh[0]-cctk_nghostzones[0];i0<cctk_lsh[0];i0++) {{
+                    {kernel}
+                    }} }} }}
+                    """.strip()
+                else:
+                    assert False, f"where={where} is not suppprted"
             elif gri.ET_driver == "CarpetX":
                 if where == 'everywhere':
                     wtag = 'all'
@@ -426,7 +472,7 @@ class CactusThorn:
             with SafeWrite(self.schedule_ccl) as fd:
                 print(f"# Schedule definitions for thorn {self.thornname}",file=fd)
                 for gf_name in self.gf_names:
-                    if gf_name in ["x","y","z"]:
+                    if grid.ET_driver == "CarpetX" and gf_name in ["x","y","z"]:
                         continue
                     if self.gf_names[gf_name] == self.thornname:
                         if grid.ET_driver == "Carpet":
@@ -449,7 +495,7 @@ class CactusThorn:
                         print(f"schedule {func.name} {atin} {func.schedule_bin} {{",file=fd)
                         print(f"   LANG: C",file=fd)
                         for readgf in func.readgfs:
-                            if readgf in ["x","y","z"]:
+                            if grid.ET_driver == "CarpetX" and readgf in ["x","y","z"]:
                                 continue
                             # The symbols in readgfs might not actually be grid
                             # functions. Make sure that they are registered as
@@ -494,6 +540,7 @@ class CactusThorn:
                         print("#include <cctk.h>", file=fd)
                         print("#include <cctk_Arguments.h>", file=fd)
                         print("#include <cctk_Parameters.h>", file=fd)
+                        print("#include <iostream>", file=fd)
                     elif gri.ET_driver == "CarpetX":
                         print("#include <fixmath.hxx>", file=fd)
                         print("#include <cctk.h>", file=fd)
@@ -509,8 +556,8 @@ class CactusThorn:
                         if gri.ET_driver == "Carpet":
                             print(f"  DECLARE_CCTK_ARGUMENTS_{func.name};",file=fd)
                         elif gri.ET_driver == "CarpetX":
-                            print(f"  DECLARE_CCTK_ARGUMENTSX_{func.name};",file=fd)
-                        print(f"  DECLARE_CCTK_PARAMETERS;",file=fd)
+                            print(f"  DECLARE_CCTK_ARGUMENTSX_{func.name}; /* xzx */",file=fd)
+                        print( "  DECLARE_CCTK_PARAMETERS;",file=fd)
                         print(f"  std::cout << \"Callling {func.name}!!!\" << std::endl;",file=fd)
                         for ii in range(3):
                             print(f"  CCTK_REAL invdx{ii} = 1/CCTK_DELTA_SPACE({ii});",file=fd)

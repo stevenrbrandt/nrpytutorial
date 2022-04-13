@@ -232,12 +232,33 @@ def read_from_memory_Ccode_onept(gfname,idx, FDparams):
     idxsplit = idx.split(',')
     idx4 = [int(idxsplit[0]),int(idxsplit[1]),int(idxsplit[2]),int(idxsplit[3])]
     gf_array_name = "in_gfs" # Default array name.
-    gfaccess_str = gri.gfaccess(gf_array_name,gfname,ijkl_string(idx4, FDparams))
+    if gri.ET_driver == "CarpetX":
+        ijklstring = ijk_carpetx(idx4)
+        assert FDparams.DIM == 3
+    else:
+        ijklstring = ijkl_string(idx4, FDparams)
+    gfaccess_str = gri.gfaccess(gf_array_name,gfname,ijklstring)
     if FDparams.enable_SIMD == "True":
         retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = ReadSIMD(&" + gfaccess_str + ");"
     else:
-        retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = " + gfaccess_str + " /* xyx */;"
+        retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = " + gfaccess_str + ";"
     return retstring+"\n"
+
+def ijk_carpetx(idx4):
+    result = ""
+    for i in range(len(idx4)):
+        f = idx4[i]
+        if f == 0:
+            pass
+        elif f == 1:
+            result += f"+PointDesc::DI[{i}]"
+        elif f == -1:
+            result += f"-PointDesc::DI[{i}]"
+        elif f < 0:
+            result += f"-{-f}*PointDesc::DI[{i}]"
+        else:
+            result += f"+{f}*PointDesc::DI[{i}]"
+    return result
 
 def ijkl_string(idx4, FDparams):
     """Generate string for reading gridfunction from specific location in memory
@@ -261,6 +282,9 @@ def ijkl_string(idx4, FDparams):
     >>> ijkl_string([-2,-1,-1,-300], FDparams)
     \'i0-2,i1-1,i2-1\'
     """
+    if False and gri.ET_driver == "CarpetX":
+        assert FDparams.DIM == 3
+        return ijk_carpetx(idx4)
     retstring = ""
     for i in range(FDparams.DIM):
         if i > 0:

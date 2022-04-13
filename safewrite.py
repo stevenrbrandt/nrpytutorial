@@ -4,6 +4,7 @@ import os
 class SafeWrite:
     def __init__(self, fname):
         self.fname = fname
+        print(f"Writing: {os.getcwd()}/{fname}")
         self.fd = None
     def __enter__(self):
         self.fd = StringIO()
