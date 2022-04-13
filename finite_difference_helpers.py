@@ -244,11 +244,10 @@ def read_from_memory_Ccode_onept(gfname,idx, FDparams, idxs=set()):
     else:
         ijklstring = ijkl_string(idx4, FDparams)
     gfaccess_str = gri.gfaccess(gf_array_name,gfname,ijklstring)
-    idxs.add(",".join([str(ii) for ii in idx4]))
     if FDparams.enable_SIMD == "True":
         retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = ReadSIMD(&" + gfaccess_str + ");"
     else:
-        retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = " + gfaccess_str + " /* xyx */;"
+        retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = " + gfaccess_str + ";"
     return retstring+"\n"
 
 def ijk_carpetx(idx4):
@@ -258,13 +257,13 @@ def ijk_carpetx(idx4):
         if f == 0:
             pass
         elif f == 1:
-            result += "+DI["+str(i)+"]"
+            result += f"+PointDesc::DI[{i}]"
         elif f == -1:
-            result += "-DI["+str(i)+"]"
+            result += f"-PointDesc::DI[{i}]"
         elif f < 0:
-            result += "-"+str(-f)+"*DI["+str(i)+"]"
+            result += f"-{-f}*PointDesc::DI[{i}]"
         else:
-            result += "+"+str(f)+"*DI["+str(i)+"]"
+            result += f"+{f}*PointDesc::DI[{i}]"
     return result
 
 def ijkl_string(idx4, FDparams):

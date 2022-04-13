@@ -166,22 +166,13 @@ def _gfaccess(gfarrayname, varname, ijklstring, context):
                 retstring += varname + "GF" + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
         elif ET_driver is "CarpetX":
             if gfarrayname == "rhs_gfs":
-                return retstring + varname + "_rhsGF" + "[p.I]"
+                return retstring + varname + "_rhsGF" + "(p.I) /** 22 **/"
             elif gftype == "EXTERNAL":
-                return retstring + varname + "[p.I]"
+                return retstring + varname + f"(p.I) /* 11 DIM={str(DIM)} {str(type(DIM))} */"
             elif gftype == "CORE":
                 return retstring + "p." + varname
             else:
-                return retstring + varname + "GF" + "[p.I]"
-#        print(ET_driver)
-#        if gfarrayname == "rhs_gfs":
-#            return retstring + varname + "_rhsGF" + "[p.I]"
-#        elif gftype == "EXTERNAL":
-#            return retstring + varname + "[p.I]"
-#        elif gftype == "CORE":
-#            return retstring + "p." + varname
-#        else:
-#            return retstring + varname + "GF" + "[p.I]"
+                return retstring + varname + "GF(p.I" + ijklstring + ")"
     else:
         print("grid::GridFuncMemAccess = "+par.parval_from_str("GridFuncMemAccess")+" not supported")
         sys.exit(1)

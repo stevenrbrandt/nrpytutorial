@@ -19,12 +19,9 @@ zero = thorn.declare_param('zero',default=0,vmin=0,vmax=0,doc="zero")
 # AUXEVOL needed for the evo, can be freed after evaluating rhs (1 time level)
 # AUX uu_rhs (1 time level)
 # EVOL evolved gfs (3 time levels)
-uu_rhs, vv_rhs = thorn.register_gridfunctions("AUX", ["uu_rhs", "vv_rhs"], centering="CCC")
-uu, vv = thorn.register_gridfunctions("EVOL", ["uu", "vv"], centering="CCC")
-if grid.ET_driver is "Carpet":
-    x,y,z = thorn.register_gridfunctions("EXTERNAL", ["x","y","z"], external_module="grid")
-if grid.ET_driver is "CarpetX":
-    x,y,z = thorn.register_gridfunctions("CORE", ["x","y","z"])
+uu_rhs, vv_rhs = thorn.register_gridfunctions("AUX", ["uu_rhs", "vv_rhs"], centering="VVV")
+uu, vv = thorn.register_gridfunctions("EVOL", ["uu", "vv"], centering="VVV")
+x,y,z = thorn.get_xyz()
 
 from outputC import lhrh
 import indexedexp as ixp
