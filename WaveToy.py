@@ -1,7 +1,7 @@
 import os
 import grid
 from cactusthorn import CactusThorn
-from sympy import sympify, cos
+from sympy import sympify, cos, pi
 
 # Current options are Carpet and CarpetX
 grid.ET_driver = os.environ.get("CACTUS_DRIVER","Carpet")
@@ -33,11 +33,13 @@ evol_eqns = [
     lhrh(lhs=vv_rhs, rhs=wave_speed**2*(uu_dDD[0][0] + uu_dDD[1][1] + uu_dDD[2][2]))
 ]
 
+k = sympify(pi/20)
+
 init_eqns = [
     lhrh(lhs=vv_rhs, rhs=sympify(0)),
     lhrh(lhs=uu_rhs, rhs=sympify(0)),
     lhrh(lhs=vv, rhs=sympify(0)),
-    lhrh(lhs=uu, rhs=cos(-(x-x0)**2-(y-y0)**2-(z-z0)**2)),
+    lhrh(lhs=uu, rhs=cos(k*(x-x0))**2*cos(k*(y-y0))**2*cos(k*(z-z0))**2),
 ]
 
 bound_eqns = [
