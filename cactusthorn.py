@@ -13,6 +13,7 @@ from outputC import lhrh
 import grid as gri
 import NRPy_param_funcs as par
 from safewrite import SafeWrite
+from sympy.core.symbol import Symbol
 
 today = date.today().strftime("%B %d, %Y")
 
@@ -240,7 +241,7 @@ class CactusThorn:
                             readgfs.add(g.group(1))
                         else:
                             readgfs.add(rdsym)
-                if type(item.lhs) == sympy.core.symbol.Symbol:
+                if type(item.lhs) == Symbol:
                     new_lhs=gri.gfaccess(varname=str(item.lhs))
                     new_body += [lhrh(lhs=new_lhs, rhs=item.rhs)]
                 else:
