@@ -316,6 +316,7 @@ class CactusThorn:
                 #TODO: need to decide how to do loops with centering other than VVV
                 body = f"""
                 {decl}
+                auto DI = PointDesc::DI;
                 grid.loop_{wtag}_device<{centering}_centered[0], {centering}_centered[1], {centering}_centered[2]>(
                 grid.nghostzones, [=] CCTK_DEVICE CCTK_HOST(
                 const PointDesc &p) CCTK_ATTRIBUTE_ALWAYS_INLINE {{

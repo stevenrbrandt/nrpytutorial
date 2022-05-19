@@ -251,13 +251,13 @@ def ijk_carpetx(idx4):
         if f == 0:
             pass
         elif f == 1:
-            result += f"+PointDesc::DI[{i}]"
+            result += f"+DI[{i}]"
         elif f == -1:
-            result += f"-PointDesc::DI[{i}]"
+            result += f"-DI[{i}]"
         elif f < 0:
-            result += f"-{-f}*PointDesc::DI[{i}]"
+            result += f"-{-f}*DI[{i}]"
         else:
-            result += f"+{f}*PointDesc::DI[{i}]"
+            result += f"+{f}*DI[{i}]"
     return result
 
 def ijkl_string(idx4, FDparams):

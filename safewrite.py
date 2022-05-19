@@ -5,7 +5,6 @@ from colored import colored
 class SafeWrite:
     def __init__(self, fname):
         self.fname = fname
-        print(f"Writing: {os.getcwd()}/{fname}")
         self.fd = None
     def __enter__(self):
         self.fd = StringIO()
@@ -16,6 +15,9 @@ class SafeWrite:
             with open(self.fname) as fd:
                 oldcontent = fd.read()
             do_write = newcontent.strip() != oldcontent.strip()
+            if do_write:
+                print("<<",oldcontent.strip(),">>",sep='')
+                print("<<",newcontent.strip(),">>",sep='')
         else:
             do_write = True
         if do_write:
