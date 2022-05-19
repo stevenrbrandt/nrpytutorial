@@ -221,8 +221,7 @@ class CactusThorn:
         else:
             assert False, "Bad type for src"
 
-    def add_func(self, name, body, schedule_bin, doc, where='interior'):
-        centering = None
+    def add_func(self, name, body, schedule_bin, doc, where='interior', centering='VVV'):
         self._add_src(name + ".cc")
         writegfs = set()
         readgfs = set()
@@ -317,7 +316,7 @@ class CactusThorn:
                 #TODO: need to decide how to do loops with centering other than VVV
                 body = f"""
                 {decl}
-                grid.loop_{wtag}_device<VVV_centered[0], VVV_centered[1], VVV_centered[2]>(
+                grid.loop_{wtag}_device<{centering}_centered[0], {centering}_centered[1], {centering}_centered[2]>(
                 grid.nghostzones, [=] CCTK_DEVICE CCTK_HOST(
                 const PointDesc &p) CCTK_ATTRIBUTE_ALWAYS_INLINE {{
                 {kernel}
@@ -472,7 +471,7 @@ class CactusThorn:
 
             with SafeWrite(self.schedule_ccl) as fd:
                 print(f"# Schedule definitions for thorn {self.thornname}",file=fd)
-                for gf_name in self.gf_names:
+                for gf_name in sorted(self.gf_names):
                     if grid.ET_driver == "CarpetX" and gf_name in ["x","y","z"]:
                         continue
                     if self.gf_names[gf_name] == self.thornname:
@@ -495,7 +494,7 @@ class CactusThorn:
                             atin = "in"
                         print(f"schedule {func.name} {atin} {func.schedule_bin} {{",file=fd)
                         print(f"   LANG: C",file=fd)
-                        for readgf in func.readgfs:
+                        for readgf in sorted(func.readgfs):
                             if grid.ET_driver == "CarpetX" and readgf in ["x","y","z"]:
                                 continue
                             # The symbols in readgfs might not actually be grid
@@ -504,7 +503,7 @@ class CactusThorn:
                             if readgf in self.gf_names:
                                 full_name = self.get_full_name(readgf)
                                 print(f"   READS: {full_name}(everywhere)",file=fd)
-                        for writegf in func.writegfs:
+                        for writegf in sorted(func.writegfs):
                             if writegf in self.gf_names:
                                 full_name = self.get_full_name(writegf)
                                 print(f"   WRITES: {full_name}({src.where})",file=fd)

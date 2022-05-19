@@ -1,5 +1,6 @@
 from io import StringIO
 import os
+from colored import colored
 
 class SafeWrite:
     def __init__(self, fname):
@@ -18,6 +19,7 @@ class SafeWrite:
         else:
             do_write = True
         if do_write:
-            print("Write:",self.fname)
+            print("Write:",colored(self.fname,"cyan"))
             with open(self.fname, "w") as fd:
                 fd.write(newcontent)
+                raise Exception()
