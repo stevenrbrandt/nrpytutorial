@@ -1,6 +1,9 @@
 from io import StringIO
 import os
-from colored import colored
+from difflib import context_diff
+import sys
+
+verbose = False
 
 class SafeWrite:
     def __init__(self, fname):
@@ -15,13 +18,14 @@ class SafeWrite:
             with open(self.fname) as fd:
                 oldcontent = fd.read()
             do_write = newcontent.strip() != oldcontent.strip()
-            if do_write:
-                print("<<",oldcontent.strip(),">>",sep='')
-                print("<<",newcontent.strip(),">>",sep='')
+            if do_write and verbose:
+                print("Diff for:",self.fname)
+                oldlines=[line+"\n" for line in oldcontent.strip().split("\n")]
+                newlines=[line+"\n" for line in newcontent.strip().split("\n")]
+                sys.stdout.writelines(context_diff(oldlines,newlines,fromfile='before',tofile='after'))
         else:
             do_write = True
         if do_write:
-            print("Write:",colored(self.fname,"cyan"))
+            print("Write:",self.fname)
             with open(self.fname, "w") as fd:
                 fd.write(newcontent)
-                raise Exception()
