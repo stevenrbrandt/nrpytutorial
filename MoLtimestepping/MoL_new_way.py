@@ -257,7 +257,10 @@ REAL *restrict """ + y_n_gridfunctions + " = "+gf_prefix + y_n_gridfunctions + "
         gf_aliases += "REAL *restrict " + gf + " = "+gf_prefix + gf + ";\n"
     if enable_griddata:
         gf_aliases += "paramstruct *restrict params = &griddata->params;\n"
-        gf_aliases += "const rfm_struct *restrict rfmstruct = &griddata->rfmstruct;\n"
+        if enable_rfm:
+            gf_aliases += "const rfm_struct *restrict rfmstruct = &griddata->rfmstruct;\n"
+        else:
+            gf_aliases += "REAL * xx[3]; for(int ww=0;ww<3;ww++) xx[ww] = griddata->xx[ww];\n"
         gf_aliases += "const bc_struct *restrict bcstruct = &griddata->bcstruct;\n"
         for i in ["0", "1", "2"]:
             gf_aliases += "const int Nxx_plus_2NGHOSTS" + i + " = griddata->params.Nxx_plus_2NGHOSTS" + i + ";\n"
