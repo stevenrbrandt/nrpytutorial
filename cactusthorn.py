@@ -215,11 +215,13 @@ class CactusThorn:
 
     def _add_src(self, src):
         if type(src) == str:
-            self.src_files += [CactusSrc(src)]
+            csrc = CactusSrc(src)
         elif type(src) == CactusSrc:
-            self.src_files += [src]
+            csrc = src
         else:
             assert False, "Bad type for src"
+        self.src_files[csrc.name] = csrc
+        self.last_src_file = csrc
 
     def add_func(self, name, body, schedule_bin, doc, where='interior', centering='VVV'):
         self._add_src(name + ".cc")
@@ -329,7 +331,7 @@ class CactusThorn:
         else:
             assert False, "Body must be list or str"
         func = CactusFunc(name, body, schedule_bin, doc)
-        self.src_files[-1].add_func(func, where)
+        self.last_src_file.add_func(func, where)
         func.readgfs = readgfs
         func.writegfs = writegfs
 
@@ -371,7 +373,8 @@ class CactusThorn:
         self.thornname = thornname
         self.thorn_dir = os.path.join("arrangements", self.arrangement, self.thornname)
 
-        self.src_files = []
+        self.src_files = {}
+        self.last_src_file = None
         self.params = []
         self.centering = {}
         self.external_modules = []
@@ -480,7 +483,7 @@ class CactusThorn:
                             print(f"storage: {gf_name}GF[3]", file=fd)
                         else:
                             print(f"storage: {gf_name}GF[1]", file=fd)
-                for src in self.src_files:
+                for src in self.src_files.values():
                     fsrc = os.path.join(self.src_dir, src.name)
 
                     readgfs = set()
@@ -524,11 +527,11 @@ class CactusThorn:
             with SafeWrite(self.makefile) as fd:
                 # for item in outC_function_master_list
                 print(makefile_init, end='', file=fd) 
-                for src in self.src_files:
+                for src in self.src_files.values():
                     print(" ",src.name,sep="",end="",file=fd)
                 print(file=fd)
 
-            for src in self.src_files:
+            for src in self.src_files.values():
                 fsrc = os.path.join(self.src_dir, src.name)
                 # switch to add_to_Cfunction_dict
                 #add_to_Cfunction_dict(body='/* body */',includes=['#include <cctk.h>'], \
