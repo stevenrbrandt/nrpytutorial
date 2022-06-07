@@ -27,6 +27,10 @@ x,y,z = thorn.get_xyz()
 
 from outputC import lhrh
 import indexedexp as ixp
+import NRPy_param_funcs as par
+
+FD_order = 8
+par.set_parval_from_str("finite_difference::FD_CENTDERIVS_ORDER",FD_order)
 
 uu_dDD = ixp.declarerank2("uu_dDD","sym01")
 
