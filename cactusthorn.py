@@ -224,6 +224,12 @@ class CactusThorn:
         self.last_src_file = csrc
 
     def add_func(self, name, body, schedule_bin, doc, where='interior', centering='VVV'):
+        if gri.ET_driver == "Carpet":
+            schedule_bin = re.sub(r'\bRHS\b','MoL_CalcRHS',schedule_bin)
+        elif gri.ET_driver == "CarpetX":
+            schedule_bin = re.sub(r'\bRHS\b','ODESolvers_RHS',schedule_bin)
+        else:
+            assert False
         self._add_src(name + ".cc")
         writegfs = set()
         readgfs = set()
@@ -384,6 +390,8 @@ class CactusThorn:
         self.schedule_ccl = os.path.join(self.thorn_dir, "schedule.ccl")
         self.configuration_ccl = os.path.join(self.thorn_dir, "configuration.ccl")
 
+        self.register_cc = os.path.join(self.thorn_dir, "src", "register.cc")
+
         self.src_dir = os.path.join(self.thorn_dir, "src")
         self.makefile = os.path.join(self.src_dir, "make.code.defn")
 
@@ -428,6 +436,7 @@ class CactusThorn:
 
     def generate(self,dirname=None,cactus_config="sim",cactus_thornlist=None):
         assert self.ET_driver == grid.ET_driver
+        rhs_pairs = set()
         cwd = None
         try:
             if dirname is not None:
@@ -455,17 +464,23 @@ class CactusThorn:
                 print(f"inherits: {', '.join(self.external_modules)}",file=fd)
                 if gri.ET_driver == "CarpetX":
                     print(f"USES INCLUDE HEADER: loop_device.hxx",file=fd)
+                elif gri.ET_driver == "Carpet":
+                    print("CCTK_INT FUNCTION MoLRegisterEvolved(CCTK_INT IN EvolvedIndex, CCTK_INT IN RHSIndex)",file=fd)
+                    print("USES FUNCTION MoLRegisterEvolved",file=fd)
                 for gf_name in self.gf_names:
                     #TODO: change lines with "if gf_name in ["x","y","z"]:" to check if gftype=="CORE"
                     if gf_name in ["x","y","z"]:
                         continue
+
                     rhs=gf_name + "_rhs"
                     if re.match(r'.*_rhs',gf_name):
                         tag = "TAGS='checkpoint=\"no\"'"
+                        rhs_pairs.add(gf_name)
                     elif rhs in self.gf_names:
                         tag = f"TAGS='rhs=\"{self.thornname}::{rhs}GF\"' "
                     else:
                         tag = ""
+
                     if self.gf_names[gf_name] == self.thornname:
                         if grid.ET_driver == "Carpet":
                             print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=3 {{ {gf_name}GF }} "{gf_name}"', file=fd)
@@ -473,6 +488,28 @@ class CactusThorn:
                             # CarpetX does not use sub-cycling in time, so it only needs one time level
                             print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=1 {tag} CENTERING={{ {self.centering[gf_name]} }} {{ {gf_name}GF }} "{gf_name}"', file=fd)
 
+            if grid.ET_driver == "Carpet":
+                with SafeWrite(self.register_cc) as fd:
+                    print(f"""
+#include "cctk.h"
+#include "cctk_Arguments.h"
+#include "cctk_Functions.h"
+#include "cctk_Parameters.h"
+
+void {self.thornname}_RegisterVars(CCTK_ARGUMENTS)
+{{
+  DECLARE_CCTK_ARGUMENTS_{self.thornname}_RegisterVars;
+  DECLARE_CCTK_PARAMETERS;
+  int ierr, var, rhs;""".strip(),file=fd)
+                    for rhs_var in rhs_pairs:
+                        var = rhs_var[:-4]
+                        assert var + "_rhs" == rhs_var
+                        print("   ",f"""
+    var   = CCTK_VarIndex("{self.thornname}::{var}GF");
+    rhs   = CCTK_VarIndex("{self.thornname}::{rhs_var}GF");
+    ierr += MoLRegisterEvolved(var, rhs);
+                        """.strip(),file=fd)
+                    print("}",file=fd)
             with SafeWrite(self.schedule_ccl) as fd:
                 print(f"# Schedule definitions for thorn {self.thornname}",file=fd)
                 for gf_name in sorted(self.gf_names):
@@ -483,6 +520,14 @@ class CactusThorn:
                             print(f"storage: {gf_name}GF[3]", file=fd)
                         else:
                             print(f"storage: {gf_name}GF[1]", file=fd)
+                if grid.ET_driver == "Carpet":
+                    print(f"""
+schedule {self.thornname}_RegisterVars in MoL_Register
+{{
+  LANG: C
+  OPTIONS: META
+}} "Register variables for MoL"
+                    """.strip(), file=fd)
                 for src in self.src_files.values():
                     fsrc = os.path.join(self.src_dir, src.name)
 
@@ -529,6 +574,8 @@ class CactusThorn:
                 print(makefile_init, end='', file=fd) 
                 for src in self.src_files.values():
                     print(" ",src.name,sep="",end="",file=fd)
+                if grid.ET_driver == "Carpet":
+                    print(" ","register.cc",file=fd)
                 print(file=fd)
 
             for src in self.src_files.values():
