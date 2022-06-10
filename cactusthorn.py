@@ -254,12 +254,32 @@ class CactusThorn:
                 else:
                     new_body += [item]
             body = new_body
-            kernel = fin.FD_outputC("returnstring",body)
+            # idxs is a list of integer offsets for stencils used by the FD routine
+            idxs = set()
+            kernel = fin.FD_outputC("returnstring",body,idxs=idxs)
+
+            # Compute the max offset from 0 for the stencils
+            maxx = 0
+            maxy = 0
+            maxz = 0
+            for idx4s in idxs:
+                idx4 = [int(ii) for ii in idx4s.split(",")]
+                maxx = max(abs(idx4[0]),maxx)
+                maxy = max(abs(idx4[1]),maxy)
+                maxz = max(abs(idx4[2]),maxz)
+
+            # Generate code to check the stencils
+            # have enough ghost zones
+            checkbounds = f"""
+               if(cctk_nghostzones[0] < {maxx}) CCTK_Error(__LINE__,__FILE__,"{self.thornname}","cctk_nghostzones[0] should be at least {maxx}");
+               if(cctk_nghostzones[1] < {maxy}) CCTK_Error(__LINE__,__FILE__,"{self.thornname}","cctk_nghostzones[1] should be at least {maxy}");
+               if(cctk_nghostzones[2] < {maxz}) CCTK_Error(__LINE__,__FILE__,"{self.thornname}","cctk_nghostzones[2] should be at least {maxz}");"""
             decl = ""
             if gri.ET_driver == "Carpet":
                 if where == "interior":
                     body = f"""
                     {decl}
+                    {checkbounds}
                     for(int i2=cctk_nghostzones[2];i2<cctk_lsh[2]-cctk_nghostzones[2];i2++) {{
                     for(int i1=cctk_nghostzones[1];i1<cctk_lsh[1]-cctk_nghostzones[1];i1++) {{
                     for(int i0=cctk_nghostzones[0];i0<cctk_lsh[0]-cctk_nghostzones[0];i0++) {{
@@ -324,6 +344,7 @@ class CactusThorn:
                 #TODO: need to decide how to do loops with centering other than VVV
                 body = f"""
                 {decl}
+                {checkbounds}
                 auto DI = PointDesc::DI;
                 grid.loop_{wtag}_device<{centering}_centered[0], {centering}_centered[1], {centering}_centered[2]>(
                 grid.nghostzones, [=] CCTK_DEVICE CCTK_HOST(

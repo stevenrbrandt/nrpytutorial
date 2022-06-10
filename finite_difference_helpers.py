@@ -213,12 +213,13 @@ def type__var(in_var,FDparams, AddPrefix_for_UpDownWindVars=True):
         return "const REAL_SIMD_ARRAY " + varname
     return "const " + FDparams.PRECISION + " " + varname
 
-def read_from_memory_Ccode_onept(gfname,idx, FDparams):
+def read_from_memory_Ccode_onept(gfname,idx, FDparams, idxs):
     """
 
     :param gfname: gridfunction name; a string
     :param idx: Grid index relative to (i0,i1,i2,i3); e.g., "0,1,2,3" -> (i0,i1+1,i2+2,i3+3); later indices ignored for DIM<4
     :param FDparams: Parameters used in the finite-difference codegen
+    :param idxs: list of indexes used by the code
     :return: C code string for reading in this gridfunction at point idx from memory
     >>> import indexedexp as ixp
     >>> from finite_difference_helpers import FDparams, read_from_memory_Ccode_onept
@@ -238,6 +239,7 @@ def read_from_memory_Ccode_onept(gfname,idx, FDparams):
     else:
         ijklstring = ijkl_string(idx4, FDparams)
     gfaccess_str = gri.gfaccess(gf_array_name,gfname,ijklstring)
+    idxs.add(",".join([str(ii) for ii in idx4]))
     if FDparams.enable_SIMD == "True":
         retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = ReadSIMD(&" + gfaccess_str + ");"
     else:
@@ -314,7 +316,7 @@ def varsuffix(name, idx4, FDparams):
         return base_suffix 
     return base_suffix + "_" + ijkl_string(idx4, FDparams).replace(",", "_").replace("+", "p").replace("-", "m")
 
-def read_gfs_from_memory(list_of_base_gridfunction_names_in_derivs, fdstencl, sympyexpr_list, FDparams):
+def read_gfs_from_memory(list_of_base_gridfunction_names_in_derivs, fdstencl, sympyexpr_list, FDparams, idxs):
     # with open(list_of_base_gridfunction_names_in_derivs[0]+".txt","w") as file:
     #     file.write(str(list_of_base_gridfunction_names_in_derivs))
     #     file.write(str(fdstencl))
@@ -477,11 +479,13 @@ def read_gfs_from_memory(list_of_base_gridfunction_names_in_derivs, fdstencl, sy
 
     read_from_memory_Ccode = ""
     count = 0
+    if idxs is None:
+        idxs = set()
     for gfidx in range(len(gri.glb_gridfcs_list)):
         for pt in range(len(sorted_list_of_points_read_from_memory[gfidx])):
             read_from_memory_Ccode += read_from_memory_Ccode_onept(read_from_memory_gf[count].name,
                                                                    sorted_list_of_points_read_from_memory[gfidx][pt],
-                                                                   FDparams)
+                                                                   FDparams,idxs)
             count += 1
     return read_from_memory_Ccode
 #################################
