@@ -250,10 +250,12 @@ def apply_symmetry_condition_to_derivatives(IDX_OBJ):
                             IDX_OBJ[i0][i1][i2][i3] = sp.sympify(0)
     return IDX_OBJ
 
+
 def declarerank1(symbol, DIM=-1):
     return declare_indexedexp(rank=1, symbol=symbol, dimension=DIM)
 
-def register_gridfunctions_for_single_rank1(gf_type,gf_basename, DIM=-1):
+
+def register_gridfunctions_for_single_rank1(gf_type,gf_basename, DIM=-1, f_infinity=0.0, wavespeed=1.0):
     # Step 0: Verify the gridfunction basename is valid:
     gri.verify_gridfunction_basename_is_valid(gf_basename)
 
@@ -267,15 +269,17 @@ def register_gridfunctions_for_single_rank1(gf_type,gf_basename, DIM=-1):
     gf_list = []
     for i in range(DIM):
         gf_list.append(str(IDX_OBJ_TMP[i]))
-    gri.register_gridfunctions(gf_type, gf_list, rank=1, is_indexed=True, DIM=DIM)
+    gri.register_gridfunctions(gf_type, gf_list, rank=1, is_indexed=True, DIM=DIM, f_infinity=f_infinity, wavespeed=wavespeed)
 
     # Step 3: Return array of SymPy variables
     return IDX_OBJ_TMP
 
+
 def declarerank2(symbol, symmetry, DIM=-1):
     return declare_indexedexp(rank=2, symbol=symbol, symmetry=symmetry, dimension=DIM)
 
-def register_gridfunctions_for_single_rank2(gf_type,gf_basename, symmetry_option, DIM=-1):
+
+def register_gridfunctions_for_single_rank2(gf_type, gf_basename, symmetry_option, DIM=-1, f_infinity=0.0, wavespeed=1.0):
     # Step 0: Verify the gridfunction basename is valid:
     gri.verify_gridfunction_basename_is_valid(gf_basename)
 
@@ -298,7 +302,9 @@ def register_gridfunctions_for_single_rank2(gf_type,gf_basename, symmetry_option
                     save = False
             if save == True:
                 gf_list.append(str(IDX_OBJ_TMP[i][j]))
-    gri.register_gridfunctions(gf_type,gf_list,rank=2, is_indexed=True, DIM=DIM)
+
+    gri.register_gridfunctions(gf_type, gf_list, rank=2, is_indexed=True, DIM=DIM,
+                               f_infinity=f_infinity, wavespeed=wavespeed)
 
     # Step 3: Return array of SymPy variables
     return IDX_OBJ_TMP
@@ -335,6 +341,7 @@ def symm_matrix_inverter3x3(a):
                 a[0][0]*a[1][2]**2 - a[0][1]**2*a[2][2] + \
                 a[0][0]*a[1][1]*a[2][2]
     if outDET == 0:
+        # print(a)
         raise NonInvertibleMatrixError('matrix has determinant zero')
 
     outINV = [[sp.sympify(0) for i in range(3)] for j in range(3)]
@@ -351,6 +358,32 @@ def symm_matrix_inverter3x3(a):
     outINV[2][1] = outINV[1][2]
     return outINV, outDET
 
+
+# Validation test code for symm_matrix_inverter4x4():
+# import indexedexp as ixp
+# R4DD = ixp.declarerank2("R4DD", "sym01", DIM=4)
+#
+# # Compute R4DD's inverse:
+# R4DDinv, det = ixp.symm_matrix_inverter4x4(R4DD)
+#
+# # Next matrix multiply: IsUnit = R^{-1} R
+# IsUnit = ixp.zerorank2(DIM=4)
+# for i in range(4):
+#     for j in range(4):
+#         for k in range(4):
+#             IsUnit[i][j] += R4DDinv[i][k] * R4DD[k][j]
+#             # If you'd like to check R R^{-1} instead:
+#             # IsUnit[i][j] += R4DD[i][k] * R4DDinv[k][j]
+#
+# # Next check, is IsUnit == Unit matrix?!
+# from UnitTesting.assert_equal import check_zero
+# for diag in range(4):
+#     print(check_zero(IsUnit[diag][diag]-1))
+# for offdiag_i in range(4):
+#     for offdiag_j in range(4):
+#         if offdiag_i != offdiag_j:
+#             print(check_zero(IsUnit[offdiag_i][offdiag_j]))
+# # ^^ all should output as True.
 def symm_matrix_inverter4x4(a):
     # It is far more efficient to write out the matrix determinant and inverse by hand
     #   instead of using SymPy's built-in functions, since the matrix is symmetric.

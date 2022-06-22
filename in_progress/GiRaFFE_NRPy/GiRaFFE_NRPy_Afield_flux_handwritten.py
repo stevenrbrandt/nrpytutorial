@@ -8,7 +8,7 @@ if nrpy_dir_path not in sys.path:
 import cmdline_helper as cmd     # NRPy+: Multi-platform Python command-line interface
 Ccodesdir = "GiRaFFE_standalone_Ccodes/RHSs"
 
-from outputC import outputC, outC_function_outdir_dict, outC_function_dict, outC_function_prototype_dict # NRPy+: Core C code output module
+from outputC import outputC, outC_function_outdir_dict, outC_function_dict, outC_function_prototype_dict, outC_function_master_list, outC_function_element # NRPy+: Core C code output module
 import sympy as sp               # SymPy: The Python computer algebra package upon which NRPy+ depends
 import indexedexp as ixp         # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
 import GiRaFFE_NRPy.GiRaFFE_NRPy_Characteristic_Speeds as chsp
@@ -269,6 +269,9 @@ def add_to_Cfunction_dict__GiRaFFE_NRPy_Afield_flux(gammaDD, betaU, alpha, outdi
         with open(os.path.join(outdir,"compute_cmax_cmin_dirn"+str(flux_dirn)+".h"),"w") as file:
             file.write(Ccode_kernel)
 
+    outC_function_master_list.append(outC_function_element("empty", "empty", "empty", "empty", name, "empty",
+                             "empty", "empty", "empty", "empty",
+                             "empty", "empty"))
     outC_function_outdir_dict[name] = "default"
     outC_function_dict[name] = includes+body.replace("../set_Cparameters.h","set_Cparameters.h")
     outC_function_prototype_dict[name] = prototype

@@ -118,8 +118,8 @@ def add_to_Cfunction_dict_MoL_malloc(MoL_method, which_gfs):
 #   define C code for a single RK substep
 #   (e.g., computing k_1 and then updating the outer boundaries)
 def single_RK_substep_input_symbolic(commentblock, RHS_str, RHS_input_str, RHS_output_str, RK_lhss_list, RK_rhss_list,
-                                     post_RHS_list, post_RHS_output_list, indent="  ", enable_SIMD=False):
-    addl_indent = ""
+                                     post_RHS_list, post_RHS_output_list, enable_SIMD=False,
+                                     enable_griddata=False, gf_aliases="", post_post_RHS_string=""):
     return_str  = commentblock + "\n"
     if not isinstance(RK_lhss_list, list):
         RK_lhss_list = [RK_lhss_list]
@@ -131,40 +131,47 @@ def single_RK_substep_input_symbolic(commentblock, RHS_str, RHS_input_str, RHS_o
     if not isinstance(post_RHS_output_list, list):
         post_RHS_output_list = [post_RHS_output_list]
 
+    indent = ""
+    if enable_griddata:
+        return_str += "{\n" + indent_Ccode(gf_aliases, "  ")
+        indent = "  "
     # Part 1: RHS evaluation:
     return_str += indent_Ccode(str(RHS_str).replace("RK_INPUT_GFS",  str(RHS_input_str).replace("gfsL", "gfs")).
-                               replace("RK_OUTPUT_GFS", str(RHS_output_str).replace("gfsL", "gfs"))+"\n", indent=addl_indent)
+                               replace("RK_OUTPUT_GFS", str(RHS_output_str).replace("gfsL", "gfs"))+"\n", indent=indent)
 
     # Part 2: RK update
     if enable_SIMD:
         return_str += "#pragma omp parallel for\n"
-        return_str += addl_indent + "for(int i=0;i<Nxx_plus_2NGHOSTS0*Nxx_plus_2NGHOSTS1*Nxx_plus_2NGHOSTS2*NUM_EVOL_GFS;i+=SIMD_width) {\n"
+        return_str += indent + "for(int i=0;i<Nxx_plus_2NGHOSTS0*Nxx_plus_2NGHOSTS1*Nxx_plus_2NGHOSTS2*NUM_EVOL_GFS;i+=SIMD_width) {\n"
     else:
-        return_str += addl_indent + "LOOP_ALL_GFS_GPS(i) {\n"
+        return_str += indent + "LOOP_ALL_GFS_GPS(i) {\n"
     type = "REAL"
     if enable_SIMD:
         type = "REAL_SIMD_ARRAY"
     RK_lhss_str_list = []
     for i, el in enumerate(RK_lhss_list):
         if enable_SIMD:
-            RK_lhss_str_list.append("const REAL_SIMD_ARRAY __RHS_exp_" + str(i))
+            RK_lhss_str_list.append(indent + "const REAL_SIMD_ARRAY __RHS_exp_" + str(i))
         else:
-            RK_lhss_str_list.append(str(el).replace("gfsL", "gfs[i]"))
+            RK_lhss_str_list.append(indent + str(el).replace("gfsL", "gfs[i]"))
     read_list = []
     for el in RK_rhss_list:
-        for read in list(el.free_symbols):
+        for read in list(sp.ordered(el.free_symbols)):
             read_list.append(read)
     read_list_uniq = superfast_uniq(read_list)
     for el in read_list_uniq:
         if str(el) != "dt":
             if enable_SIMD:
-                return_str += "  const " + type + " " + str(el) + " = ReadSIMD(&" + str(el).replace("gfsL", "gfs[i]") + ");\n"
+                return_str += indent + "  const " + type + " " + str(el) + " = ReadSIMD(&" + str(el).replace("gfsL", "gfs[i]") + ");\n"
             else:
-                return_str += "  const " + type + " " + str(el) + " = " + str(el).replace("gfsL", "gfs[i]") + ";\n"
+                return_str += indent + "  const " + type + " " + str(el) + " = " + str(el).replace("gfsL", "gfs[i]") + ";\n"
     if enable_SIMD:
-        return_str += "  const REAL_SIMD_ARRAY DT = ConstSIMD(dt);\n"
+        return_str += indent + "  const REAL_SIMD_ARRAY DT = ConstSIMD(dt);\n"
+    preindent = "1"
+    if enable_griddata:
+        preindent = "2"
     kernel = outputC(RK_rhss_list, RK_lhss_str_list, filename="returnstring",
-                          params="includebraces=False,preindent=1,outCverbose=False,enable_SIMD="+str(enable_SIMD))
+                     params="includebraces=False,preindent="+preindent+",outCverbose=False,enable_SIMD="+str(enable_SIMD))
     if enable_SIMD:
         return_str += kernel.replace("dt", "DT")
         for i, el in enumerate(RK_lhss_list):
@@ -172,11 +179,17 @@ def single_RK_substep_input_symbolic(commentblock, RHS_str, RHS_input_str, RHS_o
     else:
         return_str += kernel
 
-    return_str += "}\n"
+    return_str += indent + "}\n"
 
     # Part 3: Call post-RHS functions
     for post_RHS, post_RHS_output in zip(post_RHS_list, post_RHS_output_list):
-        return_str += indent_Ccode(post_RHS.replace("RK_OUTPUT_GFS", str(post_RHS_output).replace("gfsL", "gfs")), indent=addl_indent)
+        return_str += indent_Ccode(post_RHS.replace("RK_OUTPUT_GFS", str(post_RHS_output).replace("gfsL", "gfs")))
+
+    if enable_griddata:
+        return_str += "}\n"
+
+    for post_RHS, post_RHS_output in zip(post_RHS_list, post_RHS_output_list):
+        return_str += indent_Ccode(post_post_RHS_string.replace("RK_OUTPUT_GFS", str(post_RHS_output).replace("gfsL", "gfs")), "")
 
     return return_str
 
@@ -206,41 +219,58 @@ def single_RK_substep_input_symbolic(commentblock, RHS_str, RHS_input_str, RHS_o
 # k_even    = dt*f(t_n + dt, y_n + k_odd)
 # y_nplus1 += 1/3*k_even
 ########################################################################################################################
-def add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string = "", post_RHS_string = "",
-                                                  enable_rfm=False, enable_curviBCs=False, enable_SIMD=False):
+def add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method,
+                                                   RHS_string = "", post_RHS_string = "", post_post_RHS_string="",
+                                                   enable_rfm=False, enable_curviBCs=False, enable_SIMD=False,
+                                                   enable_griddata=False):
     includes = ["NRPy_basic_defines.h", "NRPy_function_prototypes.h"]
     if enable_SIMD:
         includes += [os.path.join("SIMD", "SIMD_intrinsics.h")]
     desc  = "Method of Lines (MoL) for \"" + MoL_method + "\" method: Step forward one full timestep.\n"
     c_type = "void"
     name = "MoL_step_forward_in_time"
-    params  = "const paramstruct *restrict params, "
-    if enable_rfm:
-        params += "const rfm_struct *restrict rfmstruct, "
+    if enable_griddata:
+        params = "griddata_struct *restrict griddata, const REAL dt"
     else:
-        params += "REAL *xx[3], "
-    if enable_curviBCs:
-        params += "const bc_struct *restrict bcstruct, "
-    params += "MoL_gridfunctions_struct *restrict gridfuncs, const REAL dt"
+        params  = "const paramstruct *restrict params, "
+        if enable_rfm:
+            params += "const rfm_struct *restrict rfmstruct, "
+        else:
+            params += "REAL *restrict xx[3], "
+        if enable_curviBCs:
+            params += "const bc_struct *restrict bcstruct, "
+        params += "MoL_gridfunctions_struct *restrict gridfuncs, const REAL dt"
 
     indent = ""  # We don't bother with an indent here.
 
     body = indent + "// C code implementation of -={ " + MoL_method + " }=- Method of Lines timestepping.\n\n"
 
     y_n_gridfunctions, non_y_n_gridfunctions_list, _throwaway = generate_gridfunction_names(MoL_method)
-    body += "// First set gridfunction aliases from gridfuncs struct\n\n"
-    body += "// y_n gridfunctions:\n"
-    body += "REAL *restrict " + y_n_gridfunctions + " = gridfuncs->" + y_n_gridfunctions + ";\n"
-    body += "\n"
-    body += "// Temporary timelevel & AUXEVOL gridfunctions:\n"
+    if enable_griddata:
+        gf_prefix = "griddata->gridfuncs."
+    else:
+        gf_prefix = "gridfuncs->"
+    gf_aliases = """// Set gridfunction aliases from gridfuncs struct
+REAL *restrict """ + y_n_gridfunctions + " = "+gf_prefix + y_n_gridfunctions + """;  // y_n gridfunctions
+// Temporary timelevel & AUXEVOL gridfunctions:\n"""
     for gf in non_y_n_gridfunctions_list:
-        body += "REAL *restrict " + gf + " = gridfuncs->" + gf + ";\n"
-    body += "\n"
-    body += "// Next perform a full step forward in time\n"
+        gf_aliases += "REAL *restrict " + gf + " = "+gf_prefix + gf + ";\n"
+    if enable_griddata:
+        gf_aliases += "paramstruct *restrict params = &griddata->params;\n"
+        if enable_rfm:
+            gf_aliases += "const rfm_struct *restrict rfmstruct = &griddata->rfmstruct;\n"
+        else:
+            gf_aliases += "REAL * xx[3]; for(int ww=0;ww<3;ww++) xx[ww] = griddata->xx[ww];\n"
+        gf_aliases += "const bc_struct *restrict bcstruct = &griddata->bcstruct;\n"
+        for i in ["0", "1", "2"]:
+            gf_aliases += "const int Nxx_plus_2NGHOSTS" + i + " = griddata->params.Nxx_plus_2NGHOSTS" + i + ";\n"
+
+    if not enable_griddata:
+        body += gf_aliases
 
     # Implement Method of Lines (MoL) Timestepping
-    Butcher = Butcher_dict[MoL_method][0] # Get the desired Butcher table from the dictionary
-    num_steps = len(Butcher)-1 # Specify the number of required steps to update solution
+    Butcher = Butcher_dict[MoL_method][0]  # Get the desired Butcher table from the dictionary
+    num_steps = len(Butcher)-1  # Specify the number of required steps to update solution
 
     # Diagonal RK3 only!!!
     dt = sp.Symbol("dt", real=True)
@@ -266,7 +296,8 @@ def add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string = "", 
             RK_lhss_list=[k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs],
             RK_rhss_list=[Butcher[1][1]*k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs*dt + y_n_gfs],
             post_RHS_list=[post_RHS_string], post_RHS_output_list=[k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs],
-            enable_SIMD=enable_SIMD) + "// -={ END k1 substep }=-\n\n"
+            enable_SIMD=enable_SIMD, enable_griddata=enable_griddata, gf_aliases=gf_aliases,
+            post_post_RHS_string=post_post_RHS_string) + "// -={ END k1 substep }=-\n\n"
 
         # k_2
         body += single_RK_substep_input_symbolic(
@@ -286,7 +317,8 @@ def add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string = "", 
             post_RHS_list=[post_RHS_string, post_RHS_string],
             post_RHS_output_list=[k2_or_y_nplus_a32_k2_gfs,
                                   k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs],
-            enable_SIMD=enable_SIMD) + "// -={ END k2 substep }=-\n\n"
+            enable_SIMD=enable_SIMD, enable_griddata=enable_griddata, gf_aliases=gf_aliases,
+            post_post_RHS_string=post_post_RHS_string) + "// -={ END k2 substep }=-\n\n"
 
         # k_3
         body += single_RK_substep_input_symbolic(
@@ -300,7 +332,9 @@ def add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string = "", 
             RK_lhss_list=[y_n_gfs],
             RK_rhss_list=[k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs + Butcher[3][3]*y_n_gfs*dt],
             post_RHS_list=[post_RHS_string],
-            post_RHS_output_list=[y_n_gfs], enable_SIMD=enable_SIMD) + "// -={ END k3 substep }=-\n\n"
+            post_RHS_output_list=[y_n_gfs],
+            enable_SIMD=enable_SIMD, enable_griddata=enable_griddata, gf_aliases=gf_aliases,
+            post_post_RHS_string=post_post_RHS_string) + "// -={ END k3 substep }=-\n\n"
     else:
         y_n = sp.Symbol("y_n_gfsL", real=True)
         if not diagonal(MoL_method):
@@ -339,7 +373,9 @@ def add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string = "", 
                     RHS_input_str=RHS_input, RHS_output_str=RHS_output,
                     RK_lhss_list=[RK_lhs], RK_rhss_list=[RK_rhs],
                     post_RHS_list=[post_RHS],
-                    post_RHS_output_list=[post_RHS_output], enable_SIMD=enable_SIMD) + "// -={ END k" + str(s + 1) + " substep }=-\n\n"
+                    post_RHS_output_list=[post_RHS_output],
+                    enable_SIMD=enable_SIMD, enable_griddata=enable_griddata, gf_aliases=gf_aliases,
+                    post_post_RHS_string=post_post_RHS_string) + "// -={ END k" + str(s + 1) + " substep }=-\n\n"
         else:
             y_n = sp.Symbol("y_n_gfsL", real=True)
             y_nplus1_running_total = sp.Symbol("y_nplus1_running_total_gfsL", real=True)
@@ -350,7 +386,9 @@ def add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string = "", 
                     RHS_input_str=y_n, RHS_output_str=y_nplus1_running_total,
                     RK_lhss_list=[y_n], RK_rhss_list=[y_n + y_nplus1_running_total*dt],
                     post_RHS_list=[post_RHS_string],
-                    post_RHS_output_list=[y_n], enable_SIMD=enable_SIMD)
+                    post_RHS_output_list=[y_n],
+                    enable_SIMD=enable_SIMD, enable_griddata=enable_griddata, gf_aliases=gf_aliases,
+                    post_post_RHS_string=post_post_RHS_string)
             else:
                 for s in range(num_steps):
                     # If we're on the first step (s=0), we use y_n gridfunction as input.
@@ -402,14 +440,19 @@ def add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string = "", 
                         RHS_input_str=RHS_input, RHS_output_str=RHS_output,
                         RK_lhss_list=RK_lhs_list, RK_rhss_list=RK_rhs_list,
                         post_RHS_list=[post_RHS_string],
-                        post_RHS_output_list=[post_RHS_output], enable_SIMD=enable_SIMD) + "// -={ END k" + str(s + 1) + " substep }=-\n\n"
+                        post_RHS_output_list=[post_RHS_output],
+                        enable_SIMD=enable_SIMD, enable_griddata=enable_griddata, gf_aliases=gf_aliases,
+                        post_post_RHS_string=post_post_RHS_string) + "// -={ END k" + str(s + 1) + " substep }=-\n\n"
 
+    enableCparameters=True
+    if enable_griddata:
+        enableCparameters=False
     add_to_Cfunction_dict(
         includes=includes,
         desc=desc,
         c_type=c_type, name=name, params=params,
         body=indent_Ccode(body, "  "),
-        rel_path_to_Cparams=os.path.join("."))
+        enableCparameters=enableCparameters, rel_path_to_Cparams=os.path.join("."))
 
 
 # add_to_Cfunction_dict_MoL_free_memory() registers
@@ -468,12 +511,12 @@ def NRPy_basic_defines_MoL_timestepping_struct(MoL_method="RK4"):
 # Finally declare the master registration function
 def register_C_functions_and_NRPy_basic_defines(MoL_method = "RK4",
             RHS_string =  "rhs_eval(Nxx,Nxx_plus_2NGHOSTS,dxx, RK_INPUT_GFS, RK_OUTPUT_GFS);",
-       post_RHS_string = "apply_bcs(Nxx,Nxx_plus_2NGHOSTS, RK_OUTPUT_GFS);",
-       enable_rfm=False, enable_curviBCs=False, enable_SIMD=False):
+            post_RHS_string = "apply_bcs(Nxx,Nxx_plus_2NGHOSTS, RK_OUTPUT_GFS);", post_post_RHS_string = "",
+            enable_rfm=False, enable_curviBCs=False, enable_SIMD=False, enable_griddata=False):
     for which_gfs in ["y_n_gfs", "non_y_n_gfs"]:
         add_to_Cfunction_dict_MoL_malloc(MoL_method, which_gfs)
         add_to_Cfunction_dict_MoL_free_memory(MoL_method, which_gfs)
-    add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string, post_RHS_string,
+    add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method, RHS_string, post_RHS_string, post_post_RHS_string,
                                                    enable_rfm=enable_rfm, enable_curviBCs=enable_curviBCs,
-                                                   enable_SIMD=enable_SIMD)
+                                                   enable_SIMD=enable_SIMD, enable_griddata=enable_griddata)
     NRPy_basic_defines_MoL_timestepping_struct(MoL_method=MoL_method)

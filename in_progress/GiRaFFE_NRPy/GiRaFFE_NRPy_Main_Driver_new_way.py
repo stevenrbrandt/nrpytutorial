@@ -5,7 +5,7 @@ nrpy_dir_path = os.path.join("..")
 if nrpy_dir_path not in sys.path:
     sys.path.append(nrpy_dir_path)
 
-from outputC import outCfunction, lhrh, add_to_Cfunction_dict, outC_function_outdir_dict, outC_function_dict, outC_function_prototype_dict # NRPy+: Core C code output module
+from outputC import outCfunction, lhrh, add_to_Cfunction_dict, outC_function_outdir_dict, outC_function_dict, outC_function_prototype_dict, outC_function_master_list, outC_function_element # NRPy+: Core C code output module
 import finite_difference as fin  # NRPy+: Finite difference C code generation module
 import NRPy_param_funcs as par   # NRPy+: Parameter interface
 import grid as gri               # NRPy+: Functions having to do with numerical grids
@@ -348,10 +348,16 @@ void GiRaFFE_NRPy_post_step(const paramstruct *restrict params,REAL *xx[3],REAL 
 }"""
 
 def add_to_Cfunction_dict__driver_function():
+    outC_function_master_list.append(outC_function_element("empty", "empty", "empty", "empty", "GiRaFFE_NRPy_RHSs", "empty",
+                             "empty", "empty", "empty", "empty",
+                             "empty", "empty"))
     outC_function_outdir_dict["GiRaFFE_NRPy_RHSs"] = "default"
     outC_function_dict["GiRaFFE_NRPy_RHSs"] = main_evolution_func
     outC_function_prototype_dict["GiRaFFE_NRPy_RHSs"] = main_evolution_prototype
 
+    outC_function_master_list.append(outC_function_element("empty", "empty", "empty", "empty", "GiRaFFE_NRPy_post_step", "empty",
+                             "empty", "empty", "empty", "empty",
+                             "empty", "empty"))
     outC_function_outdir_dict["GiRaFFE_NRPy_post_step"] = "default"
     outC_function_dict["GiRaFFE_NRPy_post_step"] = post_step_func
     outC_function_prototype_dict["GiRaFFE_NRPy_post_step"] = post_step_prototype

@@ -5,21 +5,28 @@ nrpy_dir_path = os.path.join("..")
 if nrpy_dir_path not in sys.path:
     sys.path.append(nrpy_dir_path)
 
+from outputC import outC_function_outdir_dict, outC_function_dict, outC_function_prototype_dict, outC_function_master_list, outC_function_element # NRPy+: Core C code output module
 import cmdline_helper as cmd     # NRPy+: Multi-platform Python command-line interface
 Ccodesdir = "GiRaFFE_standalone_Ccodes/RHSs"
 cmd.mkdir(os.path.join(Ccodesdir))
 
-def GiRaFFE_NRPy_Source_Terms(Ccodesdir):
-    cmd.mkdir(Ccodesdir)
-    # Write out the code to a file.
-    with open(os.path.join(Ccodesdir,"Lorenz_psi6phi_rhs__add_gauge_terms_to_A_i_rhs.h"),"w") as file:
-        file.write("""static inline REAL avg(const REAL f[PLUS2+1][PLUS2+1][PLUS2+1],const int imin,const int imax, const int jmin,const int jmax, const int kmin,const int kmax);
-
-#define MINUS2 0
+name = "Lorenz_psi6phi_rhs__add_gauge_terms_to_A_i_rhs"
+prototype = """void Lorenz_psi6phi_rhs__add_gauge_terms_to_A_i_rhs(const paramstruct *params,REAL **in_vars,const REAL *psi6phi,
+                                                           /* TEMPS: */
+                                                           REAL *shiftx_iphjphkph,REAL *shifty_iphjphkph,REAL *shiftz_iphjphkph,
+                                                           REAL *alpha_iphjphkph,REAL *alpha_Phi_minus_betaj_A_j_iphjphkph,REAL *alpha_sqrtg_Ax_interp,
+                                                           REAL *alpha_sqrtg_Ay_interp,REAL *alpha_sqrtg_Az_interp,
+                                                           /* END TEMPS, 8 total! */
+                                                           REAL *psi6phi_rhs,REAL *Ax_rhs,REAL *Ay_rhs,REAL *Az_rhs);"""
+body = """#define MINUS2 0
 #define MINUS1 1
 #define PLUS0  2
 #define PLUS1  3
 #define PLUS2  4
+#define MAXNUMINDICES 5
+//    ^^^^^^^^^^^^^ Be _sure_ to define MAXNUMINDICES appropriately!
+static inline REAL avg(const REAL f[PLUS2+1][PLUS2+1][PLUS2+1],const int imin,const int imax, const int jmin,const int jmax, const int kmin,const int kmax);
+
 // The "I" suffix denotes interpolation. In other words, these
 //    definitions are used for interpolation ONLY. The order here
 //    matters as well!
@@ -31,7 +38,7 @@ static const int SHIFTXI=0,SHIFTYI=1,SHIFTZI=2,GUPXXI=3,GUPXYI=4,GUPXZI=5,GUPYYI
 // components with the same labels as the inverse:
 static const int GXXI=3,GXYI=4,GXZI=5,GYYI=6,GYZI=7,GZZI=8;
 
-static void Lorenz_psi6phi_rhs__add_gauge_terms_to_A_i_rhs(const paramstruct *params,REAL **in_vars,const REAL *psi6phi,
+void Lorenz_psi6phi_rhs__add_gauge_terms_to_A_i_rhs(const paramstruct *params,REAL **in_vars,const REAL *psi6phi,
                                                            /* TEMPS: */
                                                            REAL *shiftx_iphjphkph,REAL *shifty_iphjphkph,REAL *shiftz_iphjphkph,
                                                            REAL *alpha_iphjphkph,REAL *alpha_Phi_minus_betaj_A_j_iphjphkph,REAL *alpha_sqrtg_Ax_interp,
@@ -291,4 +298,23 @@ static inline REAL avg(const REAL f[PLUS2+1][PLUS2+1][PLUS2+1],const int imin,co
       }
   return retval/num_in_sum;
 }
-""")
+"""
+
+def GiRaFFE_NRPy_Source_Terms(Ccodesdir):
+    cmd.mkdir(Ccodesdir)
+    # Write out the code to a file.
+    with open(os.path.join(Ccodesdir,"Lorenz_psi6phi_rhs__add_gauge_terms_to_A_i_rhs.h"),"w") as file:
+        file.write(body)
+
+includes = """#include "NRPy_basic_defines.h"
+#include "GiRaFFE_basic_defines.h"
+#include "loop_defines_reconstruction_NRPy.h"
+"""
+
+def add_to_Cfunction_dict__GiRaFFE_NRPy_staggered_Source_Terms():
+    outC_function_master_list.append(outC_function_element("empty", "empty", "empty", "empty", name, "empty",
+                             "empty", "empty", "empty", "empty",
+                             "empty", "empty"))
+    outC_function_outdir_dict[name] = "default"
+    outC_function_dict[name] = includes+body.replace("../set_Cparameters.h","set_Cparameters.h")
+    outC_function_prototype_dict[name] = prototype

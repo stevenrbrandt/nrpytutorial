@@ -1,0 +1,16 @@
+Below is a list of authors that have contributed to NRPyEOS
+and the codes NRPyEOS is based on:
+
+* Leo Werneck
+    - Lead author of NRPyEOS.
+
+* Christian Ott
+    - Author of original source code and its adaptation to the Einstein
+      Toolkit thorn EOS_Omni.
+
+* Erik Schnetter
+    - Co-author of EOS_Omni.
+
+* Lorenzo Sala
+    - Added modifications to EOS to improve, among other things, errors
+      in temperature recovery.

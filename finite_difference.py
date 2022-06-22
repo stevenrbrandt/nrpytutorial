@@ -9,7 +9,7 @@
 # Author: Zachariah B. Etienne
 #         zachetie **at** gmail **dot* com
 
-from outputC import parse_outCparams_string, outC_function_dict, outC_function_prototype_dict, outC_NRPy_basic_defines_h_dict  # NRPy+: Core C code output module
+from outputC import parse_outCparams_string, outC_function_dict, outC_function_prototype_dict, outC_NRPy_basic_defines_h_dict, outC_function_master_list  # NRPy+: Core C code output module
 import NRPy_param_funcs as par   # NRPy+: parameter interface
 import sympy as sp               # SymPy: The Python computer algebra package upon which NRPy+ depends
 import grid as gri               # NRPy+: Functions having to do with numerical grids
@@ -51,7 +51,7 @@ def FD_outputC(filename, sympyexpr_list, params="", upwindcontrolvec=""):
     #     outCparams.includebraces==True.
     # See Step 5 for open and close braces
     if outCparams.includebraces == "True":
-        indent = "   "
+        indent = "  "
     else:
         indent = ""
 
@@ -183,14 +183,19 @@ def output_finite_difference_functions_h(path=os.path.join(".")):
         # Clear all FD functions from outC_function_dict after outputting to finite_difference_functions.h.
         #   Otherwise outputC will be outputting these as separate individual C codes & attempting to build them in Makefile.
         key_list_del = []
-        for key, item in outC_function_dict.items():
-            if "__FD_OPERATOR_FUNC__" in item:
-                key_list_del += [key]
+        element_del = []
+        for i, func in enumerate(outC_function_master_list):
+            if "__FD_OPERATOR_FUNC__" in func.desc:
+                if func.name not in key_list_del:
+                    key_list_del += [func.name]
+                if func not in element_del:
+                    element_del += [func]
+        for func in element_del:
+            outC_function_master_list.remove(func)
         for key in key_list_del:
             outC_function_dict.pop(key)
             if key in outC_function_prototype_dict:
                 outC_function_prototype_dict.pop(key)
-
         file.write("#endif // #ifndef __FD_FUNCTIONS_H__\n")
 ################
 
@@ -282,15 +287,32 @@ def register_C_functions_and_NRPy_basic_defines(NGHOSTS_account_for_onezone_upwi
 #  .... row, but with each element e_j -> e_j^(L-1)
 #  A1 is used later to validate the inverted
 #  matrix.
+def setup_FD_matrix__return_inverse(STENCILWIDTH, UPDOWNWIND_stencil_shift):
+    # Set up matrix based on the stencil size (FDORDER+1).
+    #         See documentation above for details on how this
+    #         matrix is set up.
+    M = sp.zeros(STENCILWIDTH, STENCILWIDTH)
+    for i in range(STENCILWIDTH):
+        for j in range(STENCILWIDTH):
+            if i == 0:
+                M[(i, j)] = 1  # Setting n^0 = 1 for all n, including n=0, because this matches the pattern
+            else:
+                dist_from_xeq0_col = j - sp.Rational((STENCILWIDTH - 1), 2) + UPDOWNWIND_stencil_shift
+                if dist_from_xeq0_col == 0:
+                    M[(i, j)] = 0
+                else:
+                    M[(i, j)] = dist_from_xeq0_col ** i
+    return M**(-1)
 
-def compute_fdcoeffs_fdstencl(derivstring,FDORDER=-1):
+
+def compute_fdcoeffs_fdstencl(derivstring, FDORDER=-1):
     # Step 0: Set finite differencing order, stencil size, and up/downwinding
     if FDORDER == -1:
         FDORDER = par.parval_from_str("FD_CENTDERIVS_ORDER")
         if "dKOD" in derivstring:
             FDORDER += par.parval_from_str("FD_KO_ORDER__CENTDERIVS_PLUS")
 
-    STENCILSIZE = FDORDER+1
+    STENCILWIDTH = FDORDER+1
     UPDOWNWIND_stencil_shift = 0
     # dup/dnD = single-point-offset upwind/downwinding.
     if "dupD" in derivstring:
@@ -303,22 +325,8 @@ def compute_fdcoeffs_fdstencl(derivstring,FDORDER=-1):
     elif "dfulldnD" in derivstring:
         UPDOWNWIND_stencil_shift = -int(FDORDER/2)
 
-    # Step 1: Set up matrix based on the stencil size (FDORDER+1).
-    #         See documentation above for details on how this
-    #         matrix is set up.
-    M = sp.zeros(STENCILSIZE,STENCILSIZE)
-    for i in range(STENCILSIZE):
-        for j in range(STENCILSIZE):
-            if i == 0:
-                M[(i,j)] = 1 # Setting n^0 = 1 for all n, including n=0, because this matches the pattern
-            else:
-                dist_from_xeq0_col = j - sp.Rational((STENCILSIZE - 1),2) + UPDOWNWIND_stencil_shift
-                if dist_from_xeq0_col==0:
-                    M[(i,j)] = 0
-                else:
-                    M[(i, j)] = dist_from_xeq0_col**(i)
-    Minv = sp.zeros(STENCILSIZE,STENCILSIZE)
-    Minv = M**(-1)
+    # Step 1: Set up FD matrix and return the inverse, as documented above.
+    Minv = setup_FD_matrix__return_inverse(STENCILWIDTH, UPDOWNWIND_stencil_shift)
 
     # Step 2:
     #     Based on the input derivative string,
@@ -344,7 +352,7 @@ def compute_fdcoeffs_fdstencl(derivstring,FDORDER=-1):
             derivtype = "MixedSecondDeriv"
     elif "dKOD" in derivstring:
         derivtype = "KreissOligerDeriv"
-        matrixrow = STENCILSIZE - 1
+        matrixrow = STENCILWIDTH - 1
     else:
         # Up/downwinded and first derivs are all of "FirstDeriv" type
         pass
@@ -356,20 +364,20 @@ def compute_fdcoeffs_fdstencl(derivstring,FDORDER=-1):
     fdcoeffs = []
     fdstencl = []
     if derivtype != "MixedSecondDeriv":
-        for i in range(STENCILSIZE):
+        for i in range(STENCILWIDTH):
             idx4 = [0, 0, 0, 0]
             # First compute finite difference coefficient.
-            fdcoeff = sp.factorial(matrixrow)*Minv[(i,matrixrow)]
+            fdcoeff = sp.factorial(matrixrow)*Minv[(i, matrixrow)]
             # Do not store fdcoeff or fdstencil if
             # finite difference coefficient is zero.
             if fdcoeff != 0:
                 fdcoeffs.append(fdcoeff)
                 if derivtype == "KreissOligerDeriv":
-                    fdcoeffs[i] *= (-1)**(sp.Rational((STENCILSIZE+1),2))/2**matrixrow
+                    fdcoeffs[i] *= (-1)**(sp.Rational((STENCILWIDTH+1), 2))/2**matrixrow
 
                 # Next store finite difference stencil point
                 # corresponding to coefficient.
-                gridpt_posn = i - int((STENCILSIZE-1)/2) + UPDOWNWIND_stencil_shift
+                gridpt_posn = i - int((STENCILWIDTH-1)/2) + UPDOWNWIND_stencil_shift
                 if gridpt_posn != 0:
                     dirn = int(derivstring[len(derivstring)-1])
                     idx4[dirn] = gridpt_posn
@@ -378,13 +386,13 @@ def compute_fdcoeffs_fdstencl(derivstring,FDORDER=-1):
         # Mixed second derivative finite difference coeffs
         #     consist of products of first deriv coeffs,
         #     defined in first Minv matrix row.
-        for i in range(STENCILSIZE):
-            for j in range(STENCILSIZE):
+        for i in range(STENCILWIDTH):
+            for j in range(STENCILWIDTH):
                 idx4 = [0, 0, 0, 0]
 
                 # First compute finite difference coefficient.
-                fdcoeff = (sp.factorial(matrixrow)*Minv[(i,matrixrow)]) * \
-                          (sp.factorial(matrixrow)*Minv[(j,matrixrow)])
+                fdcoeff = (sp.factorial(matrixrow)*Minv[(i, matrixrow)]) * \
+                          (sp.factorial(matrixrow)*Minv[(j, matrixrow)])
 
                 # Do not store fdcoeff or fdstencil if
                 # finite difference coefficient is zero.
@@ -393,8 +401,8 @@ def compute_fdcoeffs_fdstencl(derivstring,FDORDER=-1):
 
                     # Next store finite difference stencil point
                     # corresponding to coefficient.
-                    gridpt_posn1 = i - int((STENCILSIZE - 1) / 2)
-                    gridpt_posn2 = j - int((STENCILSIZE - 1) / 2)
+                    gridpt_posn1 = i - int((STENCILWIDTH - 1) / 2)
+                    gridpt_posn2 = j - int((STENCILWIDTH - 1) / 2)
                     dirn1 = int(derivstring[len(derivstring) - 1])
                     dirn2 = int(derivstring[len(derivstring) - 2])
                     idx4[dirn1] = gridpt_posn1
