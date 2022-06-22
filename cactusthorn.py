@@ -18,7 +18,7 @@ from sympy.core.symbol import Symbol
 today = date.today().strftime("%B %d, %Y")
 
 makefile_init="""
-# Main make.code.defn file for thorn Foo
+# Main make.code.defn file for thorn {thornname}
 
 # Subdirectories containing source files
 SUBDIRS =
@@ -175,6 +175,13 @@ doc_init=r"""
 \end{document}
 """.lstrip()
 
+def check_centering(centering):
+    if centering is None:
+        return
+    assert len(centering)==3, f"The centering string '{centering}' should be 3 characters long"
+    for c in centering:
+        assert c in "cCvV", f"Invalid Centering Character: {c}"
+
 def typeof(*args):
     t = None
     for a in args:
@@ -224,6 +231,7 @@ class CactusThorn:
         self.last_src_file = csrc
 
     def add_func(self, name, body, schedule_bin, doc, where='interior', centering='VVV'):
+        check_centering(centering)
         if gri.ET_driver == "Carpet":
             schedule_bin = re.sub(r'\bRHS\b','MoL_CalcRHS',schedule_bin)
         elif gri.ET_driver == "CarpetX":
@@ -236,6 +244,7 @@ class CactusThorn:
         has_fd = False
         if type(body)==list:
             new_body = []
+            use_fd_output = False
             for item in body:
                 assert type(item) == lhrh, "Equations should be stored in outputC.lhrh objects."
                 writegfs.add(str(item.lhs))
@@ -256,6 +265,7 @@ class CactusThorn:
             body = new_body
             # idxs is a list of integer offsets for stencils used by the FD routine
             idxs = set()
+            #if use_fd_output:
             kernel = fin.FD_outputC("returnstring",body,idxs=idxs)
 
             # Compute the max offset from 0 for the stencils
@@ -271,64 +281,64 @@ class CactusThorn:
             # Generate code to check the stencils
             # have enough ghost zones
             checkbounds = f"""
-               if(cctk_nghostzones[0] < {maxx}) CCTK_Error(__LINE__,__FILE__,"{self.thornname}","cctk_nghostzones[0] should be at least {maxx}");
-               if(cctk_nghostzones[1] < {maxy}) CCTK_Error(__LINE__,__FILE__,"{self.thornname}","cctk_nghostzones[1] should be at least {maxy}");
-               if(cctk_nghostzones[2] < {maxz}) CCTK_Error(__LINE__,__FILE__,"{self.thornname}","cctk_nghostzones[2] should be at least {maxz}");"""
+  if(cctk_nghostzones[0] < {maxx}) CCTK_Error(__LINE__,__FILE__,"{self.thornname}","cctk_nghostzones[0] should be at least {maxx}");
+  if(cctk_nghostzones[1] < {maxy}) CCTK_Error(__LINE__,__FILE__,"{self.thornname}","cctk_nghostzones[1] should be at least {maxy}");
+  if(cctk_nghostzones[2] < {maxz}) CCTK_Error(__LINE__,__FILE__,"{self.thornname}","cctk_nghostzones[2] should be at least {maxz}");"""
             decl = ""
             if gri.ET_driver == "Carpet":
                 if where == "interior":
                     body = f"""
-                    {decl}
-                    {checkbounds}
-                    for(int i2=cctk_nghostzones[2];i2<cctk_lsh[2]-cctk_nghostzones[2];i2++) {{
-                    for(int i1=cctk_nghostzones[1];i1<cctk_lsh[1]-cctk_nghostzones[1];i1++) {{
-                    for(int i0=cctk_nghostzones[0];i0<cctk_lsh[0]-cctk_nghostzones[0];i0++) {{
-                    {kernel}
-                    }} }} }}
+  {decl}
+  {checkbounds}
+  for(int i2=cctk_nghostzones[2];i2<cctk_lsh[2]-cctk_nghostzones[2];i2++) {{
+  for(int i1=cctk_nghostzones[1];i1<cctk_lsh[1]-cctk_nghostzones[1];i1++) {{
+  for(int i0=cctk_nghostzones[0];i0<cctk_lsh[0]-cctk_nghostzones[0];i0++) {{
+  {kernel}
+  }} }} }}
                     """.strip()
                 elif where == "everywhere":
                     body = f"""
-                    {decl}
-                    for(int i2=0;i2<cctk_lsh[2];i2++) {{
-                    for(int i1=0;i1<cctk_lsh[1];i1++) {{
-                    for(int i0=0;i0<cctk_lsh[0];i0++) {{
-                    {kernel}
-                    }} }} }}
+  {decl}
+  for(int i2=0;i2<cctk_lsh[2];i2++) {{
+  for(int i1=0;i1<cctk_lsh[1];i1++) {{
+  for(int i0=0;i0<cctk_lsh[0];i0++) {{
+  {kernel}
+  }} }} }}
                     """.strip()
                 elif where == "boundary":
                     body = f"""
-                    {decl}
-                    for(int i2=0;i2<cctk_nghostzones[2];i2++) {{
-                    for(int i1=0;i1<cctk_lsh[1];i1++) {{
-                    for(int i0=0;i0<cctk_lsh[0];i0++) {{
-                    {kernel}
-                    }} }} }}
-                    for(int i2=0;i2<cctk_lsh[2];i2++) {{
-                    for(int i1=0;i1<cctk_nghostzones[1];i1++) {{
-                    for(int i0=0;i0<cctk_lsh[0];i0++) {{
-                    {kernel}
-                    }} }} }}
-                    for(int i2=0;i2<cctk_lsh[2];i2++) {{
-                    for(int i1=0;i1<cctk_lsh[1];i1++) {{
-                    for(int i0=0;i0<cctk_nghostzones[0];i0++) {{
-                    {kernel}
-                    }} }} }}
-                     
-                    for(int i2=cctk_lsh[2]-cctk_nghostzones[2];i2<cctk_lsh[2];i2++) {{
-                    for(int i1=0;i1<cctk_lsh[1];i1++) {{
-                    for(int i0=0;i0<cctk_lsh[0];i0++) {{
-                    {kernel}
-                    }} }} }}
-                    for(int i2=0;i2<cctk_lsh[2];i2++) {{
-                    for(int i1=cctk_lsh[1]-cctk_nghostzones[1];i1<cctk_lsh[1];i1++) {{
-                    for(int i0=0;i0<cctk_lsh[0];i0++) {{
-                    {kernel}
-                    }} }} }}
-                    for(int i2=0;i2<cctk_lsh[2];i2++) {{
-                    for(int i1=0;i1<cctk_lsh[1];i1++) {{
-                    for(int i0=cctk_lsh[0]-cctk_nghostzones[0];i0<cctk_lsh[0];i0++) {{
-                    {kernel}
-                    }} }} }}
+  {decl}
+  for(int i2=0;i2<cctk_nghostzones[2];i2++) {{
+  for(int i1=0;i1<cctk_lsh[1];i1++) {{
+  for(int i0=0;i0<cctk_lsh[0];i0++) {{
+  {kernel}
+  }} }} }}
+  for(int i2=0;i2<cctk_lsh[2];i2++) {{
+  for(int i1=0;i1<cctk_nghostzones[1];i1++) {{
+  for(int i0=0;i0<cctk_lsh[0];i0++) {{
+  {kernel}
+  }} }} }}
+  for(int i2=0;i2<cctk_lsh[2];i2++) {{
+  for(int i1=0;i1<cctk_lsh[1];i1++) {{
+  for(int i0=0;i0<cctk_nghostzones[0];i0++) {{
+  {kernel}
+  }} }} }}
+   
+  for(int i2=cctk_lsh[2]-cctk_nghostzones[2];i2<cctk_lsh[2];i2++) {{
+  for(int i1=0;i1<cctk_lsh[1];i1++) {{
+  for(int i0=0;i0<cctk_lsh[0];i0++) {{
+  {kernel}
+  }} }} }}
+  for(int i2=0;i2<cctk_lsh[2];i2++) {{
+  for(int i1=cctk_lsh[1]-cctk_nghostzones[1];i1<cctk_lsh[1];i1++) {{
+  for(int i0=0;i0<cctk_lsh[0];i0++) {{
+  {kernel}
+  }} }} }}
+  for(int i2=0;i2<cctk_lsh[2];i2++) {{
+  for(int i1=0;i1<cctk_lsh[1];i1++) {{
+  for(int i0=cctk_lsh[0]-cctk_nghostzones[0];i0<cctk_lsh[0];i0++) {{
+  {kernel}
+  }} }} }}
                     """.strip()
                 else:
                     assert False, f"where={where} is not suppprted"
@@ -343,14 +353,14 @@ class CactusThorn:
                     assert False, "where should be in ['interior', 'everywhere', 'boundary']"
                 #TODO: need to decide how to do loops with centering other than VVV
                 body = f"""
-                {decl}
-                {checkbounds}
-                auto DI = PointDesc::DI;
-                grid.loop_{wtag}_device<{centering}_centered[0], {centering}_centered[1], {centering}_centered[2]>(
-                grid.nghostzones, [=] CCTK_DEVICE CCTK_HOST(
-                const PointDesc &p) CCTK_ATTRIBUTE_ALWAYS_INLINE {{
-                {kernel}
-                }});
+  {decl}
+  {checkbounds}
+  auto DI = PointDesc::DI;
+  grid.loop_{wtag}_device<{centering}_centered[0], {centering}_centered[1], {centering}_centered[2]>(
+  grid.nghostzones, [=] CCTK_DEVICE CCTK_HOST(
+  const PointDesc &p) CCTK_ATTRIBUTE_ALWAYS_INLINE {{
+  {kernel}
+  }});
                 """.strip()
         elif type(body)==str:
             # Pass the body through literally
@@ -378,6 +388,7 @@ class CactusThorn:
         return self.coords
 
     def register_gridfunctions(self, gtype, gf_names, centering=None, external_module=None):
+        check_centering(centering)
         if external_module is not None:
             assert gtype == "EXTERNAL"
             thorn = external_module
@@ -510,7 +521,7 @@ class CactusThorn:
                             print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=1 {tag} CENTERING={{ {self.centering[gf_name]} }} {{ {gf_name}GF }} "{gf_name}"', file=fd)
 
             if grid.ET_driver == "Carpet":
-                with SafeWrite(self.register_cc) as fd:
+                with SafeWrite(self.register_cc,do_format=True) as fd:
                     print(f"""
 #include "cctk.h"
 #include "cctk_Arguments.h"
@@ -526,9 +537,9 @@ void {self.thornname}_RegisterVars(CCTK_ARGUMENTS)
                         var = rhs_var[:-4]
                         assert var + "_rhs" == rhs_var
                         print("   ",f"""
-    var   = CCTK_VarIndex("{self.thornname}::{var}GF");
-    rhs   = CCTK_VarIndex("{self.thornname}::{rhs_var}GF");
-    ierr += MoLRegisterEvolved(var, rhs);
+  var   = CCTK_VarIndex("{self.thornname}::{var}GF");
+  rhs   = CCTK_VarIndex("{self.thornname}::{rhs_var}GF");
+  ierr += MoLRegisterEvolved(var, rhs);
                         """.strip(),file=fd)
                     print("}",file=fd)
             with SafeWrite(self.schedule_ccl) as fd:
@@ -592,7 +603,7 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                     print(doc_src, file=fd)
             with SafeWrite(self.makefile) as fd:
                 # for item in outC_function_master_list
-                print(makefile_init, end='', file=fd) 
+                print(re.sub(r'{thornname}',self.thornname,makefile_init), end='', file=fd) 
                 for src in self.src_files.values():
                     print(" ",src.name,sep="",end="",file=fd)
                 if grid.ET_driver == "Carpet":
@@ -601,13 +612,7 @@ schedule {self.thornname}_RegisterVars in MoL_Register
 
             for src in self.src_files.values():
                 fsrc = os.path.join(self.src_dir, src.name)
-                # switch to add_to_Cfunction_dict
-                #add_to_Cfunction_dict(body='/* body */',includes=['#include <cctk.h>'], \
-                #    name='foo',params='/* params */',path_from_rootsrcdir_to_this_Cfunc="/tmp")
-                #construct_NRPy_function_prototypes_h("/tmp")
-                #construct_NRPy_Cfunctions("/tmp")
-                #outCfunction(outfile="x.cc",name='foo2',params='()',body='/* body 2 */')
-                with SafeWrite(fsrc) as fd:
+                with SafeWrite(fsrc,do_format=True) as fd:
                     if gri.ET_driver == "Carpet":
                         print("#include <cctk.h>", file=fd)
                         print("#include <cctk_Arguments.h>", file=fd)
@@ -632,7 +637,7 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                         print( "  DECLARE_CCTK_PARAMETERS;",file=fd)
                         print(f"  std::cout << \"Callling {func.name}!!!\" << std::endl;",file=fd)
                         for ii in range(3):
-                            print(f"  CCTK_REAL invdx{ii} = 1/CCTK_DELTA_SPACE({ii});",file=fd)
+                            print(f"  const CCTK_REAL invdx{ii} = 1/CCTK_DELTA_SPACE({ii});",file=fd)
                         print(f"  {func.body}",file=fd)
                         print(f'}}',file=fd)
 

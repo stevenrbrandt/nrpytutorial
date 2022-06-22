@@ -29,7 +29,7 @@ from outputC import lhrh
 import indexedexp as ixp
 import NRPy_param_funcs as par
 
-FD_order = 6
+FD_order = 4
 par.set_parval_from_str("finite_difference::FD_CENTDERIVS_ORDER",FD_order)
 
 uu_dDD = ixp.declarerank2("uu_dDD","sym01")
@@ -46,11 +46,6 @@ init_eqns = [
     lhrh(lhs=uu_rhs, rhs=sympify(0)),
     lhrh(lhs=vv, rhs=sympify(0)),
     lhrh(lhs=uu, rhs=cos(k*(x-x0))**2*cos(k*(y-y0))**2)
-]
-
-bound_eqns = [
-    lhrh(lhs=vv_rhs, rhs=sympify(0)),
-    lhrh(lhs=uu_rhs, rhs=cos(k*(x-x0))**2*cos(k*(y-y0))**2)
 ]
 
 # access a variable with a different centering using interpolation
