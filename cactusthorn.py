@@ -182,6 +182,9 @@ def check_centering(centering):
     for c in centering:
         assert c in "cCvV", f"Invalid Centering Character: {c}"
 
+# Divider used to break loops
+loop = lhrh(lhs=None, rhs=None)
+
 def typeof(*args):
     t = None
     for a in args:
@@ -241,16 +244,24 @@ class CactusThorn:
         self._add_src(name + ".cc")
         writegfs = set()
         readgfs = set()
+        tmps = set()
         has_fd = False
         if type(body)==list:
             new_body = []
             use_fd_output = False
             for item in body:
                 assert type(item) == lhrh, "Equations should be stored in outputC.lhrh objects."
-                writegfs.add(str(item.lhs))
+                writem = str(item.lhs)
+                if grid.find_gftype(writem,die=False) == "TMP":
+                    tmps.add(writem)
+                else:
+                    writegfs.add(writem)
                 if hasattr(item.rhs, "free_symbols"):
                     for sym in item.rhs.free_symbols:
                         rdsym = str(sym)
+                        if grid.find_gftype(rdsym,die=False) == "TMP":
+                            tmps.add(rdsym)
+                            continue
                         # Check if the symbol name is a derivative
                         g = re.match(r'(.*)_dD+\d+$', rdsym)
                         if g:
@@ -263,11 +274,71 @@ class CactusThorn:
                 else:
                     new_body += [item]
             body = new_body
+            #if use_fd_output:
+            new_body = []
+            body_str = ""
+            for i in range(len(body)+1):
+                if i == len(body) or (body[i].lhs is None and body[i].rhs is None):
+                    if len(new_body) > 0:
+                        body_str += self.do_body(new_body,where,centering) + "\n"
+                    new_body = []
+                else:
+                    new_body += [body[i]]
+        elif type(body)==str:
+            # Pass the body through literally
+            pass
+        else:
+            assert False, "Body must be list or str"
+
+        centerings_used = set()
+        for gf in readgfs:
+            gtype = grid.find_gftype(gf,die=False)
+            c = grid.get_centering(gf)
+            if gtype in ["AUX","EVOL","AUXEVOL"] and centering is not None:
+                centerings_used.add(c)
+        for gf in writegfs:
+            gtype = grid.find_gftype(gf,die=False)
+            c = grid.get_centering(gf)
+            if gtype in ["AUX","EVOL","AUXEVOL"] and centering is not None:
+                centerings_used.add(c)
+        centerings_needed = set()
+        centerings_needed.add(centering)
+        layout_decls = ""
+        for c in centerings_needed:
+            if c not in centerings_used:
+                nums = ",".join(["1" if n in ["c","C"] else "0" for n in c])
+                layout_decls += f" CCTK_CENTERING_LAYOUT({c},({{ {nums} }})); "
+        tmp_centerings = {}
+        for gf in tmps:
+            c = grid.get_centering(gf)
+            if c not in tmp_centerings:
+                tmp_centerings[c] = set()
+            tmp_centerings[c].add(gf)
+        for c in tmp_centerings:
+            nums = ",".join(["1" if n in ["c","C"] else "0" for n in c])
+            layout_decls += f" const GF3D5layout {c}_tmp_layout(cctkGH,{{ {nums} }}); "
+
+        tmp_decls = ""
+        for c in tmp_centerings:
+            ctmps = tmp_centerings[c]
+            tmp_decls=f"const GF3D5vector<CCTK_REAL> tiles_{c}({c}_tmp_layout, {len(ctmps)}); "
+            tmp_list = sorted(list(ctmps))
+            for ix in range(len(tmp_list)):
+                name = tmp_list[ix]
+                c = grid.get_centering(name)
+                tmp_decls += f" GF3D5 {name}(tiles_{c}({ix})); "
+
+        body_str = layout_decls + tmp_decls + body_str
+
+        func = CactusFunc(name, body_str, schedule_bin, doc)
+        self.last_src_file.add_func(func, where)
+        func.readgfs = readgfs
+        func.writegfs = writegfs
+
+    def do_body(self, body, where, centering):
             # idxs is a list of integer offsets for stencils used by the FD routine
             idxs = set()
-            #if use_fd_output:
             kernel = fin.FD_outputC("returnstring",body,idxs=idxs)
-
             # Compute the max offset from 0 for the stencils
             maxx = 0
             maxy = 0
@@ -355,22 +426,13 @@ class CactusThorn:
                 body = f"""
   {decl}
   {checkbounds}
-  auto DI = PointDesc::DI;
   grid.loop_{wtag}_device<{centering}_centered[0], {centering}_centered[1], {centering}_centered[2]>(
-  grid.nghostzones, [=] CCTK_DEVICE CCTK_HOST(
+  grid.nghostzones, [=] CCTK_DEVICE (
   const PointDesc &p) CCTK_ATTRIBUTE_ALWAYS_INLINE {{
   {kernel}
   }});
                 """.strip()
-        elif type(body)==str:
-            # Pass the body through literally
-            pass
-        else:
-            assert False, "Body must be list or str"
-        func = CactusFunc(name, body, schedule_bin, doc)
-        self.last_src_file.add_func(func, where)
-        func.readgfs = readgfs
-        func.writegfs = writegfs
+            return body
 
     def declare_param(self, name, default, doc, vmin=None, vmax=None, options=None):
         self.params += [(name, default, doc, vmin, vmax, options)]
@@ -396,13 +458,9 @@ class CactusThorn:
             thorn = self.thornname
         for gf_name in gf_names:
             self.gf_names[gf_name] = thorn
-            if centering is not None:
-                self.centering[gf_name] = centering
-            else:
-                self.centering[gf_name] = "VVV"
         if external_module is not None:
             self.external_modules += [external_module]
-        return grid.register_gridfunctions(gtype, gf_names, external_module=external_module)
+        return grid.register_gridfunctions(gtype, gf_names, external_module=external_module,centering=centering)
 
     def __init__(self, arrangement, thornname, author=None, email=None, license='BSD'):
         self.ET_driver = grid.ET_driver
@@ -414,7 +472,6 @@ class CactusThorn:
         self.src_files = {}
         self.last_src_file = None
         self.params = []
-        self.centering = {}
         self.external_modules = []
 
         self.param_ccl = os.path.join(self.thorn_dir, "param.ccl")
@@ -503,6 +560,8 @@ class CactusThorn:
                     #TODO: change lines with "if gf_name in ["x","y","z"]:" to check if gftype=="CORE"
                     if gf_name in ["x","y","z"]:
                         continue
+                    if grid.find_gftype(gf_name,die=False) == "TMP":
+                        continue
 
                     rhs=gf_name + "_rhs"
                     if re.match(r'.*_rhs',gf_name):
@@ -518,7 +577,7 @@ class CactusThorn:
                             print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=3 {{ {gf_name}GF }} "{gf_name}"', file=fd)
                         elif grid.ET_driver == "CarpetX":
                             # CarpetX does not use sub-cycling in time, so it only needs one time level
-                            print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=1 {tag} CENTERING={{ {self.centering[gf_name]} }} {{ {gf_name}GF }} "{gf_name}"', file=fd)
+                            print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=1 {tag} CENTERING={{ {grid.get_centering(gf_name)} }} {{ {gf_name}GF }} "{gf_name}"', file=fd)
 
             if grid.ET_driver == "Carpet":
                 with SafeWrite(self.register_cc,do_format=True) as fd:
@@ -548,6 +607,8 @@ void {self.thornname}_RegisterVars(CCTK_ARGUMENTS)
                     if grid.ET_driver == "CarpetX" and gf_name in ["x","y","z"]:
                         continue
                     if self.gf_names[gf_name] == self.thornname:
+                        if grid.find_gftype(gf_name,die=False) == "TMP":
+                            continue
                         if grid.ET_driver == "Carpet":
                             print(f"storage: {gf_name}GF[3]", file=fd)
                         else:
@@ -633,7 +694,8 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                         if gri.ET_driver == "Carpet":
                             print(f"  DECLARE_CCTK_ARGUMENTS_{func.name};",file=fd)
                         elif gri.ET_driver == "CarpetX":
-                            print(f"  DECLARE_CCTK_ARGUMENTSX_{func.name}; /* xzx */",file=fd)
+                            print(f"  DECLARE_CCTK_ARGUMENTSX_{func.name};",file=fd)
+                            print( "auto DI = PointDesc::DI;",file=fd)
                         print( "  DECLARE_CCTK_PARAMETERS;",file=fd)
                         print(f"  std::cout << \"Callling {func.name}!!!\" << std::endl;",file=fd)
                         for ii in range(3):

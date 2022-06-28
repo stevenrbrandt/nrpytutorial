@@ -1,6 +1,6 @@
 import os
 import grid
-from cactusthorn import CactusThorn
+from cactusthorn import CactusThorn, loop
 from sympy import sympify, cos, pi
 
 # Current options are Carpet and CarpetX
@@ -23,6 +23,7 @@ centering='CCC'
 # EVOL evolved gfs (3 time levels)
 uu_rhs, vv_rhs = thorn.register_gridfunctions("AUX", ["uu_rhs", "vv_rhs"], centering=centering)
 uu, vv = thorn.register_gridfunctions("EVOL", ["uu", "vv"], centering=centering)
+tmp0, tmp1 = thorn.register_gridfunctions("TMP",["tmp0v","tmp1v"],centering=centering)
 x,y,z = thorn.get_xyz()
 
 from outputC import lhrh
@@ -35,15 +36,21 @@ par.set_parval_from_str("finite_difference::FD_CENTDERIVS_ORDER",FD_order)
 uu_dDD = ixp.declarerank2("uu_dDD","sym01")
 
 evol_eqns = [
+    lhrh(lhs=tmp0, rhs=uu_dDD[0][0]),
+    lhrh(lhs=tmp1, rhs=uu_dDD[1][1]),
+    loop,
     lhrh(lhs=uu_rhs, rhs=vv),
-    lhrh(lhs=vv_rhs, rhs=wave_speed**2*(uu_dDD[0][0] + uu_dDD[1][1]))
+    lhrh(lhs=vv_rhs, rhs=wave_speed**2*(tmp0 + tmp1))
 ]
+# Version of evolution equations without temporaries
+#evol_eqns = [
+#    lhrh(lhs=uu_rhs, rhs=vv),
+#    lhrh(lhs=vv_rhs, rhs=wave_speed**2*(uu_dDD[0][0] + uu_dDD[1][1]))
+#]
 
 k = sympify(pi/20)
 
 init_eqns = [
-    lhrh(lhs=vv_rhs, rhs=sympify(0)),
-    lhrh(lhs=uu_rhs, rhs=sympify(0)),
     lhrh(lhs=vv, rhs=sympify(0)),
     lhrh(lhs=uu, rhs=cos(k*(x-x0))**2*cos(k*(y-y0))**2)
 ]

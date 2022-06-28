@@ -15,6 +15,9 @@ ET_driver = ""
 glb_gridfcs_list = []
 glb_gridfc = namedtuple('gridfunction', 'gftype name rank DIM f_infinity wavespeed centering external_module')
 
+# Grids may have centerings. These will be C=cell-centered or V=vertex centered, with either one C or V per dimension
+gf_centering = {}
+
 thismodule = __name__
 par.initialize_param(par.glb_param("char", thismodule, "GridFuncMemAccess", "SENRlike"))
 par.initialize_param(par.glb_param("char", thismodule, "MemAllocStyle", "210"))
@@ -58,15 +61,17 @@ def variable_type(var):
         return "Cparameter"
     if var_is_gf:
         return "gridfunction"
-    print("grid.py: Could not find variable_type.")
+    print(f"grid.py: Could not find variable_type for '{var}'.")
     sys.exit(1)
 
-def find_gftype(varname):
+def find_gftype(varname,die=True):
     for gf in glb_gridfcs_list:
         if gf.name == varname:
             return gf.gftype
-    print("grid.py: Could not find gftype.")
-    sys.exit(1)
+    if die:
+        raise Exception(f"grid.py: Could not find gftype for '{varname}'.")
+    else:
+        return None
 
 def gfaccess(gfarrayname = "", varname = "", ijklstring = ""):
     found_registered_gf = False
@@ -78,8 +83,7 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = ""):
             found_registered_gf = True
 
     if not found_registered_gf:
-        print("Error: gridfunction \""+varname+"\" is not registered!")
-        sys.exit(1)
+        raise Exception(f"Error: gridfunction '{varname}' is not registered!")
 
     gftype = find_gftype(varname)
 
@@ -100,6 +104,8 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = ""):
             gfarrayname = "ext_gfs"
         elif gftype == "CORE":
             gfarrayname = "core_gfs"
+        elif gftype == "TMP":
+            gfarrayname = "tmp_gfs"
         # Return gfarrayname[IDX3(varname,i0)] for DIM=1, gfarrayname[IDX3(varname,i0,i1)] for DIM=2, etc.
         retstring += gfarrayname + "[IDX" + str(DIM+1) + "S(" + varname.upper()+"GF" + ", "
     elif par.parval_from_str("GridFuncMemAccess") == "ETK":
@@ -115,6 +121,9 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = ""):
             elif gftype == "CORE":
                 print("Error: gftype = CORE should only be used with the CarpetX driver.")
                 sys.exit(1)
+            elif gftype == "TMP":
+                print("Error: gftype = TMP should only be used with the CarpetX driver.")
+                sys.exit(1)
             else:
                 retstring += varname + "GF" + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
         elif ET_driver == "CarpetX":
@@ -124,6 +133,8 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = ""):
                 return retstring + varname + f"(p.I) /* 11 DIM={str(DIM)} {str(type(DIM))} */"
             elif gftype == "CORE":
                 return retstring + "p." + varname
+            elif gftype == "TMP":
+                return retstring + varname + f"({get_centering(varname)}_tmp_layout,p.I{ijklstring})"
             else:
                 return retstring + varname + "GF(p.I" + ijklstring + ")"
     else:
@@ -169,18 +180,33 @@ def verify_gridfunction_basename_is_valid(gf_basename):
         print(" Gridfunctions with base names ending in an integer is forbidden; pick a new name.")
         sys.exit(1)
 
+def get_centering(gf_name):
+    return gf_centering.get(gf_name,None)
+
 import sys
 def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_infinity=None, wavespeed=None, centering=None, external_module=None):
+    global gf_centering
+
     # Step 0: Sanity check
     if (rank > 0 and not is_indexed) or (rank == 0 and is_indexed):
         print("Error: Attempted to register *indexed* gridfunction(s) with rank 0, or *scalar* gridfunctions with rank>0.")
         print("       Gridfunctions = ",gf_names)
         sys.exit(1)
 
+    assert centering is None or type(centering) == str, \
+        f"Centering, if supplied, should be of type str. Type was '{type(centering)}'"
+    if centering is not None:
+        assert len(centering) == DIM, f"len(centering) ({len(centering)}) is not equal to DIM ({DIM})"
+        for c in centering:
+            assert c in "CV", f"Centering should contain only 'C' or 'V'. The letter '{c}' was found."
+
     # Step 1: convert gf_names to a list if it's not already a list
     if not isinstance(gf_names, list):
         gf_namestmp = [gf_names]
         gf_names = gf_namestmp
+
+    for gf_name in gf_names:
+        gf_centering[gf_name] = centering
 
     f_inf = []
     if f_infinity is None:
@@ -219,14 +245,15 @@ def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_inf
             verify_gridfunction_basename_is_valid(gf_names[i])
 
     # Step 3: Verify that gridfunction type is valid.
-    if gf_type not in ('EVOL', 'AUX', 'AUXEVOL','EXTERNAL', 'CORE'):
+    if gf_type not in ('EVOL', 'AUX', 'AUXEVOL', 'EXTERNAL', 'CORE', 'TMP'):
         print("Error in registering gridfunction(s) with unsupported type "+gf_type+".")
         print("Supported gridfunction types include:")
         print("    \"EVOL\": for evolved quantities (i.e., quantities stepped forward in time),")
         print("    \"AUXEVOL\": for auxiliary quantities needed at all points by evolved quantities,")
         print("    \"AUX\": for all other quantities needed at all gridpoints.")
         print("    \"EXTERNAL\": for all quantities defined in other modules.")
-        print("    \"CORE\": for all quantities defined inside CarpetX.")
+        print("    \"CORE\": for all quantities defined inside the CarpetX driver.")
+        print("    \"TMP\": for all temporary quantities defined for CarpetX tiles.")
         sys.exit(1)
 
     if gf_type == "EXTERNAL":
@@ -236,6 +263,10 @@ def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_inf
     if gf_type == "CORE":
         for gf_name in gf_names:
             setsuffix(gf_name, "_core")
+
+    if gf_type == "TMP":
+        for gf_name in gf_names:
+            setsuffix(gf_name, "_tmp")
 
     # Step 4: Check for duplicate grid function registrations. If:
     #         a) A duplicate is found, error out. Otherwise
@@ -295,6 +326,7 @@ def gridfunction_lists():
     auxevol_variables_list = []
     external_variables_list = []
     core_variables_list = []
+    tmp_variables_list = []
     for i in range(len(glb_gridfcs_list)):
         if glb_gridfcs_list[i].gftype == "EVOL":
             evolved_variables_list.append(glb_gridfcs_list[i].name)
@@ -306,6 +338,8 @@ def gridfunction_lists():
             external_variables_list.append(glb_gridfcs_list[i].name)
         if glb_gridfcs_list[i].gftype == "CORE":
            core_variables_list.append(glb_gridfcs_list[i].name)
+        if glb_gridfcs_list[i].gftype == "TMP":
+           tmp_variables_list.append(glb_gridfcs_list[i].name)
 
     # Next we alphabetize the lists
     evolved_variables_list.sort()
@@ -313,11 +347,12 @@ def gridfunction_lists():
     auxevol_variables_list.sort()
     external_variables_list.sort()
     core_variables_list.sort()
+    tmp_variables_list.sort()
 
-    return evolved_variables_list, auxiliary_variables_list, auxevol_variables_list, external_variables_list, core_variables_list
+    return evolved_variables_list, auxiliary_variables_list, auxevol_variables_list, external_variables_list, core_variables_list, tmp_variables_list
 
 def gridfunction_defines():
-    evolved_variables_list, auxiliary_variables_list, auxevol_variables_list, external_variables_list, core_variables_list  = gridfunction_lists()
+    evolved_variables_list, auxiliary_variables_list, auxevol_variables_list, external_variables_list, core_variables_list, tmp_variables_list  = gridfunction_lists()
 
     outstr  = """// EVOLVED VARIABLES:
 #define NUM_EVOL_GFS """ + str(len(evolved_variables_list)) + "\n"
