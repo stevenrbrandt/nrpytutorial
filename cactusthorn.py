@@ -296,24 +296,25 @@ class CactusThorn:
     def add_func(self, name, body, schedule_bin, doc):
         centering = None
         self._add_src(name + ".cc")
-        writegfs = sortedset()
-        readgfs = sortedset()
-        tmps = sortedset()
+        writegfs = set()
+        readgfs = set()
+        tmps = set()
         has_fd = False
         if type(body)==list:
             new_body = []
             use_fd_output = False
             for item in body:
                 assert type(item) == lhrh, "Equations should be stored in outputC.lhrh objects."
-
+                writem = str(item.lhs)
+                if grid.find_gftype(writem,die=False) == "TMP":
+                    tmps.add(writem)
+                else:
+                    writegfs.add(writem)
                 if hasattr(item.rhs, "free_symbols"):
                     for sym in item.rhs.free_symbols:
                         rdsym = str(sym)
-                        gftype = grid.find_gftype(rdsym,die=False)
-                        if gftype == "TILE_TMP":
+                        if grid.find_gftype(rdsym,die=False) == "TMP":
                             tmps.add(rdsym)
-                            continue
-                        elif gftype == "SCALAR_TMP":
                             continue
                         # Check if the symbol name is a derivative
                         g = re.match(r'(.*)_dD+\d+$', rdsym)
@@ -330,100 +331,34 @@ class CactusThorn:
 
             assert centering is not None, "The centering for loop '{name}' is none"
             body = new_body
-            kernel = fin.FD_outputC("returnstring",body)
-            decl = ""
-            if gri.ET_driver == "Carpet":
-                if where == "interior":
-                    body = f"""
-                    {decl}
-                    for(int i2=cctk_nghostzones[2];i2<cctk_lsh[2]-cctk_nghostzones[2];i2++) {{
-                    for(int i1=cctk_nghostzones[1];i1<cctk_lsh[1]-cctk_nghostzones[1];i1++) {{
-                    for(int i0=cctk_nghostzones[0];i0<cctk_lsh[0]-cctk_nghostzones[0];i0++) {{
-                    {kernel}
-                    }} }} }}
-                    """.strip()
-                elif where == "everywhere":
-                    body = f"""
-                    {decl}
-                    for(int i2=0;i2<cctk_lsh[2];i2++) {{
-                    for(int i1=0;i1<cctk_lsh[1];i1++) {{
-                    for(int i0=0;i0<cctk_lsh[0];i0++) {{
-                    {kernel}
-                    }} }} }}
-                    """.strip()
-                elif where == "boundary":
-                    body = f"""
-                    {decl}
-                    for(int i2=0;i2<cctk_nghostzones[2];i2++) {{
-                    for(int i1=0;i1<cctk_lsh[1];i1++) {{
-                    for(int i0=0;i0<cctk_lsh[0];i0++) {{
-                    {kernel}
-                    }} }} }}
-                    for(int i2=0;i2<cctk_lsh[2];i2++) {{
-                    for(int i1=0;i1<cctk_nghostzones[1];i1++) {{
-                    for(int i0=0;i0<cctk_lsh[0];i0++) {{
-                    {kernel}
-                    }} }} }}
-                    for(int i2=0;i2<cctk_lsh[2];i2++) {{
-                    for(int i1=0;i1<cctk_lsh[1];i1++) {{
-                    for(int i0=0;i0<cctk_nghostzones[0];i0++) {{
-                    {kernel}
-                    }} }} }}
-                     
-                    for(int i2=cctk_lsh[2]-cctk_nghostzones[2];i2<cctk_lsh[2];i2++) {{
-                    for(int i1=0;i1<cctk_lsh[1];i1++) {{
-                    for(int i0=0;i0<cctk_lsh[0];i0++) {{
-                    {kernel}
-                    }} }} }}
-                    for(int i2=0;i2<cctk_lsh[2];i2++) {{
-                    for(int i1=cctk_lsh[1]-cctk_nghostzones[1];i1<cctk_lsh[1];i1++) {{
-                    for(int i0=0;i0<cctk_lsh[0];i0++) {{
-                    {kernel}
-                    }} }} }}
-                    for(int i2=0;i2<cctk_lsh[2];i2++) {{
-                    for(int i1=0;i1<cctk_lsh[1];i1++) {{
-                    for(int i0=cctk_lsh[0]-cctk_nghostzones[0];i0<cctk_lsh[0];i0++) {{
-                    {kernel}
-                    }} }} }}
-                    """.strip()
+            #if use_fd_output:
+            new_body = []
+            body_str = ""
+            for i in range(len(body)+1):
+                if i == len(body) or (body[i].lhs is None and body[i].rhs is None):
+                    if len(new_body) > 0:
+                        body_str += self.do_body(new_body,where,centering) + "\n"
+                    new_body = []
                 else:
-                    assert False, f"where={where} is not suppprted"
-            elif gri.ET_driver == "CarpetX":
-                if where == 'everywhere':
-                    wtag = 'all'
-                elif where == 'interior':
-                    wtag = 'int'
-                elif where == 'boundary':
-                    wtag = 'bnd'
-                else:
-                    assert False, "where should be in ['interior', 'everywhere', 'boundary']"
-                #TODO: need to decide how to do loops with centering other than VVV
-                body = f"""
-                {decl}
-                grid.loop_int_device<CCC_centered[0], CCC_centered[1], CCC_centered[2]>(
-                grid.nghostzones, [=] CCTK_DEVICE CCTK_HOST(
-                const PointDesc &p) CCTK_ATTRIBUTE_ALWAYS_INLINE {{
-                {kernel}
-                }}
-                """.strip()
+                    new_body += [body[i]]
         elif type(body)==str:
             # Pass the body through literally
             pass
         else:
             assert False, "Body must be list or str"
 
-        centerings_used = sortedset()
+        centerings_used = set()
         for gf in readgfs:
             gtype = grid.find_gftype(gf,die=False)
-            c = grid.find_centering(gf)
+            c = grid.get_centering(gf)
             if gtype in ["AUX","EVOL","AUXEVOL"] and centering is not None:
                 centerings_used.add(c)
         for gf in writegfs:
             gtype = grid.find_gftype(gf,die=False)
-            c = grid.find_centering(gf)
+            c = grid.get_centering(gf)
             if gtype in ["AUX","EVOL","AUXEVOL"] and centering is not None:
                 centerings_used.add(c)
-        centerings_needed = sortedset()
+        centerings_needed = set()
         centerings_needed.add(centering)
         layout_decls = ""
         for c in centerings_needed:
@@ -432,51 +367,34 @@ class CactusThorn:
                 layout_decls += f" CCTK_CENTERING_LAYOUT({c},({{ {nums} }})); "
         tmp_centerings = {}
         for gf in tmps:
-            c = grid.find_centering(gf)
+            c = grid.get_centering(gf)
             if c not in tmp_centerings:
-                tmp_centerings[c] = sortedset()
+                tmp_centerings[c] = set()
             tmp_centerings[c].add(gf)
-        if grid.ET_driver == "CarpetX":
-            if where == 'interior':
-                layout_decls += f"  // Allocate temporary grid functions without ghost zones\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVV_tmp_layout(cctkGH, {{0,0,0}}, {{0,0,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_tmp_layout(cctkGH, {{0,0,1}}, {{0,0,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCV_tmp_layout(cctkGH, {{0,1,0}}, {{0,0,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCC_tmp_layout(cctkGH, {{0,1,1}}, {{0,0,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVV_tmp_layout(cctkGH, {{1,0,0}}, {{0,0,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVC_tmp_layout(cctkGH, {{1,0,1}}, {{0,0,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCV_tmp_layout(cctkGH, {{1,1,0}}, {{0,0,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_tmp_layout(cctkGH, {{1,1,1}}, {{0,0,0}});\n"
-            else:
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVV_tmp_layout(cctkGH, {{0,0,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_tmp_layout(cctkGH, {{0,0,1}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCV_tmp_layout(cctkGH, {{0,1,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCC_tmp_layout(cctkGH, {{0,1,1}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVV_tmp_layout(cctkGH, {{1,0,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVC_tmp_layout(cctkGH, {{1,0,1}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCV_tmp_layout(cctkGH, {{1,1,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_tmp_layout(cctkGH, {{1,1,1}});\n"
+        for c in tmp_centerings:
+            nums = ",".join(["1" if n in ["c","C"] else "0" for n in c])
+            layout_decls += f" const GF3D5layout {c}_tmp_layout(cctkGH,{{ {nums} }}); "
 
         tmp_decls = ""
         for c in tmp_centerings:
             ctmps = tmp_centerings[c]
-            tmp_decls=f"  const GF3D5vector<CCTK_REAL> tiles_{c}({c}_tmp_layout, {len(ctmps)});\n"
+            tmp_decls=f"const GF3D5vector<CCTK_REAL> tiles_{c}({c}_tmp_layout, {len(ctmps)}); "
             tmp_list = sorted(list(ctmps))
             for ix in range(len(tmp_list)):
-                tname = tmp_list[ix]
-                c = grid.find_centering(tname)
-                tmp_decls += f"  const GF3D5 {tname}(tiles_{c}({ix}));\n"
+                name = tmp_list[ix]
+                c = grid.get_centering(name)
+                tmp_decls += f" GF3D5 {name}(tiles_{c}({ix})); "
 
         body_str = layout_decls + tmp_decls + body_str
 
-        func = CactusFunc(name, body_str, schedule_bin, doc, centering)
+        func = CactusFunc(name, body_str, schedule_bin, doc)
         self.last_src_file.add_func(func, where)
         func.readgfs = readgfs
         func.writegfs = writegfs
 
     def do_body(self, body, where, centering):
             # idxs is a list of integer offsets for stencils used by the FD routine
-            idxs = sortedset()
+            idxs = set()
             kernel = fin.FD_outputC("returnstring",body,idxs=idxs)
             # Compute the max offset from 0 for the stencils
             maxx = 0
@@ -567,7 +485,7 @@ class CactusThorn:
                 body = f"""
   {decl}
   {checkbounds}
-  grid.loop_{wtag}_device<{centering}_centered[0], {centering}_centered[1], {centering}_centered[2], CCTK_VECSIZE>(
+  grid.loop_{wtag}_device<{centering}_centered[0], {centering}_centered[1], {centering}_centered[2]>(
   grid.nghostzones, [=] CCTK_DEVICE (
   const PointDesc &p) CCTK_ATTRIBUTE_ALWAYS_INLINE {{
   const GF3D5index CCTK_ATTRIBUTE_UNUSED {centering}_index({centering}_layout, p.I);
@@ -603,13 +521,9 @@ class CactusThorn:
             thorn = self.thornname
         for gf_name in gf_names:
             self.gf_names[gf_name] = thorn
-            if centering is not None:
-                self.centering[gf_name] = centering
-            else:
-                self.centering[gf_name] = "CCC" #TODO: should it be a default or an error?
         if external_module is not None:
             self.external_modules += [external_module]
-        return grid.register_gridfunctions(gtype, gf_names, external_module=external_module)
+        return grid.register_gridfunctions(gtype, gf_names, external_module=external_module,centering=centering)
 
     def __init__(self, arrangement, thornname, author=None, email=None, license='BSD'):
         self.sync = {}
@@ -621,7 +535,6 @@ class CactusThorn:
         self.src_files = {}
         self.last_src_file = None
         self.params = []
-        self.centering = {}
         self.external_modules = []
 
         self.param_ccl = os.path.join(self.thorn_dir, "param.ccl")
@@ -724,21 +637,57 @@ class CactusThorn:
                 print(f"implements: {self.thornname}",file=fd)
                 print(f"inherits: {', '.join(self.external_modules)}",file=fd)
                 for gf_name in self.gf_names:
+                    #TODO: change lines with "if gf_name in ["x","y","z"]:" to check if gftype=="CORE"
+                    if gf_name in ["x","y","z"]:
+                        continue
+                    if grid.find_gftype(gf_name,die=False) == "TMP":
+                        continue
+
+                    rhs=gf_name + "_rhs"
+                    if re.match(r'.*_rhs',gf_name):
+                        tag = "TAGS='checkpoint=\"no\"'"
+                        rhs_pairs.add(gf_name)
+                    elif rhs in self.gf_names:
+                        tag = f"TAGS='rhs=\"{self.thornname}::{rhs}GF\"' "
+                    else:
+                        tag = ""
+
                     if self.gf_names[gf_name] == self.thornname:
-                        print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=3 CENTERING={{ {self.centering[gf_name]} }} {{ {gf_name}GF }} "{gf_name}"', file=fd)
-            with open(self.schedule_ccl,"w") as fd:
+                        if grid.ET_driver == "Carpet":
+                            print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=3 {{ {gf_name}GF }} "{gf_name}"', file=fd)
+                        elif grid.ET_driver == "CarpetX":
+                            # CarpetX does not use sub-cycling in time, so it only needs one time level
+                            print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=1 {tag} CENTERING={{ {grid.get_centering(gf_name)} }} {{ {gf_name}GF }} "{gf_name}"', file=fd)
+
+            if grid.ET_driver == "Carpet":
+                with SafeWrite(self.register_cc,do_format=True) as fd:
+                    print(f"""
+#include "cctk.h"
+#include "cctk_Arguments.h"
+#include "cctk_Functions.h"
+#include "cctk_Parameters.h"
+
+void {self.thornname}_RegisterVars(CCTK_ARGUMENTS)
+{{
+  DECLARE_CCTK_ARGUMENTS_{self.thornname}_RegisterVars;
+  DECLARE_CCTK_PARAMETERS;
+  int ierr, var, rhs;""".strip(),file=fd)
+                    for rhs_var in rhs_pairs:
+                        var = rhs_var[:-4]
+                        assert var + "_rhs" == rhs_var
+                        print("   ",f"""
+  var   = CCTK_VarIndex("{self.thornname}::{var}GF");
+  rhs   = CCTK_VarIndex("{self.thornname}::{rhs_var}GF");
+  ierr += MoLRegisterEvolved(var, rhs);
+                        """.strip(),file=fd)
+                    print("}",file=fd)
+            with SafeWrite(self.schedule_ccl) as fd:
                 print(f"# Schedule definitions for thorn {self.thornname}",file=fd)
                 for gf_name in self.gf_names:
                     if grid.ET_driver == "CarpetX" and gf_name in ["x","y","z"]:
                         continue
-                    storage_written = sortedset()
-                    module = grid.find_gfmodule(gf_name)
-                    if module is None or module == self.thornname:
-                        gf_group = ixp.rev_index_group.get(gf_name, gf_name)
-                        if gf_group in storage_written:
-                            continue
-                        storage_written.add(gf_group)
-                        if grid.find_gftype(gf_name,die=False) in ["TILE_TMP","SCALAR_TMP"]:
+                    if self.gf_names[gf_name] == self.thornname:
+                        if grid.find_gftype(gf_name,die=False) == "TMP":
                             continue
                         if grid.ET_driver == "Carpet":
                             print(f"STORAGE: {gf_group}GF[3]", file=fd)
@@ -835,7 +784,8 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                         if gri.ET_driver is "Carpet":
                             print(f"  DECLARE_CCTK_ARGUMENTS_{func.name};",file=fd)
                         elif gri.ET_driver == "CarpetX":
-                            print(f"  DECLARE_CCTK_ARGUMENTSX_{func.name}; /* xzx */",file=fd)
+                            print(f"  DECLARE_CCTK_ARGUMENTSX_{func.name};",file=fd)
+                            print( "auto DI = PointDesc::DI;",file=fd)
                         print( "  DECLARE_CCTK_PARAMETERS;",file=fd)
                         print(f"  std::cout << \"Callling {func.name}!!!\" << std::endl;",file=fd)
                         for ii in range(3):
