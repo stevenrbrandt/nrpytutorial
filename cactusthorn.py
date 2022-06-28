@@ -324,9 +324,9 @@ class CactusThorn:
             tmp_decls=f"const GF3D5vector<CCTK_REAL> tiles_{c}({c}_tmp_layout, {len(ctmps)}); "
             tmp_list = sorted(list(ctmps))
             for ix in range(len(tmp_list)):
-                name = tmp_list[ix]
-                c = grid.get_centering(name)
-                tmp_decls += f" GF3D5 {name}(tiles_{c}({ix})); "
+                tname = tmp_list[ix]
+                c = grid.get_centering(tname)
+                tmp_decls += f" GF3D5 {tname}(tiles_{c}({ix})); "
 
         body_str = layout_decls + tmp_decls + body_str
 
