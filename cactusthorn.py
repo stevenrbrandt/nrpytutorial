@@ -456,15 +456,12 @@ class CactusThorn:
             thorn = external_module
         else:
             thorn = self.thornname
-        for gf_name in gf_names:
-            self.gf_names[gf_name] = thorn
         if external_module is not None:
             self.external_modules += [external_module]
         return grid.register_gridfunctions(gtype, gf_names, external_module=external_module,centering=centering)
 
     def __init__(self, arrangement, thornname, author=None, email=None, license='BSD'):
         self.ET_driver = grid.ET_driver
-        self.gf_names = {}
         self.arrangement = arrangement
         self.thornname = thornname
         self.thorn_dir = os.path.join("arrangements", self.arrangement, self.thornname)
@@ -517,7 +514,9 @@ class CactusThorn:
             self.email = os.environ['USER']
 
     def get_full_name(self,gf_name):
-        gfthorn = self.gf_names[gf_name]
+        gfthorn = grid.find_gfmodule(gf_name,die=False)
+        if gfthorn is None:
+            gfthorn = self.thornname
         if gfthorn == self.thornname:
             return f"{gfthorn}::{gf_name}GF"
         else:
@@ -556,7 +555,8 @@ class CactusThorn:
                 elif gri.ET_driver == "Carpet":
                     print("CCTK_INT FUNCTION MoLRegisterEvolved(CCTK_INT IN EvolvedIndex, CCTK_INT IN RHSIndex)",file=fd)
                     print("USES FUNCTION MoLRegisterEvolved",file=fd)
-                for gf_name in self.gf_names:
+                for gf in grid.glb_gridfcs_map.values():
+                    gf_name = gf.name
                     #TODO: change lines with "if gf_name in ["x","y","z"]:" to check if gftype=="CORE"
                     if gf_name in ["x","y","z"]:
                         continue
@@ -567,12 +567,13 @@ class CactusThorn:
                     if re.match(r'.*_rhs',gf_name):
                         tag = "TAGS='checkpoint=\"no\"'"
                         rhs_pairs.add(gf_name)
-                    elif rhs in self.gf_names:
+                    elif rhs in grid.find_gfnames():
                         tag = f"TAGS='rhs=\"{self.thornname}::{rhs}GF\"' "
                     else:
                         tag = ""
 
-                    if self.gf_names[gf_name] == self.thornname:
+                    module = grid.find_gfmodule(gf_name,die=False)
+                    if module is None or module == self.thornname:
                         if grid.ET_driver == "Carpet":
                             print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=3 {{ {gf_name}GF }} "{gf_name}"', file=fd)
                         elif grid.ET_driver == "CarpetX":
@@ -603,10 +604,11 @@ void {self.thornname}_RegisterVars(CCTK_ARGUMENTS)
                     print("}",file=fd)
             with SafeWrite(self.schedule_ccl) as fd:
                 print(f"# Schedule definitions for thorn {self.thornname}",file=fd)
-                for gf_name in sorted(self.gf_names):
+                for gf_name in sorted(grid.find_gfnames()):
                     if grid.ET_driver == "CarpetX" and gf_name in ["x","y","z"]:
                         continue
-                    if self.gf_names[gf_name] == self.thornname:
+                    module = grid.find_gfmodule(gf_name)
+                    if module is None or module == self.thornname:
                         if grid.find_gftype(gf_name,die=False) == "TMP":
                             continue
                         if grid.ET_driver == "Carpet":
@@ -642,16 +644,16 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                             # The symbols in readgfs might not actually be grid
                             # functions. Make sure that they are registered as
                             # such before generating read/write decls.
-                            if readgf in self.gf_names:
+                            if readgf in grid.find_gfnames():
                                 full_name = self.get_full_name(readgf)
                                 print(f"   READS: {full_name}(everywhere)",file=fd)
                         for writegf in sorted(func.writegfs):
-                            if writegf in self.gf_names:
+                            if writegf in grid.find_gfnames():
                                 full_name = self.get_full_name(writegf)
                                 print(f"   WRITES: {full_name}({src.where})",file=fd)
                         if src.where == "interior":
                             for writegf in func.writegfs:
-                                if writegf in self.gf_names:
+                                if writegf in grid.find_gfnames():
                                     pass #print(f"    SYNC: {full_name}",file=fd)
                         print(f'}} "{func.doc}"',file=fd)
             if not os.path.exists(self.doc_tex):

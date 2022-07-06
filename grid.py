@@ -10,8 +10,14 @@ from collections import namedtuple  # Standard Python `collections` module: defi
 import os                           # Standard Python module for multiplatform OS-level functions
 from suffixes import setsuffix
 
+renames = {}
+
+def rename(n1,n2):
+    renames[n1] = n2
+
 # Initialize globals related to the grid
 ET_driver = ""
+glb_gridfcs_map = {}
 glb_gridfcs_list = []
 glb_gridfc = namedtuple('gridfunction', 'gftype name rank DIM f_infinity wavespeed centering external_module')
 
@@ -41,10 +47,8 @@ Cart_origin = par.Cparameters("REAL", thismodule, ["Cart_originx", "Cart_originy
 Cart_CoM_offset = par.Cparameters("REAL", thismodule, ["Cart_CoM_offsetx", "Cart_CoM_offsety", "Cart_CoM_offsetz"], 0.0)
 
 def variable_type(var):
-    var_is_gf = False
-    for gf in range(len(glb_gridfcs_list)):
-        if str(var) == glb_gridfcs_list[gf].name:
-            var_is_gf = True
+    var_data = glb_gridfcs_map.get(str(var),None)
+    var_is_gf = var_data is not None
     var_is_parameter = False
 #     for paramname in range(len(par.glb_params_list)):
 #         if str(var) == par.glb_params_list[paramname].parname:
@@ -53,39 +57,46 @@ def variable_type(var):
         if str(var) == par.glb_Cparams_list[paramname].parname:
             var_is_parameter = True
     if var_is_parameter and var_is_gf:
-        print("Error: variable "+str(var)+" is registered both as a gridfunction and as a Cparameter.")
-        sys.exit(1)
-    if not (var_is_parameter or var_is_gf):
+        raise Exception("Error: variable "+str(var)+" is registered both as a gridfunction and as a Cparameter.")
+    elif not (var_is_parameter or var_is_gf):
         return "other"
-    if var_is_parameter:
+    elif var_is_parameter:
         return "Cparameter"
-    if var_is_gf:
+    elif var_is_gf:
         return "gridfunction"
-    print(f"grid.py: Could not find variable_type for '{var}'.")
-    sys.exit(1)
+    else:
+        raise Exception(f"grid.py: Could not find variable_type for '{var}'.")
+
+def find_gfnames():
+    return sorted(list(glb_gridfcs_map.keys()))
 
 def find_gftype(varname,die=True):
-    for gf in glb_gridfcs_list:
-        if gf.name == varname:
-            return gf.gftype
-    if die:
-        raise Exception(f"grid.py: Could not find gftype for '{varname}'.")
+    var_data = glb_gridfcs_map.get(varname, None)
+    if var_data is None:
+        if die:
+            raise Exception(f"grid.py: Could not find gftype for '{varname}'.")
+        else:
+            return None
     else:
-        return None
+        return var_data.gftype
+
+def find_gfmodule(varname,die=True):
+    var_data = glb_gridfcs_map.get(varname, None)
+    if var_data is None:
+        if die:
+            raise Exception(f"grid.py: Could not find module for '{varname}'.")
+        else:
+            return None
+    else:
+        return var_data.external_module
 
 def gfaccess(gfarrayname = "", varname = "", ijklstring = ""):
-    found_registered_gf = False
-    for gf in glb_gridfcs_list:
-        if gf.name == varname:
-            if found_registered_gf:
-                print("Error: found duplicate gridfunction name: "+gf.name)
-                sys.exit(1)
-            found_registered_gf = True
+    var_data = glb_gridfcs_map.get(varname, None)
 
-    if not found_registered_gf:
+    if var_data is None:
         raise Exception(f"Error: gridfunction '{varname}' is not registered!")
 
-    gftype = find_gftype(varname)
+    gftype = var_data.gftype
 
     DIM = par.parval_from_str("DIM")
     retstring = ""
@@ -270,14 +281,15 @@ def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_inf
 
     # Step 4: Check for duplicate grid function registrations. If:
     #         a) A duplicate is found, error out. Otherwise
-    #         b) Append to list of gridfunctions, stored in glb_gridfcs_list[].
+    #         b) Add to map of gridfunctions, stored in glb_gridfcs_map
     for i in range(len(gf_names)):
-        for j in range(len(glb_gridfcs_list)):
-            if gf_names[i] == glb_gridfcs_list[j].name:
-                print("Error: Tried to register the gridfunction \""+gf_names[i]+"\" twice (ignored type)\n\n")
-                sys.exit(1)
+        gf_name = gf_names[i]
+        assert gf_name not in glb_gridfcs_map, \
+                f"Error: Tried to register the gridfunction \"{gf_names[i]}\" twice (ignored type)"
         # If no duplicate found, append to "gridfunctions" list:
-        glb_gridfcs_list.append(glb_gridfc(gf_type, gf_names[i], rank, DIM, f_infinity[i], wavespeed[i], centering[i], external_module))
+        var_data = (glb_gridfc(gf_type, gf_name, rank, DIM, f_infinity[i], wavespeed[i], centering[i], external_module))
+        glb_gridfcs_map[gf_name] = var_data
+        glb_gridfcs_list.append(var_data)
 
     # Step 5: Return SymPy object corresponding to symbol or
     #         list of symbols representing gridfunction in
@@ -327,19 +339,23 @@ def gridfunction_lists():
     external_variables_list = []
     core_variables_list = []
     tmp_variables_list = []
-    for i in range(len(glb_gridfcs_list)):
-        if glb_gridfcs_list[i].gftype == "EVOL":
-            evolved_variables_list.append(glb_gridfcs_list[i].name)
-        if glb_gridfcs_list[i].gftype == "AUX":
-            auxiliary_variables_list.append(glb_gridfcs_list[i].name)
-        if glb_gridfcs_list[i].gftype == "AUXEVOL":
-            auxevol_variables_list.append(glb_gridfcs_list[i].name)
-        if glb_gridfcs_list[i].gftype == "EXTERNAL":
-            external_variables_list.append(glb_gridfcs_list[i].name)
-        if glb_gridfcs_list[i].gftype == "CORE":
-           core_variables_list.append(glb_gridfcs_list[i].name)
-        if glb_gridfcs_list[i].gftype == "TMP":
-           tmp_variables_list.append(glb_gridfcs_list[i].name)
+    for gf in glb_gridfcs_map.values():
+        gf_type = gf.gftype
+        gf_name = gf.name
+        if gf_type == "EVOL":
+            evolved_variables_list.append(gf_name)
+        elif gf_type == "AUX":
+            auxiliary_variables_list.append(gf_name)
+        elif gf_type == "AUXEVOL":
+            auxevol_variables_list.append(gf_name)
+        elif gf_type == "EXTERNAL":
+            external_variables_list.append(gf_name)
+        elif gf_type == "CORE":
+           core_variables_list.append(gf_name)
+        elif gf_type == "TMP":
+           tmp_variables_list.append(gf_name)
+        else:
+           raise Exception(f"Bad gftype '{gf_type}'")
 
     # Next we alphabetize the lists
     evolved_variables_list.sort()
@@ -378,29 +394,29 @@ def gridfunction_defines():
     if(len(evolved_variables_list)) > 0:
         outstr += """\n\n// SET gridfunctions_f_infinity[i] = value of gridfunction i in the limit r->infinity:
 static const REAL gridfunctions_f_infinity[NUM_EVOL_GFS] = { """
-        for evol_var in evolved_variables_list:  # This list is sorted; glb_gridfcs_list is not.
+        for evol_var in evolved_variables_list:  # This list is sorted; glb_gridfcs_map is not.
             #                                      We need to preserve the order to ensure consistency with the #defines
-            for i, gf in enumerate(glb_gridfcs_list):
+            for gf in enumerate(glb_gridfcs_map):
                 if gf.name == evol_var and gf.gftype == "EVOL":
-                    outstr += str(glb_gridfcs_list[i].f_infinity) + ", "
+                    outstr += str(gf.f_infinity) + ", "
         outstr = outstr[:-2] + " };\n"
 
         outstr += """\n\n// SET gridfunctions_wavespeed[i] = gridfunction i's characteristic wave speed:
 static const REAL gridfunctions_wavespeed[NUM_EVOL_GFS] = { """
-        for evol_var in evolved_variables_list:  # This list is sorted; glb_gridfcs_list is not.
+        for evol_var in evolved_variables_list:  # This list is sorted; glb_gridfcs_map is not.
             #                                      We need to preserve the order to ensure consistency with the #defines
-            for i, gf in enumerate(glb_gridfcs_list):
+            for gf in glb_gridfcs_map.values():
                 if gf.name == evol_var and gf.gftype == "EVOL":
-                    outstr += str(glb_gridfcs_list[i].wavespeed) + ", "
+                    outstr += str(gf.wavespeed) + ", "
         outstr = outstr[:-2] + " };\n"
 
         outstr += """\n\n// SET gridfunctions_centering[i] = gridfunction i's vertex/cell centering:
 static const REAL gridfunctions_centering[NUM_EVOL_GFS] = { """
-        for evol_var in evolved_variables_list:  # This list is sorted; glb_gridfcs_list is not.
+        for evol_var in evolved_variables_list:  # This list is sorted; glb_gridfcs_map is not.
             #                                      We need to preserve the order to ensure consistency with the #defines
-            for i, gf in enumerate(glb_gridfcs_list):
+            for gf in glb_gridfcs:
                 if gf.name == evol_var and gf.gftype == "EVOL":
-                    outstr += str(glb_gridfcs_list[i].centering) + ", "
+                    outstr += str(gf.centering) + ", "
         outstr = outstr[:-2] + " };\n"
 
     return outstr

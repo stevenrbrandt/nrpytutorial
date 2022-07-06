@@ -323,7 +323,7 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
     if outCparams.CSE_enable == "False":
         # If CSE is disabled:
         for i in range(len(sympyexpr)):
-            outstring += outtypestring + ccode_postproc(sp.ccode(sympyexpr[i], output_varname_str[i],
+            outstring += outtypestring + ccode_postproc(sp.ccode(dosubs(sympyexpr[i]), output_varname_str[i],
                                                                  user_functions=custom_functions_for_SymPy_ccode))+"\n"
     # Step 6b: If CSE enabled, then perform CSE using SymPy and then
     #          resulting C code.
@@ -368,7 +368,7 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
                 outstring += indent + FULLTYPESTRING + str(commonsubexpression[0]) + " = " + \
                              str(expr_convert_to_SIMD_intrins(commonsubexpression[1],map_sym_to_rat,varprefix,outCparams.SIMD_find_more_FMAsFMSs)) + ";\n"
             else:
-                outstring += indent + FULLTYPESTRING + ccode_postproc(sp.ccode(commonsubexpression[1], commonsubexpression[0],
+                outstring += indent + FULLTYPESTRING + ccode_postproc(sp.ccode(dosubs(commonsubexpression[1]), commonsubexpression[0],
                                                                 user_functions=custom_functions_for_SymPy_ccode)) + "\n"
 
         for i, result in enumerate(CSE_results[1]):
@@ -377,7 +377,7 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
                              str(expr_convert_to_SIMD_intrins(result,map_sym_to_rat,varprefix,outCparams.SIMD_find_more_FMAsFMSs)) + ";\n"
             else:
                 result = dosubs(result)
-                outstring += outtypestring+ccode_postproc(sp.ccode(result,output_varname_str[i],
+                outstring += outtypestring+ccode_postproc(sp.ccode(dosubs(result),output_varname_str[i],
                                                                    user_functions=custom_functions_for_SymPy_ccode))+"\n"
         # Complication: SIMD functions require numerical constants to be stored in SIMD arrays
         # Resolution: This function extends lists "SIMD_const_varnms" and "SIMD_const_values",

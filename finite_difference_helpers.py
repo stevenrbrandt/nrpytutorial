@@ -69,7 +69,7 @@ def generate_list_of_deriv_vars_from_lhrh_sympyexpr_list(sympyexpr_list,FDparams
                     print("in NRPy+ as either a gridfunction or Cparameter, by calling")
                     print(str(var)+" = register_gridfunctions...() (in ixp/grid) if \""+str(var)+"\" is a gridfunction, or")
                     print(str(var)+" = Cparameters() (in par) otherwise (e.g., if it is a free parameter set at C runtime).")
-                    sys.exit(1)
+                    raise Exception()
     list_of_deriv_vars = superfast_uniq(list_of_deriv_vars_with_duplicates)
 
     # Upwinding with respect to a control vector: algorithm description.
