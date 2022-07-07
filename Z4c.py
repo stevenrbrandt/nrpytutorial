@@ -30,9 +30,7 @@ import sympy as sp
 def ixnam(i):
     return ["x","y","z"][i]
 
-def namefun(symbol, index, shape,prefix):
-    #result = [sp.Symbol(symbol + ''.join(str(n) for n in index + [i]))
-    #        if symbol else sp.sympify(0) for i in range(shape[0])]
+def namefun(symbol, index, shape, prefix):
     symbol = prefix
     result = [sp.Symbol(symbol + ''.join(ixnam(n) for n in index + [i]))
             if symbol else sp.sympify(0) for i in range(shape[0])]
@@ -70,7 +68,7 @@ alphaG_rhs = thorn.register_gridfunctions("AUX", ["alphaG_rhs"], centering=cente
 betaGU_rhs = ixp.register_gridfunctions_for_single_rank1("AUX", "betaGU_rhs", centering=centering)
 
 dchi = ixp.register_gridfunctions_for_single_rank1("TMP", "dchi", centering=centering)
-dgammatildeDDD = ixp.register_gridfunctions_for_single_rank3("TMP", "dgammatildeDDD", "sym01", centering=centering)
+dgammatildeDDD = ixp.register_gridfunctions_for_single_rankN(3,"TMP", "dgammatildeDDD", "sym01", centering=centering)
 
 def flatten(lists):
     return sum(lists, [])

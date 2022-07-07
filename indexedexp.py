@@ -312,34 +312,41 @@ def register_gridfunctions_for_single_rank2(gf_type, gf_basename, symmetry_optio
     # Step 3: Return array of SymPy variables
     return IDX_OBJ_TMP
 
-def register_gridfunctions_for_single_rank3(gf_type, gf_basename, symmetry_option, DIM=-1, f_infinity=0.0, wavespeed=1.0,external_module=None,centering=None):
+def make_gf_set(gf_set, rank, IDX_TMP_OBJ, DIM):
+    """
+    Called by register_gridfunctions_for_single_rankN to
+    generate a list of gridfunction names.
+    """
+    if rank == 0:
+        gf_set[str(IDX_TMP_OBJ)] = 1
+        return
+    for d in range(DIM):
+        make_gf_set(gf_set, rank-1, IDX_TMP_OBJ[d], DIM)
+
+def register_gridfunctions_for_single_rankN(rank, gf_type, gf_basename, symmetry_option, DIM=-1, f_infinity=0.0, wavespeed=1.0,external_module=None,centering=None,namefun=None):
+
     # Step 0: Verify the gridfunction basename is valid:
     gri.verify_gridfunction_basename_is_valid(gf_basename)
 
     # Step 1: Declare a list of lists of SymPy variables,
     #         where IDX_OBJ_TMP[i][j] = gf_basename+str(i)+str(j)
-    IDX_OBJ_TMP = declarerank3(gf_basename,symmetry_option, DIM)
+    IDX_OBJ_TMP = declare_indexedexp(rank=3, symbol=gf_basename, symmetry=symmetry_option, dimension=DIM)
 
     # Step 2: register each gridfunction, being careful not
     #         not to store duplicates due to rank-2 symmetries.
     if DIM==-1:
         DIM = par.parval_from_str("DIM")
-    # Register only unique gridfunctions. Otherwise
-    # rank-2 symmetries might result in duplicates
-    # Use a hash as a set. Hash has deterministic order.
+
+    # Step 3: generate the list of grid function names
     gf_set = {}
-    for i in range(DIM):
-        for j in range(DIM):
-            for k in range(DIM):
-                gf_set[str(IDX_OBJ_TMP[i][j][k])]=1
+    make_gf_set(gf_set,rank,IDX_OBJ_TMP,DIM)
+    gf_list = list(gf_set.keys())
 
-    gf_list = list(gf_set)
-
-    gri.register_gridfunctions(gf_type, gf_list, rank=3, is_indexed=True, DIM=DIM,
+    gri.register_gridfunctions(gf_type, gf_list, rank=rank, is_indexed=True, DIM=DIM,
                                f_infinity=f_infinity, wavespeed=wavespeed,
                                external_module=external_module, centering=centering)
 
-    # Step 3: Return array of SymPy variables
+    # Step 4: Return array of SymPy variables
     return IDX_OBJ_TMP
 
 def declarerank3(symbol, symmetry, DIM=-1):
