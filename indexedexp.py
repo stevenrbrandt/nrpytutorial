@@ -326,11 +326,12 @@ def register_gridfunctions_for_single_rank3(gf_type, gf_basename, symmetry_optio
         DIM = par.parval_from_str("DIM")
     # Register only unique gridfunctions. Otherwise
     # rank-2 symmetries might result in duplicates
-    gf_set = set()
+    # Use a hash as a set. Hash has deterministic order.
+    gf_set = {}
     for i in range(DIM):
         for j in range(DIM):
             for k in range(DIM):
-                gf_set.add(str(IDX_OBJ_TMP[i][j][k]))
+                gf_set[str(IDX_OBJ_TMP[i][j][k])]=1
 
     gf_list = list(gf_set)
 
