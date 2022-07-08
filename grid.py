@@ -139,9 +139,9 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = ""):
                 retstring += varname + "GF" + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
         elif ET_driver == "CarpetX":
             if gfarrayname == "rhs_gfs":
-                return retstring + varname + "_rhsGF" + "(p.I) /** 22 **/"
+                return retstring + varname + "_rhsGF" + "(p.I)"
             elif gftype == "EXTERNAL":
-                return retstring + varname + f"(p.I) /* 11 DIM={str(DIM)} {str(type(DIM))} */"
+                return retstring + varname + f"(p.I)"
             elif gftype == "CORE":
                 return retstring + "p." + varname
             elif gftype == "TMP":
