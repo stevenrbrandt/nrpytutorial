@@ -746,7 +746,6 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                             print(f"  DECLARE_CCTK_ARGUMENTSX_{func.name};",file=fd)
                             print( "auto DI = PointDesc::DI;",file=fd)
                         print( "  DECLARE_CCTK_PARAMETERS;",file=fd)
-                        print(f"  std::cout << \"Callling {func.name}!!!\" << std::endl;",file=fd)
                         for ii in range(3):
                             print(f"  const CCTK_REAL invdx{ii} = 1/CCTK_DELTA_SPACE({ii});",file=fd)
                         print(f"  {func.body}",file=fd)
