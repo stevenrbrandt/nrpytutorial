@@ -9,8 +9,53 @@ import sympy as sp               # SymPy: The Python computer algebra package up
 import sys                       # Standard Python module for multiplatform OS-level functions
 import re                        # Standard Python module for regular expressions
 
+# =====================
+# Things relating to grid function groups.
+# Essentially, the group name is the basename
+# for a rankN tensor.
 index_group = {}
 rev_index_group = {}
+
+def get_group_name(gf_name):
+    if gf_name in rev_index_group:
+        return rev_index_group[gf_name]
+
+    # Assume that if the name is not in the
+    # rev_index_group, then it is in a group
+    # with the same name as the gf
+    assert gf_name in gri.glb_gridfcs_map, f"Not a valid grid function: '{gf_name}'"
+    return gf_name
+
+def get_all_group_names():
+    group_names = {}
+    for gf_group in index_group:
+        group_names[gf_group]=1
+    for gf_name in gri.glb_gridfcs_map:
+        if gf_name not in rev_index_group:
+            group_names[gf_name]=1
+    return group_names
+
+def get_gfnames_for_group(gf_group):
+    if gf_group in index_group:
+        return index_group[gf_group]
+    assert gf_group in gri.glb_gridfcs_map, f"Not a valid grid group: '{gf_group}'"
+    return {gf_group:1}
+
+def find_gftype_for_group(gf_group,die=True):
+    for gf_name in get_gfnames_for_group(gf_group):
+        return gri.find_gftype(gf_name,die=die)
+    return None
+
+def find_gfmodule_for_group(gf_group,die=True):
+    for gf_name in get_gfnames_for_group(gf_group):
+        return gri.find_gfmodule(gf_name,die=die)
+    return None
+
+def find_centering_for_group(gf_group,die=True):
+    for gf_name in get_gfnames_for_group(gf_group):
+        return gri.get_centering(gf_name)
+    return None
+# =====================
 
 thismodule = __name__
 par.initialize_param(par.glb_param("char", thismodule, "symmetry_axes",  ""))
