@@ -87,16 +87,16 @@ eta = thorn.declare_param('eta', default=2.0, doc="eta")
 alphaG_floor = thorn.declare_param('alphaG_floor', default=1.0e-10, vmin=0.0, doc="alphaG_floor")
 chi_floor = thorn.declare_param('chi_floor', default=1.0e-10, vmin=0.0, doc="chi_floor")
 
-gDD = ixp.register_gridfunctions_for_single_rank2("EXTERNAL", "metric", "sym01", centering=centering, external_module="ADMBase", namefun=lambda sym,ind,shape: namefun(sym,ind,shape,"g"))
-KDD = ixp.register_gridfunctions_for_single_rank2("EXTERNAL", "extcurv", "sym01", centering=centering, external_module="ADMBase", namefun=lambda sym,ind,shape: namefun(sym,ind,shape,"k"))
+gDD = ixp.register_gridfunctions_for_single_rankN(2,"EXTERNAL", "metric", "sym01", centering=centering, external_module="ADMBase", namefun=lambda sym,ind,shape: namefun(sym,ind,shape,"g"))
+KDD = ixp.register_gridfunctions_for_single_rankN(2,"EXTERNAL", "extcurv", "sym01", centering=centering, external_module="ADMBase", namefun=lambda sym,ind,shape: namefun(sym,ind,shape,"k"))
 alp = thorn.register_gridfunctions("EXTERNAL", ["alp"], centering=centering, external_module="ADMBase")
 dtalp = thorn.register_gridfunctions("EXTERNAL", ["dtalp"], centering=centering, external_module="ADMBase")
-betaU = ixp.register_gridfunctions_for_single_rank1("EXTERNAL", "shift", centering=centering, external_module="ADMBase", namefun=lambda sym,ind,shape: namefun(sym,ind,shape,"beta"))
-dtbetaU = ixp.register_gridfunctions_for_single_rank1("EXTERNAL", "dtshift", centering=centering, external_module="ADMBase", namefun=lambda sym,ind,shape: namefun(sym,ind,shape,"dtbeta"))
+betaU = ixp.register_gridfunctions_for_single_rankN(1,"EXTERNAL", "shift", centering=centering, external_module="ADMBase", namefun=lambda sym,ind,shape: namefun(sym,ind,shape,"beta"))
+dtbetaU = ixp.register_gridfunctions_for_single_rankN(1,"EXTERNAL", "dtshift", centering=centering, external_module="ADMBase", namefun=lambda sym,ind,shape: namefun(sym,ind,shape,"dtbeta"))
 
 eTtt = thorn.register_gridfunctions("EXTERNAL", ["eTtt"], centering=centering, external_module="TmunuBase")
-eTtiD = ixp.register_gridfunctions_for_single_rank1("EXTERNAL", "eTti", centering=centering, external_module="TmunuBase", namefun=lambda sym,ind,shape: namefun(sym,ind,shape,"eTt"))
-eTijDD = ixp.register_gridfunctions_for_single_rank2("EXTERNAL", "eTtij", "sym01", centering=centering, external_module="TmunuBase", namefun=lambda sym,ind,shape: namefun(sym,ind,shape,"eT"))
+eTtiD = ixp.register_gridfunctions_for_single_rankN(1,"EXTERNAL", "eTti", centering=centering, external_module="TmunuBase", namefun=lambda sym,ind,shape: namefun(sym,ind,shape,"eTt"))
+eTijDD = ixp.register_gridfunctions_for_single_rankN(2,"EXTERNAL", "eTtij", "sym01", centering=centering, external_module="TmunuBase", namefun=lambda sym,ind,shape: namefun(sym,ind,shape,"eT"))
 
 chi = thorn.register_gridfunctions("EVOL", ["chi"], centering=centering)
 gammatildeDD = ixp.register_gridfunctions_for_single_rankN(2,"EVOL", "gammatildeDD", "sym01", centering=centering)
@@ -116,9 +116,9 @@ Theta_rhs = thorn.register_gridfunctions("AUX", ["Theta_rhs"], centering=centeri
 alphaG_rhs = thorn.register_gridfunctions("AUX", ["alphaG_rhs"], centering=centering)
 betaGU_rhs = ixp.register_gridfunctions_for_single_rankN(1,"AUX", "betaGU_rhs", centering=centering)
 
-dchiD = ixp.register_gridfunctions_for_single_rank1("TMP", "dchiD", centering=centering)
+dchiD = ixp.register_gridfunctions_for_single_rankN(1,"TMP", "dchiD", centering=centering)
 dgammatildeDDD = ixp.register_gridfunctions_for_single_rankN(3, "TMP", "dgammatildeDDD", "sym01", centering=centering)
-dalphaGD = ixp.register_gridfunctions_for_single_rank1("TMP", "dalphaGD", centering=centering)
+dalphaGD = ixp.register_gridfunctions_for_single_rankN(1,"TMP", "dalphaGD", centering=centering)
 ddalphaGDD = ixp.register_gridfunctions_for_single_rankN(2, "TMP", "ddalphaGDD", "sym01", centering=centering)
 dbetaGUD = ixp.register_gridfunctions_for_single_rankN(2, "TMP", "dbetaGUD", "", centering=centering)
 
@@ -202,8 +202,9 @@ thorn.add_func("Z4cNRPy_Enforce",
     where='interior',
     schedule_bin="Z4cNRPy_PostStepGroup",
     doc="Enforce constaints",
-    centering=centering,
-    sync="chiGF gammatildeDD00GF gammatildeDD01GF gammatildeDD02GF gammatildeDD11GF gammatildeDD12GF gammatildeDD22GF KhatGF AtildeDD00GF AtildeDD01GF AtildeDD02GF AtildeDD11GF AtildeDD12GF AtildeDD22GF GammatildeU0GF GammatildeU1GF GammatildeU2GF ThetaGF alphaGGF betaGU0GF betaGU1GF betaGU2GF")
+    sync="chiGF gammatildeDDGF KhatGF AtildeDDGF GammatildeUGF ThetaGF alphaGGF betaGUGF",
+    centering=centering
+    )
 
 # Calculate ADM variables
 

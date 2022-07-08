@@ -459,7 +459,7 @@ class CactusThorn:
         else:
             thorn = self.thornname
         if external_module is not None:
-            self.external_modules += [external_module]
+            self.external_modules[external_module]=1
         return grid.register_gridfunctions(gtype, gf_names, external_module=external_module,centering=centering)
 
     def __init__(self, arrangement, thornname, author=None, email=None, license='BSD'):
@@ -472,7 +472,7 @@ class CactusThorn:
         self.src_files = {}
         self.last_src_file = None
         self.params = []
-        self.external_modules = []
+        self.external_modules = {}
 
         self.param_ccl = os.path.join(self.thorn_dir, "param.ccl")
         self.interface_ccl = os.path.join(self.thorn_dir, "interface.ccl")
@@ -564,7 +564,7 @@ class CactusThorn:
             with SafeWrite(self.interface_ccl) as fd:
                 print(f"# Interface definitions for thorn {self.thornname}",file=fd)
                 print(f"IMPLEMENTS: {self.thornname}",file=fd)
-                print(f"INHERITS: {', '.join(self.external_modules)}",file=fd)
+                print(f"INHERITS: {', '.join(list(self.external_modules.keys()))}",file=fd)
                 if gri.ET_driver == "CarpetX":
                     print(f"USES INCLUDE HEADER: loop_device.hxx",file=fd)
                 elif gri.ET_driver == "Carpet":
@@ -685,7 +685,7 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                             for writegf in func.writegfs:
                                 if writegf in grid.find_gfnames():
                                     full_name = self.get_full_group_name(writegf)
-                                    print(f"    SYNC: {full_name}",file=fd)
+                                    pass #print(f"    SYNC: {full_name}",file=fd)
                         sync = self.sync.get(func.name,None)
                         if sync is not None:
                             print(f"    SYNC: {sync}",file=fd)
