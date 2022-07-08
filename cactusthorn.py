@@ -18,7 +18,7 @@ import indexedexp as ixp
 
 today = date.today().strftime("%B %d, %Y")
 
-makefile_init="""
+makefile_init="""\
 # Main make.code.defn file for thorn {thornname}
 
 # Subdirectories containing source files
