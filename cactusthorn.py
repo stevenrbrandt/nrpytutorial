@@ -561,8 +561,8 @@ class CactusThorn:
                         print(f'CCTK_REAL {name} "{doc}" {{ {vmin}:{vmax} :: "" }} {default}', file=fd)
             with SafeWrite(self.interface_ccl) as fd:
                 print(f"# Interface definitions for thorn {self.thornname}",file=fd)
-                print(f"implements: {self.thornname}",file=fd)
-                print(f"inherits: {', '.join(self.external_modules)}",file=fd)
+                print(f"IMPLEMENTS: {self.thornname}",file=fd)
+                print(f"INHERITS: {', '.join(self.external_modules)}",file=fd)
                 if gri.ET_driver == "CarpetX":
                     print(f"USES INCLUDE HEADER: loop_device.hxx",file=fd)
                 elif gri.ET_driver == "Carpet":
@@ -600,7 +600,7 @@ class CactusThorn:
                         gfs = ixp.index_group.get(gf_name,[gf_name])
                         gfs_str = "GF, ".join(list(gfs))
                         if grid.ET_driver == "Carpet":
-                            print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=3 {{ {gfs_str}GF }} "{gf_name}"', file=fd)
+                            print(f'REAL {gf_name}GF TYPE=gf TIMELEVELS=3 {{ {gfs_str}GF }} "{gf_name}"', file=fd)
                         elif grid.ET_driver == "CarpetX":
                             # CarpetX does not use sub-cycling in time, so it only needs one time level
                             _centering = grid.get_centering(gf_name)
@@ -608,7 +608,7 @@ class CactusThorn:
                                 _centering = ''
                             else:
                                 _centering=f"CENTERING={{ {_centering} }}"
-                            print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=1 {tag} {_centering} {{ {gfs_str}GF }} "{gf_name}"', file=fd)
+                            print(f'REAL {gf_name}GF TYPE=gf TIMELEVELS=1 {tag} {_centering} {{ {gfs_str}GF }} "{gf_name}"', file=fd)
 
             if grid.ET_driver == "Carpet":
                 with SafeWrite(self.register_cc,do_format=True) as fd:
@@ -647,9 +647,9 @@ void {self.thornname}_RegisterVars(CCTK_ARGUMENTS)
                         if grid.find_gftype(gf_name,die=False) == "TMP":
                             continue
                         if grid.ET_driver == "Carpet":
-                            print(f"storage: {gf_group}GF[3]", file=fd)
+                            print(f"STORAGE: {gf_group}GF[3]", file=fd)
                         else:
-                            print(f"storage: {gf_group}GF[1]", file=fd)
+                            print(f"STORAGE: {gf_group}GF[1]", file=fd)
                 if grid.ET_driver == "Carpet":
                     print(f"""
 schedule {self.thornname}_RegisterVars in MoL_Register
