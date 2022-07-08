@@ -354,9 +354,9 @@ class CactusThorn:
             # Generate code to check the stencils
             # have enough ghost zones
             checkbounds = f"""
-  if(cctk_nghostzones[0] < {maxx}) CCTK_Error(__LINE__,__FILE__,"{self.thornname}","cctk_nghostzones[0] should be at least {maxx}");
-  if(cctk_nghostzones[1] < {maxy}) CCTK_Error(__LINE__,__FILE__,"{self.thornname}","cctk_nghostzones[1] should be at least {maxy}");
-  if(cctk_nghostzones[2] < {maxz}) CCTK_Error(__LINE__,__FILE__,"{self.thornname}","cctk_nghostzones[2] should be at least {maxz}");"""
+  if(cctk_nghostzones[0] < {maxx}) CCTK_ERROR("cctk_nghostzones[0] should be at least {maxx}");
+  if(cctk_nghostzones[1] < {maxy}) CCTK_ERROR("cctk_nghostzones[1] should be at least {maxy}");
+  if(cctk_nghostzones[2] < {maxz}) CCTK_ERROR("cctk_nghostzones[2] should be at least {maxz}");"""
             decl = ""
             if gri.ET_driver == "Carpet":
                 if where == "interior":
