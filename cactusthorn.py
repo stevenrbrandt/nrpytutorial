@@ -666,13 +666,14 @@ schedule {self.thornname}_RegisterVars in MoL_Register
 
                     for func in src.funcs:
                         print(file=fd)
-                        # TODO: Add the other special bins here
-                        if func.schedule_bin.lower() in ["initial"]:
-                            atin = "at"
+                        # We split the `schedule_bin` to allow conditions such as "initial AFTER ADMBase_Initial"
+                        if func.schedule_bin.split()[0].lower() in [
+                            "basegrid", "initial", "postinitial", "prestep", "evol", "poststep", "analysis"]:
+                            atin = "AT"
                         else:
-                            atin = "in"
-                        print(f"schedule {func.name} {atin} {func.schedule_bin} {{",file=fd)
-                        print(f"   LANG: C",file=fd)
+                            atin = "IN"
+                        print(f"SCHEDULE {func.name} {atin} {func.schedule_bin} {{",file=fd)
+                        print(f"    LANG: C",file=fd)
                         for readgf in sorted(func.readgfs):
                             if grid.ET_driver == "CarpetX" and readgf in ["x","y","z"]:
                                 continue
