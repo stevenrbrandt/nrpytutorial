@@ -36,7 +36,7 @@ def namefun(symbol, index, shape, prefix):
             if symbol else sp.sympify(0) for i in range(shape[0])]
     return result
 
-gDD = ixp.register_gridfunctions_for_single_rank2("EXTERNAL", "metric", "sym01", centering=centering, external_module="ADMBase",namefun=lambda sym,ind,shape: namefun(sym,ind,shape,"g"))
+gDD = ixp.register_gridfunctions_for_single_rankN(2,"EXTERNAL", "metric", "sym01", centering=centering, external_module="ADMBase",namefun=lambda sym,ind,shape: namefun(sym,ind,shape,"g"))
 
 d = ["x","y","z"]
 for i in range(3):
@@ -45,29 +45,29 @@ for i in range(3):
         n2 = f"g{d[i]}{d[j]}"
         grid.rename(n1,n2)
 
-KDD = ixp.register_gridfunctions_for_single_rank2("EXTERNAL", "extcurv", "sym01", centering=centering, external_module="ADMBase",namefun=lambda sym,ind,shape: namefun(sym,ind,shape,"k"))
+KDD = ixp.register_gridfunctions_for_single_rankN(2,"EXTERNAL", "extcurv", "sym01", centering=centering, external_module="ADMBase",namefun=lambda sym,ind,shape: namefun(sym,ind,shape,"k"))
 alp = thorn.register_gridfunctions("EXTERNAL", ["alp"], centering=centering, external_module="ADMBase")
-betaU = ixp.register_gridfunctions_for_single_rank1("EXTERNAL", "shift", centering=centering, external_module="ADMBase",namefun=lambda sym,ind,shape: namefun(sym,ind,shape,"beta"))
+betaU = ixp.register_gridfunctions_for_single_rankN(1,"EXTERNAL", "shift", centering=centering, external_module="ADMBase",namefun=lambda sym,ind,shape: namefun(sym,ind,shape,"beta"))
 
 chi = thorn.register_gridfunctions("EVOL", ["chi"], centering=centering)
-gammatildeDD = ixp.register_gridfunctions_for_single_rank2("EVOL", "gammatildeDD", "sym01", centering=centering)
+gammatildeDD = ixp.register_gridfunctions_for_single_rankN(2,"EVOL", "gammatildeDD", "sym01", centering=centering)
 Khat = thorn.register_gridfunctions("EVOL", ["Khat"], centering=centering)
-AtildeDD = ixp.register_gridfunctions_for_single_rank2("EVOL", "AtildeDD", "sym01", centering=centering)
-GammatildeU = ixp.register_gridfunctions_for_single_rank1("EVOL", "GammatildeU", centering=centering)
+AtildeDD = ixp.register_gridfunctions_for_single_rankN(2,"EVOL", "AtildeDD", "sym01", centering=centering)
+GammatildeU = ixp.register_gridfunctions_for_single_rankN(1,"EVOL", "GammatildeU", centering=centering)
 Theta = thorn.register_gridfunctions("EVOL", ["Theta"], centering=centering)
 alphaG = thorn.register_gridfunctions("EVOL", ["alphaG"], centering=centering)
-betaGU = ixp.register_gridfunctions_for_single_rank1("EVOL", "betaGU", centering=centering)
+betaGU = ixp.register_gridfunctions_for_single_rankN(1,"EVOL", "betaGU", centering=centering)
 
 chi_rhs = thorn.register_gridfunctions("AUX", ["chi_rhs"], centering=centering)
-gammatildeDD_rhs = ixp.register_gridfunctions_for_single_rank2("AUX", "gammatildeDD_rhs", "sym01", centering=centering)
+gammatildeDD_rhs = ixp.register_gridfunctions_for_single_rankN(2,"AUX", "gammatildeDD_rhs", "sym01", centering=centering)
 Khat_rhs = thorn.register_gridfunctions("AUX", ["Khat_rhs"], centering=centering)
-AtildeDD_rhs = ixp.register_gridfunctions_for_single_rank2("AUX", "AtildeDD_rhs", "sym01", centering=centering)
-GammatildeU_rhs = ixp.register_gridfunctions_for_single_rank1("AUX", "GammatildeU_rhs", centering=centering)
+AtildeDD_rhs = ixp.register_gridfunctions_for_single_rankN(2,"AUX", "AtildeDD_rhs", "sym01", centering=centering)
+GammatildeU_rhs = ixp.register_gridfunctions_for_single_rankN(1,"AUX", "GammatildeU_rhs", centering=centering)
 Theta_rhs = thorn.register_gridfunctions("AUX", ["Theta_rhs"], centering=centering)
 alphaG_rhs = thorn.register_gridfunctions("AUX", ["alphaG_rhs"], centering=centering)
-betaGU_rhs = ixp.register_gridfunctions_for_single_rank1("AUX", "betaGU_rhs", centering=centering)
+betaGU_rhs = ixp.register_gridfunctions_for_single_rankN(1,"AUX", "betaGU_rhs", centering=centering)
 
-dchi = ixp.register_gridfunctions_for_single_rank1("TMP", "dchi", centering=centering)
+dchi = ixp.register_gridfunctions_for_single_rankN(1,"TMP", "dchi", centering=centering)
 dgammatildeDDD = ixp.register_gridfunctions_for_single_rankN(3,"TMP", "dgammatildeDDD", "sym01", centering=centering)
 
 def flatten(lists):
@@ -135,7 +135,7 @@ thorn.add_func("Z4c_initial2",
     schedule_bin="initial AFTER Z4c_initial1",
     doc="Convert ADM to Z4c variables, part 2",
     centering=centering,
-    sync="ADMBase::gxx # added")
+    sync="ADMBase::metric # added")
 
 assert "CACTUS_HOME" in os.environ, "Please set the CACTUS_HOME variable to point to your Cactus installation"
 cactus_home = os.environ["CACTUS_HOME"]

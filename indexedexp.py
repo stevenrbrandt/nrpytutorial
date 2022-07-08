@@ -9,6 +9,9 @@ import sympy as sp               # SymPy: The Python computer algebra package up
 import sys                       # Standard Python module for multiplatform OS-level functions
 import re                        # Standard Python module for regular expressions
 
+index_group = {}
+rev_index_group = {}
+
 thismodule = __name__
 par.initialize_param(par.glb_param("char", thismodule, "symmetry_axes",  ""))
 
@@ -323,14 +326,23 @@ def make_gf_set(gf_set, rank, IDX_TMP_OBJ, DIM):
     for d in range(DIM):
         make_gf_set(gf_set, rank-1, IDX_TMP_OBJ[d], DIM)
 
-def register_gridfunctions_for_single_rankN(rank, gf_type, gf_basename, symmetry_option, DIM=-1, f_infinity=0.0, wavespeed=1.0,external_module=None,centering=None,namefun=None):
+def add_index_group(basename, IDX_OBJ_TMP):
+    if type(IDX_OBJ_TMP) == list:
+        for row in IDX_OBJ_TMP:
+            add_index_group(basename, row)
+    else:
+        s = str(IDX_OBJ_TMP)
+        index_group[basename][s] = 1
+        rev_index_group[s] = basename
+
+def register_gridfunctions_for_single_rankN(rank, gf_type, gf_basename, symmetry_option="", DIM=-1, f_infinity=0.0, wavespeed=1.0,external_module=None,centering=None,namefun=None):
 
     # Step 0: Verify the gridfunction basename is valid:
     gri.verify_gridfunction_basename_is_valid(gf_basename)
 
     # Step 1: Declare a list of lists of SymPy variables,
     #         where IDX_OBJ_TMP[i][j] = gf_basename+str(i)+str(j)
-    IDX_OBJ_TMP = declare_indexedexp(rank=3, symbol=gf_basename, symmetry=symmetry_option, dimension=DIM)
+    IDX_OBJ_TMP = declare_indexedexp(rank=rank, symbol=gf_basename, symmetry=symmetry_option, dimension=DIM, namefun=namefun)
 
     # Step 2: register each gridfunction, being careful not
     #         not to store duplicates due to rank-2 symmetries.
@@ -345,6 +357,10 @@ def register_gridfunctions_for_single_rankN(rank, gf_type, gf_basename, symmetry
     gri.register_gridfunctions(gf_type, gf_list, rank=rank, is_indexed=True, DIM=DIM,
                                f_infinity=f_infinity, wavespeed=wavespeed,
                                external_module=external_module, centering=centering)
+
+    assert gf_basename not in index_group, f"Duplicate use of grid function {gf_basename}"
+    index_group[gf_basename] = {}
+    add_index_group(gf_basename, IDX_OBJ_TMP)
 
     # Step 4: Return array of SymPy variables
     return IDX_OBJ_TMP

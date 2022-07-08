@@ -14,6 +14,7 @@ import grid as gri
 import NRPy_param_funcs as par
 from safewrite import SafeWrite
 from sympy.core.symbol import Symbol
+import indexedexp as ixp
 
 today = date.today().strftime("%B %d, %Y")
 
@@ -524,6 +525,16 @@ class CactusThorn:
         else:
             return f"{gfthorn}::{gf_name}"
 
+    def get_full_group_name(self,gf_name):
+        gf_group = ixp.rev_index_group.get(gf_name, gf_name)
+        gfthorn = grid.find_gfmodule(gf_name,die=False)
+        if gfthorn is None:
+            gfthorn = self.thornname
+        if gfthorn == self.thornname:
+            return f"{gfthorn}::{gf_group}GF"
+        else:
+            return f"{gfthorn}::{gf_name}"
+
     def generate(self,dirname=None,cactus_config="sim",cactus_thornlist=None,schedule_raw=""):
         assert self.ET_driver == grid.ET_driver
         rhs_pairs = set()
@@ -557,30 +568,47 @@ class CactusThorn:
                 elif gri.ET_driver == "Carpet":
                     print("CCTK_INT FUNCTION MoLRegisterEvolved(CCTK_INT IN EvolvedIndex, CCTK_INT IN RHSIndex)",file=fd)
                     print("USES FUNCTION MoLRegisterEvolved",file=fd)
+
+                gf_group_names = {}
                 for gf in grid.glb_gridfcs_map.values():
-                    gf_name = gf.name
+                    if gf.name not in ixp.rev_index_group:
+                        gf_group_names[gf.name] = 1
+                for gf_group_name in ixp.index_group:
+                    gf_group_names[gf_group_name]=1
+
+                for gf_name in gf_group_names:
                     #TODO: change lines with "if gf_name in ["x","y","z"]:" to check if gftype=="CORE"
                     if gf_name in ["x","y","z"]:
                         continue
                     if grid.find_gftype(gf_name,die=False) == "TMP":
                         continue
 
+                    #if gf_name in ixp.rev_index_group:
+                    #    continue
+
                     rhs=gf_name + "_rhs"
                     if re.match(r'.*_rhs',gf_name):
                         tag = "TAGS='checkpoint=\"no\"'"
                         rhs_pairs.add(gf_name)
-                    elif rhs in grid.find_gfnames():
+                    elif rhs in gf_group_names:
                         tag = f"TAGS='rhs=\"{self.thornname}::{rhs}GF\"' "
                     else:
                         tag = ""
 
                     module = grid.find_gfmodule(gf_name,die=False)
                     if module is None or module == self.thornname:
+                        gfs = ixp.index_group.get(gf_name,[gf_name])
+                        gfs_str = "GF, ".join(list(gfs))
                         if grid.ET_driver == "Carpet":
-                            print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=3 {{ {gf_name}GF }} "{gf_name}"', file=fd)
+                            print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=3 {{ {gfs_str}GF }} "{gf_name}"', file=fd)
                         elif grid.ET_driver == "CarpetX":
                             # CarpetX does not use sub-cycling in time, so it only needs one time level
-                            print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=1 {tag} CENTERING={{ {grid.get_centering(gf_name)} }} {{ {gf_name}GF }} "{gf_name}"', file=fd)
+                            _centering = grid.get_centering(gf_name)
+                            if _centering is None:
+                                _centering = ''
+                            else:
+                                _centering=f"CENTERING={{ {_centering} }}"
+                            print(f'REAL {gf_name}GF TYPE=GF TIMELEVELS=1 {tag} {_centering} {{ {gfs_str}GF }} "{gf_name}"', file=fd)
 
             if grid.ET_driver == "Carpet":
                 with SafeWrite(self.register_cc,do_format=True) as fd:
@@ -609,14 +637,19 @@ void {self.thornname}_RegisterVars(CCTK_ARGUMENTS)
                 for gf_name in sorted(grid.find_gfnames()):
                     if grid.ET_driver == "CarpetX" and gf_name in ["x","y","z"]:
                         continue
+                    storage_written = set()
                     module = grid.find_gfmodule(gf_name)
                     if module is None or module == self.thornname:
+                        gf_group = ixp.rev_index_group.get(gf_name, gf_name)
+                        if gf_group in storage_written:
+                            continue
+                        storage_written.add(gf_group)
                         if grid.find_gftype(gf_name,die=False) == "TMP":
                             continue
                         if grid.ET_driver == "Carpet":
-                            print(f"storage: {gf_name}GF[3]", file=fd)
+                            print(f"storage: {gf_group}GF[3]", file=fd)
                         else:
-                            print(f"storage: {gf_name}GF[1]", file=fd)
+                            print(f"storage: {gf_group}GF[1]", file=fd)
                 if grid.ET_driver == "Carpet":
                     print(f"""
 schedule {self.thornname}_RegisterVars in MoL_Register
@@ -656,6 +689,7 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                         if src.where == "interior":
                             for writegf in func.writegfs:
                                 if writegf in grid.find_gfnames():
+                                    full_name = self.get_full_group_name(writegf)
                                     print(f"    SYNC: {full_name}",file=fd)
                         sync = self.sync.get(func.name,None)
                         if sync is not None:
