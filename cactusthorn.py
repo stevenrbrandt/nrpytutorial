@@ -744,7 +744,7 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                             print(f"  DECLARE_CCTK_ARGUMENTS_{func.name};",file=fd)
                         elif gri.ET_driver == "CarpetX":
                             print(f"  DECLARE_CCTK_ARGUMENTSX_{func.name};",file=fd)
-                            print( "auto DI = PointDesc::DI;",file=fd)
+                            print( "  constexpr auto DI = PointDesc::DI;",file=fd)
                         print( "  DECLARE_CCTK_PARAMETERS;",file=fd)
                         for ii in range(3):
                             print(f"  const CCTK_REAL invdx{ii} = 1/CCTK_DELTA_SPACE({ii});",file=fd)
