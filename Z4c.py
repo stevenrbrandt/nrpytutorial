@@ -61,6 +61,9 @@ def tensor2(expr):
 def tensor3(expr):
     return [[[expr(i, j, k) for k in range(3)] for j in range(3)] for i in range(3)]
 
+def tensor4(expr):
+    return [[[[expr(i, j, k, l) for l in range(3)] for k in range(3)] for j in range(3)] for i in range(3)]
+
 # TODO: Specify names `gxx` etc.
 def ixnam(i):
     return ["x","y","z"][i]
@@ -117,13 +120,19 @@ alphaG_rhs = thorn.register_gridfunctions("AUX", ["alphaG_rhs"], centering=cente
 betaGU_rhs = ixp.register_gridfunctions_for_single_rankN(1,"AUX", "betaGU_rhs", centering=centering)
 
 dchiD = ixp.register_gridfunctions_for_single_rankN(1,"TMP", "dchiD", centering=centering)
+ddchiDD = ixp.register_gridfunctions_for_single_rankN(2, "TMP", "ddchiDD", "sym01", centering=centering)
 dgammatildeDDD = ixp.register_gridfunctions_for_single_rankN(3, "TMP", "dgammatildeDDD", "sym01", centering=centering)
+ddgammatildeDDDD = ixp.register_gridfunctions_for_single_rankN(4, "TMP", "ddgammatildeDDDD", "sym0123", centering=centering)
+dGammatildeUD = ixp.register_gridfunctions_for_single_rankN(2, "TMP", "dGammatildeUD", "", centering=centering)
 dalphaGD = ixp.register_gridfunctions_for_single_rankN(1,"TMP", "dalphaGD", centering=centering)
 ddalphaGDD = ixp.register_gridfunctions_for_single_rankN(2, "TMP", "ddalphaGDD", "sym01", centering=centering)
 dbetaGUD = ixp.register_gridfunctions_for_single_rankN(2, "TMP", "dbetaGUD", "", centering=centering)
 
 chi_dD = ixp.declarerank1("chi_dD")
+chi_dDD = ixp.declarerank1("chi_dDD")
 gammatildeDD_dD = ixp.declarerank3("gammatildeDD_dD", "sym01")
+gammatildeDD_dDD = ixp.declarerank4("gammatildeDD_dDD", "sym0123")
+GammatildeU_dD = ixp.declarerank2("GammatildeU_dD", "")
 alphaG_dD = ixp.declarerank1("alphaG_dD")
 alphaG_dDD = ixp.declarerank2("alphaG_dDD", "sym01")
 betaGU_dD = ixp.declarerank2("betaGU_dD", "")
@@ -230,7 +239,10 @@ thorn.add_func("Z4cNRPy_ADM",
 AtildeUD = tensor2(lambda i, j: sum1(lambda x: gammatildeUU[i][x] * AtildeDD[x][j]))
 GammaDDD = tensor3(lambda i, j, k: 1/2 * dg1DDD[i][j][k] + dg1DDD[i][k][j] - dg1DDD[j][k][i])
 GammaUDD = tensor3(lambda i, j, k: sum1(lambda x: gUU[i][x] * GammaDDD[x][j][k]))
+DDchiDD = tensor2(lambda i, j: ddchiDD[i][j] - sum1(lambda x: GammaUDD[x][i][j] * dchiD[x]))
+DDchiUD = tensor2(lambda i, j: sum1(lambda x: gammatildeUU[i][x] * DDchiDD[x][j]))
 DDalphaGDD = tensor2(lambda i, j: ddalphaGDD[i][j] - sum1(lambda x: GammaUDD[x][i][j] * dalphaGD[x]))
+DDalphaGUD = tensor2(lambda i, j: sum1(lambda x: gUU[i][x] * DDalphaGDD[x][j]))
 
 rho = 1 / alphaG**2 * (eTtt
                        - 2 * sum1(lambda x: betaGU[x] * eTtiD[x])
@@ -240,6 +252,27 @@ SiD = tensor1(lambda i: -1 / alphaG * (eTtiD[i]
 SijDD = tensor2(lambda i, j: eTijDD[i][j])
 SijUD = tensor2(lambda i, j: sum1(lambda x: gUU[i][x] * SijDD[x][j]))
 traceSij = sum1(lambda x: SijUD[x][x])
+
+GammatildeDDD = tensor3(lambda i, j, k: 1/2 * dgammatildeDDD[i][j][k] + dgammatildeDDD[i][k][j] - dgammatildeDDD[j][k][i])
+GammatildeUDD = tensor3(lambda i, j, k: sum1(lambda x: gammatildeUU[i][x] * GammatildeDDD[x][j][k]))
+GammatildeUDU = tensor3(lambda i, j, k: sum1(lambda x: GammatildeUDD[i][j][x] * gammatildeUU[x][k]))
+RchiDD = tensor2(lambda i, j: (+ 1 / (2 * chi) * DDchiDD[i][j]
+                               + 1 / (2 * chi) * gammatildeDD[i][j] * sum1(lambda x: DDchiUD[x][x])
+                               - 1 / (4 * chi**2) * dchiD[i] * dchiD[j]
+                               - 3 / (4 * chi**2) * (gammatildeDD[i][j] *
+                                                     sum1(lambda x: dchiD[x] * sum1(lambda y: gammatildeUU[x][y] * dchiD[y])))))
+RtildeDD = tensor2(lambda i, j: (- 1 / 2 * sum2_symm(lambda x, y: gammatildeUU[x][y] * ddgammatildeDDDD[i][j][x][y])
+                                 + 1 / 2 * sum1(lambda x: (+ gammatildeDD[x][i] * dGammatildeUD[x][j]
+                                                           + gammatildeDD[x][j] * dGammatildeUD[x][i]))
+                                 + 1 / 2 * sum1(lambda x: (+ GammatildeU[x] * GammatildeDDD[i][j][x]
+                                                           + GammatildeU[x] * GammatildeDDD[j][i][x]))
+                                 + sum2_symm(lambda x, y: (+ GammatildeUDD[x][i][y] * GammatildeUDU[j][x][y]
+                                                           + GammatildeUDD[x][j][y] * GammatildeUDU[i][x][y]
+                                                           + GammatildeUDD[x][i][y] * GammatildeUDU[x][j][y]))))
+RDD = tensor2(lambda i, j: RchiDD[i][j] + RtildeDD[i][j])
+
+Atilde1DD_rhs = tensor2(lambda i, j: - DDalphaGDD[i][j] + alphaG * (+ RDD[i][j] - 8 * pi * SijDD[i][j]))
+Atilde1UD_rhs = tensor2(lambda i, j: sum1(lambda x: gUU[i][x] * Atilde1DD_rhs[x][j]))
 
 rhs_eqns = flatten([
     flatten([
@@ -257,11 +290,19 @@ rhs_eqns = flatten([
                - 2 / 3 * sum1(lambda x: gammatildeDD[i][j] * dbetaGUD[x][x])))
      for i in range(3) for j in range(i+1)],
     [lhrh(lhs=Khat_rhs,
-          rhs=(- sum2_symm(lambda x, y: g1UU[x][y] * DDalphaGDD[x][y])
+          rhs=(- sum1(lambda x: DDalphaGUD[x][x])
                + alphaG * (sum2_symm(lambda x, y: AtildeUD[x][y] * AtildeUD[y][x])
                            + 1 / 3 * (Khat + 2 * Theta)**2)
                + 4 * pi * alphaG * (traceSij + rho)
                + alphaG * kappa1 * (1 - kappa2) * Theta))],
+    # [lhrh(lhs=AtildeDD_rhs[i][j],
+    #       rhs=(+ chi * (Atilde1DD_rhs[i][j]
+    #                     - 1 / 3 * gDD[i][j] * sum1(lambda x: Atilde1UD_rhs[x][x]))
+    #            + alphaG * (+ (Khat + 2 * Theta) * AtildeDD[i][j]
+    #                        - 2 * sum1(lambda x: AtildeDD[x][i] * AtildeUD[x][j]))
+    #            + sum1(lambda x: AtildeDD[x][i] * dbetaGUD[x][j] + AtildeDD[x][j] * dbetaGUD[x][i])
+    #            - 2 / 3 * AtildeDD[i][j] * sum1(lambda x: dbetaGUD[x][x])))
+    #  for i in range(3) for j in range(i+1)],
 ])
 
 thorn.add_func("Z4cNRPy_RHS",
@@ -281,7 +322,7 @@ cactus_thornlist = os.environ.get("CACTUS_THORNLIST", None)
 schedule_raw = """
 # Define schedule groups
 
-SCHEDULE GROUP Z4c_InitialGroup AT initial AFTER ADMBase_PostInitial
+SCHEDULE GROUP Z4cNRPy_InitialGroup AT initial AFTER ADMBase_PostInitial
 {
 } "Convert ADM to Z4c variables"
 
