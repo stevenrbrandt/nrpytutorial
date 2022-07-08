@@ -591,7 +591,7 @@ class CactusThorn:
                         tag = "TAGS='checkpoint=\"no\"'"
                         rhs_pairs.add(gf_name)
                     elif rhs in gf_group_names:
-                        tag = f"TAGS='rhs=\"{self.thornname}::{rhs}GF\"' "
+                        tag = f"TAGS='rhs=\"{self.thornname}::{rhs}GF\"'"
                     else:
                         tag = ""
 
