@@ -134,11 +134,12 @@ thorn.add_func("Z4c_initial2",
     where='interior',
     schedule_bin="initial AFTER Z4c_initial1",
     doc="Convert ADM to Z4c variables, part 2",
-    centering=centering)
+    centering=centering,
+    sync="ADMBase::gxx # added")
 
 assert "CACTUS_HOME" in os.environ, "Please set the CACTUS_HOME variable to point to your Cactus installation"
 cactus_home = os.environ["CACTUS_HOME"]
 cactus_sim = os.environ.get("CACTUS_SIM", "sim")
 cactus_thornlist = os.environ.get("CACTUS_THORNLIST", None)
 
-thorn.generate(cactus_home, cactus_config=cactus_sim, cactus_thornlist=cactus_thornlist)
+thorn.generate(cactus_home, cactus_config=cactus_sim, cactus_thornlist=cactus_thornlist,schedule_raw="# RAW")

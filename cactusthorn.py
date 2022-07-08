@@ -233,7 +233,8 @@ class CactusThorn:
         self.src_files[csrc.name] = csrc
         self.last_src_file = csrc
 
-    def add_func(self, name, body, schedule_bin, doc, where='interior', centering='VVV'):
+    def add_func(self, name, body, schedule_bin, doc, where='interior', centering='VVV', sync=None):
+        self.sync[name] = sync
         check_centering(centering)
         if gri.ET_driver == "Carpet":
             schedule_bin = re.sub(r'\bRHS\b','MoL_CalcRHS',schedule_bin)
@@ -461,6 +462,7 @@ class CactusThorn:
         return grid.register_gridfunctions(gtype, gf_names, external_module=external_module,centering=centering)
 
     def __init__(self, arrangement, thornname, author=None, email=None, license='BSD'):
+        self.sync = {}
         self.ET_driver = grid.ET_driver
         self.arrangement = arrangement
         self.thornname = thornname
@@ -522,7 +524,7 @@ class CactusThorn:
         else:
             return f"{gfthorn}::{gf_name}"
 
-    def generate(self,dirname=None,cactus_config="sim",cactus_thornlist=None):
+    def generate(self,dirname=None,cactus_config="sim",cactus_thornlist=None,schedule_raw=""):
         assert self.ET_driver == grid.ET_driver
         rhs_pairs = set()
         cwd = None
@@ -654,8 +656,13 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                         if src.where == "interior":
                             for writegf in func.writegfs:
                                 if writegf in grid.find_gfnames():
-                                    pass #print(f"    SYNC: {full_name}",file=fd)
+                                    print(f"    SYNC: {full_name}",file=fd)
+                        sync = self.sync.get(func.name,None)
+                        if sync is not None:
+                            print(f"    SYNC: {sync}",file=fd)
                         print(f'}} "{func.doc}"',file=fd)
+                print(schedule_raw,end='',file=fd)
+
             if not os.path.exists(self.doc_tex):
                 doc_src = doc_init
                 doc_src = re.sub(r'{thorn}',self.thornname,doc_src)
