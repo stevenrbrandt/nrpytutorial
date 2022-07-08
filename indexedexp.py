@@ -105,22 +105,6 @@ def symmetrize(rank, indexedexp, symmetry, dimension):
     else: raise Exception('unsupported rank for indexed expression')
     return apply_symmetry_condition_to_derivatives(indexedexp)
 
-def symmetrize_rankN(indexedexp, symmetry, dimension):
-    import re
-    from itertools import permutations
-    for sym in symmetri.split('_'):
-        # Limits to 9 indexes at max. Is this a problem?
-        g = re.match(r'^a?sym(\d+)$',sym)
-        assert sym, f"Bad symmetry pattern: '{sym}'"
-        indexes = [int(d) for d in g.group(1)]
-        nodups = set():
-        for d in indexes:
-            nodups.add(d)
-        assert len(indexes) == len(nodups), f"Duplicitate indices in pattern: '{sym}'"
-        perms = permutations(indexes)
-        first = next p
-        for p in perms
-
 def symmetrize_rank2(indexedexp, symmetry, dimension):
     for sym in symmetry.split('_'):
         sign = 1 if sym[:3] == 'sym' else -1
