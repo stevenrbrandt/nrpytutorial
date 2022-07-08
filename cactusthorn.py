@@ -682,11 +682,11 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                             # such before generating read/write decls.
                             if readgf in grid.find_gfnames():
                                 full_name = self.get_full_name(readgf)
-                                print(f"   READS: {full_name}(everywhere)",file=fd)
+                                print(f"    READS: {full_name}(everywhere)",file=fd)
                         for writegf in sorted(func.writegfs):
                             if writegf in grid.find_gfnames():
                                 full_name = self.get_full_name(writegf)
-                                print(f"   WRITES: {full_name}({src.where})",file=fd)
+                                print(f"    WRITES: {full_name}({src.where})",file=fd)
                         if src.where == "interior":
                             for writegf in func.writegfs:
                                 if writegf in grid.find_gfnames():
