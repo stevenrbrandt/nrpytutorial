@@ -555,6 +555,8 @@ class CactusThorn:
                 print(f"# Parameter definitions for thorn {self.thornname}",file=fd)
                 for name, default, doc, vmin, vmax, options in self.params:
                     t = typeof(default, vmin, vmax)
+                    vmin = vmin if vmin is not None else '*'
+                    vmax = vmax if vmax is not None else '*'
                     if t == int:
                         print(f'CCTK_INT {name} "{doc}" {{ {vmin}:{vmax} :: "" }} {default}', file=fd)
                     elif t == float:
