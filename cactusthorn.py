@@ -728,8 +728,13 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                         print("#include <cctk.h>", file=fd)
                         print("#include <cctk_Arguments.h>", file=fd)
                         print("#include <cctk_Parameters.h>", file=fd)
+                        print("", file=fd)
                         print("#include <loop_device.hxx>", file=fd)
-                        print("\nusing namespace Loop;", file=fd)
+                        print("", file=fd)
+                        print("#include <cmath>", file=fd)
+                        print("", file=fd)
+                        print("using namespace Loop;", file=fd)
+                        print("using std::cbrt, std::fmax, std::fmin, std::sqrt;", file=fd)
                     else:
                         assert "Bad value for grid.ET_driver={grid.ET_driver}"
                     for func in src.funcs:
