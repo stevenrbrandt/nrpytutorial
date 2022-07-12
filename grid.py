@@ -157,7 +157,7 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = "", context = "DECL"):
                 if context == "USE":
                     return retstring + varname;
                 else:
-                    return retstring + "0";
+                    return retstring + "0.0/0.0";
             else:
                 return retstring + varname + "GF(p.I" + ijklstring + ")"
     else:
