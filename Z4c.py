@@ -9,6 +9,8 @@ import indexedexp as ixp
 from cactusthorn import CactusThorn, loop
 from outputC import lhrh
 
+par.set_parval_from_str("PRECISION", "CCTK_REAL")
+
 # Current options are Carpet and CarpetX
 grid.ET_driver = "CarpetX"
 
@@ -24,13 +26,20 @@ centering='VVV'
 # EVOL: evolved grid functions (possibly multiple time levels)
 # AUXEVOL: needed for evolution, can be freed after evaluating rhs (1 time level)
 # AUX: e.g. RHS (1 time level)
-# TMP: not actually a grid function, only temporary tile
+# TILE_TMP: not actually a grid function, only temporary tile
+# SCALAR_TMP: not actually a grid function, only a double
 import sympy as sp
 
 # Generic helpers
 
 def flatten(lists):
-    return sum(lists, [])
+    new_list = []
+    for item in lists:
+        if type(item) == list:
+            new_list += flatten(item)
+        else:
+            new_list += [item]
+    return new_list
 
 def sum1(expr):
     result = sympify(0)
@@ -114,19 +123,20 @@ chi_rhs = thorn.register_gridfunctions("AUX", ["chi_rhs"], centering=centering)
 gammatildeDD_rhs = ixp.register_gridfunctions_for_single_rankN(2,"AUX", "gammatildeDD_rhs", "sym01", centering=centering)
 Khat_rhs = thorn.register_gridfunctions("AUX", ["Khat_rhs"], centering=centering)
 AtildeDD_rhs = ixp.register_gridfunctions_for_single_rankN(2,"AUX", "AtildeDD_rhs", "sym01", centering=centering)
+Atilde1DD_rhs = ixp.register_gridfunctions_for_single_rankN(2,"SCALAR_TMP", "Atilde1DD_rhs", "sym01", centering=centering)
 GammatildeU_rhs = ixp.register_gridfunctions_for_single_rankN(1,"AUX", "GammatildeU_rhs", centering=centering)
 Theta_rhs = thorn.register_gridfunctions("AUX", ["Theta_rhs"], centering=centering)
 alphaG_rhs = thorn.register_gridfunctions("AUX", ["alphaG_rhs"], centering=centering)
 betaGU_rhs = ixp.register_gridfunctions_for_single_rankN(1,"AUX", "betaGU_rhs", centering=centering)
 
-dchiD = ixp.register_gridfunctions_for_single_rankN(1,"TMP", "dchiD", centering=centering)
-ddchiDD = ixp.register_gridfunctions_for_single_rankN(2, "TMP", "ddchiDD", "sym01", centering=centering)
-dgammatildeDDD = ixp.register_gridfunctions_for_single_rankN(3, "TMP", "dgammatildeDDD", "sym01", centering=centering)
-ddgammatildeDDDD = ixp.register_gridfunctions_for_single_rankN(4, "TMP", "ddgammatildeDDDD", "sym0123", centering=centering)
-dGammatildeUD = ixp.register_gridfunctions_for_single_rankN(2, "TMP", "dGammatildeUD", "", centering=centering)
-dalphaGD = ixp.register_gridfunctions_for_single_rankN(1,"TMP", "dalphaGD", centering=centering)
-ddalphaGDD = ixp.register_gridfunctions_for_single_rankN(2, "TMP", "ddalphaGDD", "sym01", centering=centering)
-dbetaGUD = ixp.register_gridfunctions_for_single_rankN(2, "TMP", "dbetaGUD", "", centering=centering)
+dchiD = ixp.register_gridfunctions_for_single_rankN(1,"TILE_TMP", "dchiD", centering=centering)
+ddchiDD = ixp.register_gridfunctions_for_single_rankN(2, "TILE_TMP", "ddchiDD", "sym01", centering=centering)
+dgammatildeDDD = ixp.register_gridfunctions_for_single_rankN(3, "TILE_TMP", "dgammatildeDDD", "sym01", centering=centering)
+ddgammatildeDDDD = ixp.register_gridfunctions_for_single_rankN(4, "TILE_TMP", "ddgammatildeDDDD", "sym0123", centering=centering)
+dGammatildeUD = ixp.register_gridfunctions_for_single_rankN(2, "TILE_TMP", "dGammatildeUD", "", centering=centering)
+dalphaGD = ixp.register_gridfunctions_for_single_rankN(1,"TILE_TMP", "dalphaGD", centering=centering)
+ddalphaGDD = ixp.register_gridfunctions_for_single_rankN(2, "TILE_TMP", "ddalphaGDD", "sym01", centering=centering)
+dbetaGUD = ixp.register_gridfunctions_for_single_rankN(2, "TILE_TMP", "dbetaGUD", "", centering=centering)
 
 chi_dD = ixp.declarerank1("chi_dD")
 chi_dDD = ixp.declarerank1("chi_dDD")
@@ -176,13 +186,10 @@ thorn.add_func("Z4cNRPy_Initial1",
     centering=centering)
 
 initial2_eqns = flatten([
-    flatten([
-        flatten([
-            [lhrh(lhs=dgammatildeDDD[i][j][k], rhs=gammatildeDD_dD[i][j][k]) for k in range(3)],
-            [loop],
-        ])
-        for i in range(3) for j in range(i+1)
-    ]),
+    [[
+        [lhrh(lhs=dgammatildeDDD[i][j][k], rhs=gammatildeDD_dD[i][j][k]) for k in range(3)],
+        [loop],
+    ] for i in range(3) for j in range(i+1)],
     [lhrh(lhs=GammatildeU[i], rhs=sum2(lambda j, k: gammatildeUU[j][k] * dgammatildeDDD[j][k][i])) for i in range(3)],
 ])
 
@@ -271,17 +278,14 @@ RtildeDD = tensor2(lambda i, j: (- 1 / 2 * sum2_symm(lambda x, y: gammatildeUU[x
                                                            + GammatildeUDD[x][i][y] * GammatildeUDU[x][j][y]))))
 RDD = tensor2(lambda i, j: RchiDD[i][j] + RtildeDD[i][j])
 
-Atilde1DD_rhs = tensor2(lambda i, j: - DDalphaGDD[i][j] + alphaG * (+ RDD[i][j] - 8 * pi * SijDD[i][j]))
-Atilde1UD_rhs = tensor2(lambda i, j: sum1(lambda x: gUU[i][x] * Atilde1DD_rhs[x][j]))
+#Atilde1DD_rhs = tensor2(lambda i, j: - DDalphaGDD[i][j] + alphaG * (+ RDD[i][j] - 8 * pi * SijDD[i][j]))
+#Atilde1UD_rhs = tensor2(lambda i, j: sum1(lambda x: gUU[i][x] * Atilde1DD_rhs[x][j]))
 
 rhs_eqns = flatten([
-    flatten([
-        flatten([
-            [lhrh(lhs=dbetaGUD[i][j], rhs=betaGU_dD[i][j]) for j in range(3)],
-            [loop],
-        ])
-        for i in range(3)
-    ]),
+    [[
+        [lhrh(lhs=dbetaGUD[i][j], rhs=betaGU_dD[i][j]) for j in range(3)],
+        [loop],
+    ] for i in range(3) ],
     [lhrh(lhs=chi_rhs,
           rhs=2 / 3 * chi * (alphaG * (Khat + 2 * Theta) - sum1(lambda x: dbetaGUD[x][x])))],
     [lhrh(lhs=gammatildeDD_rhs[i][j],
@@ -295,6 +299,8 @@ rhs_eqns = flatten([
                            + 1 / 3 * (Khat + 2 * Theta)**2)
                + 4 * pi * alphaG * (traceSij + rho)
                + alphaG * kappa1 * (1 - kappa2) * Theta))],
+    [[lhrh(lhs=Atilde1DD_rhs[i][j], rhs=gUU[i][j])] for i in range(3) for j in range(i+1)], 
+    [[lhrh(lhs=AtildeDD_rhs[i][j], rhs=Atilde1DD_rhs[i][j])] for i in range(3) for j in range(i+1)],
     # [lhrh(lhs=AtildeDD_rhs[i][j],
     #       rhs=(+ chi * (Atilde1DD_rhs[i][j]
     #                     - 1 / 3 * gDD[i][j] * sum1(lambda x: Atilde1UD_rhs[x][x]))

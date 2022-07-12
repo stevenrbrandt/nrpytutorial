@@ -170,7 +170,7 @@ def extract_from_list_of_deriv_vars__base_gfs_and_deriv_ops_lists(list_of_deriv_
 
 from operator import itemgetter
 
-def type__var(in_var,FDparams, AddPrefix_for_UpDownWindVars=True):
+def type__var(in_var,FDparams, AddPrefix_for_UpDownWindVars=True,is_const=True):
     """ Outputs [type] [variable name]; e.g.,
     "const double variable"
 
@@ -211,7 +211,10 @@ def type__var(in_var,FDparams, AddPrefix_for_UpDownWindVars=True):
             varname = "UpwindAlgInput"+varname
     if FDparams.enable_SIMD == "True":
         return "const REAL_SIMD_ARRAY " + varname
-    return "const " + FDparams.PRECISION + " " + varname
+    if is_const:
+        return "const " + FDparams.PRECISION + " " + varname
+    else:
+        return FDparams.PRECISION + " " + varname
 
 def read_from_memory_Ccode_onept(gfname,idx, FDparams, idxs):
     """
@@ -242,6 +245,8 @@ def read_from_memory_Ccode_onept(gfname,idx, FDparams, idxs):
     idxs.add(",".join([str(ii) for ii in idx4]))
     if FDparams.enable_SIMD == "True":
         retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = ReadSIMD(&" + gfaccess_str + ");"
+    elif gri.find_gftype(gfname) == "SCALAR_TMP":
+        retstring = type__var(gfname, FDparams, is_const=False) + varsuffix(gfname, idx4, FDparams) + " = " + gfaccess_str + ";"
     else:
         retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = " + gfaccess_str + ";"
     return retstring+"\n"

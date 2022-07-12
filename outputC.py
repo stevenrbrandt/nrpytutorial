@@ -97,6 +97,8 @@ def ccode_postproc(string):
     cmathsuffix = ""
     if PRECISION == "double":
         pass
+    elif PRECISION == "CCTK_REAL":
+        pass
     elif PRECISION == "long double":
         cmathsuffix = "l"
     elif PRECISION == "float":
