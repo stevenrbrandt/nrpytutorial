@@ -148,7 +148,7 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = "", context = "DECL"):
             if gfarrayname == "rhs_gfs":
                 return retstring + varname + "_rhsGF" + "(p.I)"
             elif gftype == "EXTERNAL":
-                return retstring + varname + f"(p.I)"
+                return retstring + varname + "(p.I)"
             elif gftype == "CORE":
                 return retstring + "p." + varname
             elif gftype == "TILE_TMP":
