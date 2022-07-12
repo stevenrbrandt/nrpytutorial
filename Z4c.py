@@ -114,7 +114,7 @@ chi = thorn.register_gridfunctions("EVOL", ["chi"], centering=centering)
 gammatildeDD = ixp.register_gridfunctions_for_single_rankN(2,"EVOL", "gammatildeDD", "sym01", centering=centering)
 Khat = thorn.register_gridfunctions("EVOL", ["Khat"], centering=centering)
 AtildeDD = ixp.register_gridfunctions_for_single_rankN(2,"EVOL", "AtildeDD", "sym01", centering=centering)
-GammatildeU = ixp.register_gridfunctions_for_single_rankN(1,"EVOL", "GammatildeU", centering=centering)
+contractedGammatildeU = ixp.register_gridfunctions_for_single_rankN(1,"EVOL", "contractedGammatildeU", centering=centering)
 Theta = thorn.register_gridfunctions("EVOL", ["Theta"], centering=centering)
 alphaG = thorn.register_gridfunctions("EVOL", ["alphaG"], centering=centering)
 betaGU = ixp.register_gridfunctions_for_single_rankN(1,"EVOL", "betaGU", centering=centering)
@@ -124,199 +124,273 @@ gammatildeDD_rhs = ixp.register_gridfunctions_for_single_rankN(2,"AUX", "gammati
 Khat_rhs = thorn.register_gridfunctions("AUX", ["Khat_rhs"], centering=centering)
 AtildeDD_rhs = ixp.register_gridfunctions_for_single_rankN(2,"AUX", "AtildeDD_rhs", "sym01", centering=centering)
 Atilde1DD_rhs = ixp.register_gridfunctions_for_single_rankN(2,"SCALAR_TMP", "Atilde1DD_rhs", "sym01", centering=centering)
-GammatildeU_rhs = ixp.register_gridfunctions_for_single_rankN(1,"AUX", "GammatildeU_rhs", centering=centering)
+contractedGammatildeU_rhs = ixp.register_gridfunctions_for_single_rankN(1,"AUX", "contractedGammatildeU_rhs", centering=centering)
 Theta_rhs = thorn.register_gridfunctions("AUX", ["Theta_rhs"], centering=centering)
 alphaG_rhs = thorn.register_gridfunctions("AUX", ["alphaG_rhs"], centering=centering)
 betaGU_rhs = ixp.register_gridfunctions_for_single_rankN(1,"AUX", "betaGU_rhs", centering=centering)
 
+# Derivatives as calculated by NRPy
+chi_dD = ixp.declarerank1("chi_dD")
+chi_dDD = ixp.declarerank2("chi_dDD", "sym01")
+gammatildeDD_dD = ixp.declarerank3("gammatildeDD_dD", "sym01")
+gammatildeDD_dDD = ixp.declarerank4("gammatildeDD_dDD", "sym01_sym23")
+contractedGammatildeU_dD = ixp.declarerank2("contractedGammatildeU_dD", None)
+alphaG_dD = ixp.declarerank1("alphaG_dD")
+alphaG_dDD = ixp.declarerank2("alphaG_dDD", "sym01")
+betaGU_dD = ixp.declarerank2("betaGU_dD", None)
+
+# Our tile-local derivatives
 dchiD = ixp.register_gridfunctions_for_single_rankN(1,"TILE_TMP", "dchiD", centering=centering)
 ddchiDD = ixp.register_gridfunctions_for_single_rankN(2, "TILE_TMP", "ddchiDD", "sym01", centering=centering)
 dgammatildeDDD = ixp.register_gridfunctions_for_single_rankN(3, "TILE_TMP", "dgammatildeDDD", "sym01", centering=centering)
-ddgammatildeDDDD = ixp.register_gridfunctions_for_single_rankN(4, "TILE_TMP", "ddgammatildeDDDD", "sym0123", centering=centering)
-dGammatildeUD = ixp.register_gridfunctions_for_single_rankN(2, "TILE_TMP", "dGammatildeUD", "", centering=centering)
+ddgammatildeDDDD = ixp.register_gridfunctions_for_single_rankN(4, "TILE_TMP", "ddgammatildeDDDD", "sym01_sym23", centering=centering)
+dcontractedGammatildeUD = ixp.register_gridfunctions_for_single_rankN(2, "TILE_TMP", "dcontractedGammatildeUD", None, centering=centering)
 dalphaGD = ixp.register_gridfunctions_for_single_rankN(1,"TILE_TMP", "dalphaGD", centering=centering)
 ddalphaGDD = ixp.register_gridfunctions_for_single_rankN(2, "TILE_TMP", "ddalphaGDD", "sym01", centering=centering)
-dbetaGUD = ixp.register_gridfunctions_for_single_rankN(2, "TILE_TMP", "dbetaGUD", "", centering=centering)
-
-chi_dD = ixp.declarerank1("chi_dD")
-chi_dDD = ixp.declarerank1("chi_dDD")
-gammatildeDD_dD = ixp.declarerank3("gammatildeDD_dD", "sym01")
-gammatildeDD_dDD = ixp.declarerank4("gammatildeDD_dDD", "sym0123")
-GammatildeU_dD = ixp.declarerank2("GammatildeU_dD", "")
-alphaG_dD = ixp.declarerank1("alphaG_dD")
-alphaG_dDD = ixp.declarerank2("alphaG_dDD", "sym01")
-betaGU_dD = ixp.declarerank2("betaGU_dD", "")
-
-# Expressions as calculated from the ADM variables
-
-gUU, detg = ixp.symm_matrix_inverter3x3(gDD)
-cbrt_detg = cbrt(detg)
-trK = sum2(lambda i, j: gUU[i][j] * KDD[i][j])
-
-# Expressions as calculated from the Z4c variables
-
-gammatildeUU, detgammatilde = ixp.symm_matrix_inverter3x3(gammatildeDD)
-cbrt_detgammatilde = cbrt(detgammatilde)
-trAtilde = sum2(lambda i, j: gammatildeUU[i][j] * AtildeDD[i][j])
-
-g1DD = tensor2(lambda i, j: 1 / chi * gammatildeDD[i][j])
-g1UU = tensor2(lambda i, j: chi * gammatildeUU[i][j])
-dg1DDD = tensor3(lambda i, j, k: -dchiD[k] / chi**2 * gammatildeDD[i][j] + 1 / chi * dgammatildeDDD[i][k][k])
+dbetaGUD = ixp.register_gridfunctions_for_single_rankN(2, "TILE_TMP", "dbetaGUD", None, centering=centering)
 
 # Initial conditions
 
-chi1 = 1 / cbrt(detg)
-Theta1 = sympify(0)
+gUU = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "gUU", "sym01", centering=centering)
+Theta_val = thorn.register_gridfunctions("SCALAR_TMP", ["Theta_val"], centering=centering)
+trK = thorn.register_gridfunctions("SCALAR_TMP", ["trK"], centering=centering)
+chi_val = thorn.register_gridfunctions("SCALAR_TMP", ["chi_val"], centering=centering)
 
-initial1_eqns = flatten([
-    [lhrh(lhs=chi, rhs=chi1)],
-    [lhrh(lhs=gammatildeDD[i][j], rhs=chi1 * gDD[i][j]) for i in range(3) for j in range(i+1)],
-    [lhrh(lhs=Theta, rhs=Theta1)],
-    [lhrh(lhs=Khat, rhs=trK - 2 * Theta1)],
-    [lhrh(lhs=AtildeDD[i][j], rhs=chi1 * (KDD[i][j] - trK / 3 * gDD[i][j])) for i in range(3) for j in range(i+1)],
-    [lhrh(lhs=alphaG, rhs=alp)],
-    [lhrh(lhs=betaGU[i], rhs=betaU[i]) for i in range(3)],
-])
-
-thorn.add_func("Z4cNRPy_Initial1",
-    body=initial1_eqns,
-    where='everywhere',
-    schedule_bin="Z4cNRPy_InitialGroup",
-    doc="Convert ADM to Z4c variables, part 1",
-    centering=centering)
-
-initial2_eqns = flatten([
-    [[
-        [lhrh(lhs=dgammatildeDDD[i][j][k], rhs=gammatildeDD_dD[i][j][k]) for k in range(3)],
-        [loop],
-    ] for i in range(3) for j in range(i+1)],
-    [lhrh(lhs=GammatildeU[i], rhs=sum2(lambda j, k: gammatildeUU[j][k] * dgammatildeDDD[j][k][i])) for i in range(3)],
-])
-
-thorn.add_func("Z4cNRPy_Initial2",
-    body=initial2_eqns,
-    where='interior',
-    schedule_bin="Z4cNRPy_InitialGroup AFTER Z4cNRPy_Initial1",
-    doc="Convert ADM to Z4c variables, part 2",
-    centering=centering)
+def Initial():
+    gUU_expr, detg_expr = ixp.symm_matrix_inverter3x3(gDD)
+    gammatildeUU_expr, detgammatilde_expr = ixp.symm_matrix_inverter3x3(gammatildeDD)
+    
+    initial1_eqns = flatten([
+        [lhrh(lhs=chi_val, rhs=1 / cbrt(detg_expr))],
+        [lhrh(lhs=gUU[i][j], rhs=gUU_expr[i][j]) for i in range(3) for j in range(i+1)],
+        [lhrh(lhs=Theta_val, rhs=sympify(0))],
+        [lhrh(lhs=trK, rhs=sum2(lambda i, j: gUU[i][j] * KDD[i][j]))],
+        [lhrh(lhs=chi, rhs=chi_val)],
+        [lhrh(lhs=gammatildeDD[i][j], rhs=chi_val * gDD[i][j]) for i in range(3) for j in range(i+1)],
+        [lhrh(lhs=Theta, rhs=Theta_val)],
+        [lhrh(lhs=Khat, rhs=trK - 2 * Theta_val)],
+        [lhrh(lhs=AtildeDD[i][j], rhs=chi_val * (KDD[i][j] - trK / 3 * gDD[i][j])) for i in range(3) for j in range(i+1)],
+        [lhrh(lhs=alphaG, rhs=alp)],
+        [lhrh(lhs=betaGU[i], rhs=betaU[i]) for i in range(3)],
+    ])
+    
+    thorn.add_func("Z4cNRPy_Initial1",
+        body=initial1_eqns,
+        where='everywhere',
+        schedule_bin="Z4cNRPy_InitialGroup",
+        doc="Convert ADM to Z4c variables, part 1",
+        centering=centering)
+    
+    initial2_eqns = flatten([
+        [[
+            [lhrh(lhs=dgammatildeDDD[i][j][k], rhs=gammatildeDD_dD[i][j][k]) for k in range(3)],
+            [loop],
+        ] for i in range(3) for j in range(i+1)],
+        [lhrh(lhs=contractedGammatildeU[i], rhs=sum2(lambda j, k: gammatildeUU_expr[j][k] * dgammatildeDDD[j][k][i])) for i in range(3)],
+    ])
+    
+    thorn.add_func("Z4cNRPy_Initial2",
+        body=initial2_eqns,
+        where='interior',
+        schedule_bin="Z4cNRPy_InitialGroup AFTER Z4cNRPy_Initial1",
+        doc="Convert ADM to Z4c variables, part 2",
+        centering=centering)
+Initial()
 
 # Enforce constaints
 
-enforce_eqns = flatten([
-    # Enforce floors
-    [lhrh(lhs=chi, rhs=Max(chi_floor, chi))],
-    [lhrh(lhs=alphaG, rhs=Max(alphaG_floor, alphaG))],
-    # Enforce algebraic constraints; see arXiv:1212.2901 [gr-qc]
-    [lhrh(lhs=gammatildeDD[i][j], rhs=(1 / cbrt_detgammatilde) * gammatildeDD[i][j])
-     for i in range(3) for j in range(i+1)],
-    [lhrh(lhs=AtildeDD[i][j], rhs=(AtildeDD[i][j] - trAtilde / 3 * gammatildeDD[i][j]))
-     for i in range(3) for j in range(i+1)],
-])
+gammatildeUU = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "gammatildeUU", "sym01", centering=centering)
+detgammatilde = thorn.register_gridfunctions("SCALAR_TMP", ["detgammatilde"], centering=centering)
+trAtilde = thorn.register_gridfunctions("SCALAR_TMP", ["trAtilde"], centering=centering)
 
-thorn.add_func("Z4cNRPy_Enforce",
-    body=enforce_eqns,
-    where='interior',
-    schedule_bin="Z4cNRPy_PostStepGroup",
-    doc="Enforce constaints",
-    sync="chiGF gammatildeDDGF KhatGF AtildeDDGF GammatildeUGF ThetaGF alphaGGF betaGUGF",
-    centering=centering
-    )
+def Enforce():
+    gammatildeUU_expr, detgammatilde_expr = ixp.symm_matrix_inverter3x3(gammatildeDD)
+    
+    enforce_eqns = flatten([
+        # Enforce floors
+        [lhrh(lhs=gammatildeUU[i][j], rhs=gammatildeUU_expr[i][j]) for i in range(3) for j in range(i+1)],
+        [lhrh(lhs=detgammatilde, rhs=detgammatilde_expr)],
+        [lhrh(lhs=trAtilde, rhs=sum2(lambda i, j: gammatildeUU[i][j] * AtildeDD[i][j]))],
+        [lhrh(lhs=chi, rhs=Max(chi_floor, chi))],
+        [lhrh(lhs=alphaG, rhs=Max(alphaG_floor, alphaG))],
+        # Enforce algebraic constraints; see arXiv:1212.2901 [gr-qc]
+        [lhrh(lhs=gammatildeDD[i][j], rhs=(1 / cbrt(detgammatilde)) * gammatildeDD[i][j]) for i in range(3) for j in range(i+1)],
+        [lhrh(lhs=AtildeDD[i][j], rhs=(AtildeDD[i][j] - trAtilde / 3 * gammatildeDD[i][j])) for i in range(3) for j in range(i+1)],
+    ])
+    
+    thorn.add_func("Z4cNRPy_Enforce",
+        body=enforce_eqns,
+        where='interior',
+        schedule_bin="Z4cNRPy_PostStepGroup",
+        doc="Enforce constaints",
+        sync="chiGF gammatildeDDGF KhatGF AtildeDDGF contractedGammatildeUGF ThetaGF alphaGGF betaGUGF",
+        centering=centering
+        )
+Enforce()
 
 # Calculate ADM variables
-
-adm_eqns = flatten([
-    [lhrh(lhs=gDD[i][j], rhs=g1DD[i][j]) for i in range(3) for j in range(i+1)],
-    [lhrh(lhs=KDD[i][j], rhs=1 / chi * (AtildeDD[i][j] + (Khat + 2 * Theta) / 3 * gammatildeDD[i][j]))
-     for i in range(3) for j in range(i+1)],
-    [lhrh(lhs=alp, rhs=alphaG)],
-    [lhrh(lhs=dtalp, rhs=-alphaG * f_mu_L * Khat)],
-    [lhrh(lhs=betaU[i], rhs=betaGU[i]) for i in range(3)],
-    [lhrh(lhs=dtbetaU[i], rhs=f_mu_S * GammatildeU[i] - eta * betaGU[i]) for i in range(3)],
-])
-
-thorn.add_func("Z4cNRPy_ADM",
-    body=adm_eqns,
-    where='interior',
-    schedule_bin="Z4cNRPy_PostStepGroup AFTER Z4cNRPy_Enforce",
-    doc="Calculate ADM variables",
-    centering=centering)
+def ADM():
+    g1DD = tensor2(lambda i, j: 1 / chi * gammatildeDD[i][j])
+    
+    adm_eqns = flatten([
+        [lhrh(lhs=gDD[i][j], rhs=g1DD[i][j]) for i in range(3) for j in range(i+1)],
+        [lhrh(lhs=KDD[i][j], rhs=1 / chi * (AtildeDD[i][j] + (Khat + 2 * Theta) / 3 * gammatildeDD[i][j]))
+         for i in range(3) for j in range(i+1)],
+        [lhrh(lhs=alp, rhs=alphaG)],
+        [lhrh(lhs=dtalp, rhs=-alphaG * f_mu_L * Khat)],
+        [lhrh(lhs=betaU[i], rhs=betaGU[i]) for i in range(3)],
+        [lhrh(lhs=dtbetaU[i], rhs=f_mu_S * contractedGammatildeU[i] - eta * betaGU[i]) for i in range(3)],
+    ])
+    
+    thorn.add_func("Z4cNRPy_ADM",
+        body=adm_eqns,
+        where='interior',
+        schedule_bin="Z4cNRPy_PostStepGroup AFTER Z4cNRPy_Enforce",
+        doc="Calculate ADM variables",
+        centering=centering)
+ADM()
 
 # Calculate RHS
 
-AtildeUD = tensor2(lambda i, j: sum1(lambda x: gammatildeUU[i][x] * AtildeDD[x][j]))
-GammaDDD = tensor3(lambda i, j, k: 1/2 * dg1DDD[i][j][k] + dg1DDD[i][k][j] - dg1DDD[j][k][i])
-GammaUDD = tensor3(lambda i, j, k: sum1(lambda x: gUU[i][x] * GammaDDD[x][j][k]))
-DDchiDD = tensor2(lambda i, j: ddchiDD[i][j] - sum1(lambda x: GammaUDD[x][i][j] * dchiD[x]))
-DDchiUD = tensor2(lambda i, j: sum1(lambda x: gammatildeUU[i][x] * DDchiDD[x][j]))
-DDalphaGDD = tensor2(lambda i, j: ddalphaGDD[i][j] - sum1(lambda x: GammaUDD[x][i][j] * dalphaGD[x]))
-DDalphaGUD = tensor2(lambda i, j: sum1(lambda x: gUU[i][x] * DDalphaGDD[x][j]))
+dgDDD = ixp.register_gridfunctions_for_single_rankN(3, "SCALAR_TMP", "dgDDD", "sym01", centering=centering)
+GammaDDD = ixp.register_gridfunctions_for_single_rankN(3, "SCALAR_TMP", "GammaDDD", "sym12", centering=centering)
+GammaUDD = ixp.register_gridfunctions_for_single_rankN(3, "SCALAR_TMP", "GammaUDD", "sym12", centering=centering)
+DDalphaGDD = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "DDalphaGDD", "sym01", centering=centering)
+rho = thorn.register_gridfunctions("SCALAR_TMP", ["rho"], centering=centering)
+SiD = ixp.register_gridfunctions_for_single_rankN(1, "SCALAR_TMP", "SiD", None, centering=centering)
+SijDD = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "SijDD", "sym01", centering=centering)
+trS = thorn.register_gridfunctions("SCALAR_TMP", ["trS"], centering=centering)
+AtildeUD = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "AtildeUD", None, centering=centering)
+GammatildeDDD = ixp.register_gridfunctions_for_single_rankN(3, "SCALAR_TMP", "GammatildeDDD", "sym12", centering=centering)
+GammatildeUDD = ixp.register_gridfunctions_for_single_rankN(3, "SCALAR_TMP", "GammatildeUDD", "sym12", centering=centering)
+GammatildeUDU = ixp.register_gridfunctions_for_single_rankN(3, "SCALAR_TMP", "GammatildeUDU", None, centering=centering)
+DDchiDD = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "DDchiDD", "sym01", centering=centering)
+RchiDD = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "RchiDD", "sym01", centering=centering)
+RtildeDD = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "RtildeDD", "sym01", centering=centering)
+RDD = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "RDD", "sym01", centering=centering)
+alphaRicciTmunuDD = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "alphaRicciTmunuDD", "sym01", centering=centering)
 
-rho = 1 / alphaG**2 * (eTtt
-                       - 2 * sum1(lambda x: betaGU[x] * eTtiD[x])
-                       + sum1(lambda x: betaGU[x] * sum1(lambda y: betaGU[y] * eTijDD[x][y])))
-SiD = tensor1(lambda i: -1 / alphaG * (eTtiD[i]
-                                       - sum1(lambda x:  betaGU[x] * eTijDD[i][x])))
-SijDD = tensor2(lambda i, j: eTijDD[i][j])
-SijUD = tensor2(lambda i, j: sum1(lambda x: gUU[i][x] * SijDD[x][j]))
-traceSij = sum1(lambda x: SijUD[x][x])
+def RHS():
+    rhs_eqns = flatten([
+        # Derivatives
+        [
+            [lhrh(lhs=dchiD[i], rhs=chi_dD[i]) for i in range(3)],
+            [lhrh(lhs=ddchiDD[i][j], rhs=chi_dDD[i][j]) for i in range(3) for j in range(i+1)],
+            [loop],
+        ],
+        [[
+            [lhrh(lhs=dgammatildeDDD[i][j][k], rhs=gammatildeDD_dD[i][j][k]) for k in range(3)],
+            [lhrh(lhs=ddgammatildeDDDD[i][j][k][l], rhs=gammatildeDD_dDD[i][j][k][l]) for k in range(3) for l in range(i+1)],
+            [loop],
+        ] for k in range(3) for l in range(k+1)],
+        [
+            [lhrh(lhs=dalphaGD[i], rhs=alphaG_dD[i]) for i in range(3)],
+            [lhrh(lhs=ddalphaGDD[i][j], rhs=alphaG_dDD[i][j]) for i in range(3) for j in range(i+1)],
+            [loop],
+        ],
+        [[
+            [lhrh(lhs=dbetaGUD[i][j], rhs=betaGU_dD[i][j]) for j in range(3)],
+            [loop],
+        ] for i in range(3)],
+        # RHS
+        [lhrh(lhs=chi_rhs,
+              rhs=2/3 * chi * (alphaG * (Khat + 2 * Theta) - sum1(lambda x: dbetaGUD[x][x])))],
 
-GammatildeDDD = tensor3(lambda i, j, k: 1/2 * dgammatildeDDD[i][j][k] + dgammatildeDDD[i][k][j] - dgammatildeDDD[j][k][i])
-GammatildeUDD = tensor3(lambda i, j, k: sum1(lambda x: gammatildeUU[i][x] * GammatildeDDD[x][j][k]))
-GammatildeUDU = tensor3(lambda i, j, k: sum1(lambda x: GammatildeUDD[i][j][x] * gammatildeUU[x][k]))
-RchiDD = tensor2(lambda i, j: (+ 1 / (2 * chi) * DDchiDD[i][j]
-                               + 1 / (2 * chi) * gammatildeDD[i][j] * sum1(lambda x: DDchiUD[x][x])
-                               - 1 / (4 * chi**2) * dchiD[i] * dchiD[j]
-                               - 3 / (4 * chi**2) * (gammatildeDD[i][j] *
-                                                     sum1(lambda x: dchiD[x] * sum1(lambda y: gammatildeUU[x][y] * dchiD[y])))))
-RtildeDD = tensor2(lambda i, j: (- 1 / 2 * sum2_symm(lambda x, y: gammatildeUU[x][y] * ddgammatildeDDDD[i][j][x][y])
-                                 + 1 / 2 * sum1(lambda x: (+ gammatildeDD[x][i] * dGammatildeUD[x][j]
-                                                           + gammatildeDD[x][j] * dGammatildeUD[x][i]))
-                                 + 1 / 2 * sum1(lambda x: (+ GammatildeU[x] * GammatildeDDD[i][j][x]
-                                                           + GammatildeU[x] * GammatildeDDD[j][i][x]))
-                                 + sum2_symm(lambda x, y: (+ GammatildeUDD[x][i][y] * GammatildeUDU[j][x][y]
-                                                           + GammatildeUDD[x][j][y] * GammatildeUDU[i][x][y]
-                                                           + GammatildeUDD[x][i][y] * GammatildeUDU[x][j][y]))))
-RDD = tensor2(lambda i, j: RchiDD[i][j] + RtildeDD[i][j])
+        [lhrh(lhs=gammatildeDD_rhs[i][j],
+              rhs=(-2 * alphaG * AtildeDD[i][j]
+                   + sum1(lambda x: gammatildeDD[x][i] * dbetaGUD[x][j] + gammatildeDD[x][j] * dbetaGUD[x][i])
+                   - 2/3 * sum1(lambda x: gammatildeDD[i][j] * dbetaGUD[x][x])))
+         for i in range(3) for j in range(i+1)],
 
-#Atilde1DD_rhs = tensor2(lambda i, j: - DDalphaGDD[i][j] + alphaG * (+ RDD[i][j] - 8 * pi * SijDD[i][j]))
-#Atilde1UD_rhs = tensor2(lambda i, j: sum1(lambda x: gUU[i][x] * Atilde1DD_rhs[x][j]))
+        [lhrh(lhs=gUU[i][j],
+              rhs=chi * gammatildeUU[i][j])
+         for i in range(3) for j in range(i+1)],
+        [lhrh(lhs=dgDDD[i][j][k],
+              rhs=(- 1 / chi**2 * dchiD[k] * gammatildeDD[i][j]
+                   + 1 / chi * dgammatildeDDD[i][j][k]))
+         for i in range(3) for j in range(i+1) for k in range(3)],
+        [lhrh(lhs=GammaDDD[i][j][k],
+              rhs=1/2 * dgDDD[i][j][k] + dgDDD[i][k][j] - dgDDD[j][k][i])
+         for i in range(3) for j in range(3) for k in range(j+1)],
+        [lhrh(lhs=GammaUDD[i][j][k],
+              rhs=sum1(lambda x: gUU[i][x] * GammaDDD[x][j][k]))
+         for i in range(3) for j in range(3) for k in range(j+1)],
+        [lhrh(lhs=DDalphaGDD[i][j],
+              rhs=ddalphaGDD[i][j] - sum1(lambda x: GammaUDD[x][i][j] * dalphaGD[x]))
+         for i in range(3) for j in range(i+1)],
+        [lhrh(lhs=AtildeUD[i][j],
+              rhs=sum1(lambda x: gammatildeUU[i][x] * AtildeDD[x][j]))
+         for i in range(3) for j in range(i+1)],
+        [lhrh(lhs=rho,
+              rhs=1 / alphaG**2 * (+ eTtt
+                                   - 2 * sum1(lambda x: betaGU[x] * eTtiD[x])
+                                   + sum2_symm(lambda x, y: betaGU[x] * betaGU[y] * eTijDD[x][y])))],
+        # [lhrh(lhs=SiD[i],
+        #       rhs=-1 / alphaG * (eTtiD[i] - sum1(lambda x:  betaGU[x] * eTijDD[i][x])))
+        #  for i in range(3)],
+        [lhrh(lhs=SijDD[i][j],
+              rhs=eTijDD[i][j])
+         for i in range(3) for j in range(i+1)],
+        [lhrh(lhs=trS,
+              rhs=sum2_symm(lambda x, y: gUU[x][y] * SijDD[x][y]))],
+        [lhrh(lhs=Khat_rhs,
+              rhs=(- sum2_symm(lambda x, y: gUU[x][y] * DDalphaGDD[x][y])
+                   + alphaG * (+ sum2_symm(lambda x, y: AtildeUD[x][y] * AtildeUD[y][x])
+                               + 1/3 * (Khat + 2 * Theta)**2)
+                   + 4 * pi * alphaG * (trS + rho)
+                   + alphaG * kappa1 * (1 - kappa2) * Theta))],
 
-rhs_eqns = flatten([
-    [[
-        [lhrh(lhs=dbetaGUD[i][j], rhs=betaGU_dD[i][j]) for j in range(3)],
-        [loop],
-    ] for i in range(3) ],
-    [lhrh(lhs=chi_rhs,
-          rhs=2 / 3 * chi * (alphaG * (Khat + 2 * Theta) - sum1(lambda x: dbetaGUD[x][x])))],
-    [lhrh(lhs=gammatildeDD_rhs[i][j],
-          rhs=(-2 * alphaG * AtildeDD[i][j]
-               + sum1(lambda x: gammatildeDD[x][i] * dbetaGUD[x][j] + gammatildeDD[x][j] * dbetaGUD[x][i])
-               - 2 / 3 * sum1(lambda x: gammatildeDD[i][j] * dbetaGUD[x][x])))
-     for i in range(3) for j in range(i+1)],
-    [lhrh(lhs=Khat_rhs,
-          rhs=(- sum1(lambda x: DDalphaGUD[x][x])
-               + alphaG * (sum2_symm(lambda x, y: AtildeUD[x][y] * AtildeUD[y][x])
-                           + 1 / 3 * (Khat + 2 * Theta)**2)
-               + 4 * pi * alphaG * (traceSij + rho)
-               + alphaG * kappa1 * (1 - kappa2) * Theta))],
-    [[lhrh(lhs=Atilde1DD_rhs[i][j], rhs=gUU[i][j])] for i in range(3) for j in range(i+1)], 
-    [[lhrh(lhs=AtildeDD_rhs[i][j], rhs=Atilde1DD_rhs[i][j])] for i in range(3) for j in range(i+1)],
-    # [lhrh(lhs=AtildeDD_rhs[i][j],
-    #       rhs=(+ chi * (Atilde1DD_rhs[i][j]
-    #                     - 1 / 3 * gDD[i][j] * sum1(lambda x: Atilde1UD_rhs[x][x]))
-    #            + alphaG * (+ (Khat + 2 * Theta) * AtildeDD[i][j]
-    #                        - 2 * sum1(lambda x: AtildeDD[x][i] * AtildeUD[x][j]))
-    #            + sum1(lambda x: AtildeDD[x][i] * dbetaGUD[x][j] + AtildeDD[x][j] * dbetaGUD[x][i])
-    #            - 2 / 3 * AtildeDD[i][j] * sum1(lambda x: dbetaGUD[x][x])))
-    #  for i in range(3) for j in range(i+1)],
-])
-
-thorn.add_func("Z4cNRPy_RHS",
-    body=rhs_eqns,
-    where='interior',
-    schedule_bin="ODESolvers_RHS",
-    doc="Calculate RHS",
-    centering=centering)
+        [lhrh(lhs=GammatildeDDD[i][j][k],
+              rhs=1/2 * dgammatildeDDD[i][j][k] + dgammatildeDDD[i][k][j] - dgammatildeDDD[j][k][i])
+         for i in range(3) for j in range(3) for k in range(j+1)],
+        [lhrh(lhs=GammatildeUDD[i][j][k],
+              rhs=sum1(lambda x: gammatildeUU[i][x] * GammatildeDDD[x][j][k]))
+         for i in range(3) for j in range(3) for k in range(j+1)],
+        [lhrh(lhs=GammatildeUDU[i][j][k],
+              rhs=sum1(lambda x: GammatildeUDD[i][j][x] * gammatildeUU[x][k]))
+         for i in range(3) for j in range(3) for k in range(3)],
+        [lhrh(lhs=alphaRicciTmunuDD[i][j],
+              rhs=- DDalphaGDD[i][j] + alphaG * (+ RDD[i][j] - 8 * pi * SijDD[i][j]))
+         for i in range(3) for j in range(i+1)],
+        [lhrh(lhs=DDchiDD[i][j],
+              rhs=ddchiDD[i][j] - sum1(lambda x: GammaUDD[x][i][j] * dchiD[x]))
+         for i in range(3) for j in range(i+1)],
+        [lhrh(lhs=RchiDD[i][j],
+              rhs=(+ 1 / (2 * chi) * DDchiDD[i][j]
+                   + 1 / (2 * chi) * gammatildeDD[i][j] * sum2_symm(lambda x, y: gammatildeUU[x][y] * DDchiDD[x][y])
+                   - 1 / (4 * chi**2) * dchiD[i] * dchiD[j]
+                   - 3 / (4 * chi**2) * (gammatildeDD[i][j] * sum2_symm(lambda x, y:  gammatildeUU[x][y] * dchiD[x] * dchiD[y]))))
+         for i in range(3) for j in range(i+1)],
+        [lhrh(lhs=RtildeDD[i][j],
+              rhs=(- 1/2 * sum2_symm(lambda x, y: gammatildeUU[x][y] * ddgammatildeDDDD[i][j][x][y])
+                   + 1/2 * sum1(lambda x: (+ gammatildeDD[x][i] * dcontractedGammatildeUD[x][j]
+                                           + gammatildeDD[x][j] * dcontractedGammatildeUD[x][i]))
+                   + 1/2 * sum1(lambda x: (+ contractedGammatildeU[x] * GammatildeDDD[i][j][x]
+                                           + contractedGammatildeU[x] * GammatildeDDD[j][i][x]))
+                   + sum2_symm(lambda x, y: (+ GammatildeUDD[x][i][y] * GammatildeUDU[j][x][y]
+                                             + GammatildeUDD[x][j][y] * GammatildeUDU[i][x][y]
+                                             + GammatildeUDD[x][i][y] * GammatildeUDU[x][j][y]))))
+         for i in range(3) for j in range(i+1)],
+        [lhrh(lhs=RDD[i][j],
+              rhs=RchiDD[i][j] + RtildeDD[i][j])
+         for i in range(3) for j in range(i+1)],
+        [lhrh(lhs=AtildeDD_rhs[i][j],
+              rhs=(+ chi * (alphaRicciTmunuDD[i][j]
+                            - 1 / 3 * gDD[i][j] * sum2_symm(lambda x, y: gUU[x][y] * alphaRicciTmunuDD[x][y]))
+                   + alphaG * (+ (Khat + 2 * Theta) * AtildeDD[i][j]
+                               - 2 * sum1(lambda x: AtildeDD[x][i] * AtildeUD[x][j]))
+                   + sum1(lambda x: AtildeDD[x][i] * dbetaGUD[x][j] + AtildeDD[x][j] * dbetaGUD[x][i])
+                   - 2 / 3 * AtildeDD[i][j] * sum1(lambda x: dbetaGUD[x][x])))
+         for i in range(3) for j in range(i+1)],
+    ])
+    
+    thorn.add_func("Z4cNRPy_RHS",
+        body=rhs_eqns,
+        where='interior',
+        schedule_bin="ODESolvers_RHS",
+        doc="Calculate RHS",
+        centering=centering)
+RHS()
 
 # Generate thorn
 
