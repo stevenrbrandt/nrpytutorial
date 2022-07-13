@@ -1,7 +1,7 @@
 # NRPyPN: Validated Post-Newtonian Expressions for Input into TwoPunctures, Wolfram Mathematica, SymPy, or Highly-Optimized C Codes
 
 ## Author
-Zachariah B. Etienne (http://astro.phys.wvu.edu/zetienne/)
+Zachariah B. Etienne (https://etienneresearch.com)
 
 ## Special Thanks
 Special thanks to Peter Diener and Roland Haas for reviewing
