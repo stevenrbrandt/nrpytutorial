@@ -254,14 +254,14 @@ class CactusThorn:
             for item in body:
                 assert type(item) == lhrh, "Equations should be stored in outputC.lhrh objects."
                 writem = str(item.lhs)
-                if grid.find_gftype(writem,die=False) == "TILE_TMP":
+                if grid.find_gftype(writem,die=False) in ["TILE_TMP","SCALAR_TMP"]:
                     tmps.add(writem)
                 else:
                     writegfs.add(writem)
                 if hasattr(item.rhs, "free_symbols"):
                     for sym in item.rhs.free_symbols:
                         rdsym = str(sym)
-                        if grid.find_gftype(rdsym,die=False) == "TILE_TMP":
+                        if grid.find_gftype(rdsym,die=False) in ["TILE_TMP","SCALAR_TMP"]:
                             tmps.add(rdsym)
                             continue
                         # Check if the symbol name is a derivative
@@ -577,7 +577,7 @@ class CactusThorn:
                     #TODO: change lines with "if gf_name in ["x","y","z"]:" to check if gftype=="CORE"
                     if gf_group in ["x","y","z"]:
                         continue
-                    if ixp.find_gftype_for_group(gf_group,die=False) == "TILE_TMP":
+                    if ixp.find_gftype_for_group(gf_group,die=False) in ["TILE_TMP","SCALAR_TMP"]:
                         continue
 
                     rhs=gf_group + "_rhs"
@@ -638,7 +638,7 @@ void {self.thornname}_RegisterVars(CCTK_ARGUMENTS)
                         if gf_group in storage_written:
                             continue
                         storage_written.add(gf_group)
-                        if grid.find_gftype(gf_name,die=False) == "TILE_TMP":
+                        if grid.find_gftype(gf_name,die=False) in ["TILE_TMP","SCALAR_TMP"]:
                             continue
                         if grid.ET_driver == "Carpet":
                             print(f"STORAGE: {gf_group}GF[3]", file=fd)
