@@ -392,12 +392,20 @@ def read_gfs_from_memory(list_of_base_gridfunction_names_in_derivs, fdstencl, sy
                                                                               str(fdstencl[j][k][2]) + "," +
                                                                               str(fdstencl[j][k][3]))
 
+    def get_symbols(arg):
+        if hasattr(arg, "free_symbols"):
+            return list(arg.free_symbols)
+        elif type(arg) == str:
+            return [arg]
+        else:
+            assert False
+
     # Step 4b: "Zeroth derivative" case:
     #     If gridfunction appears in expression not
     #     as derivative (i.e., by itself), it must
     #     be read from memory as well.
     for expr in range(len(sympyexpr_list)):
-        for var in sympyexpr_list[expr].rhs.free_symbols:
+        for var in get_symbols(sympyexpr_list[expr].rhs) + get_symbols(sympyexpr_list[expr].lhs):
             vartype = gri.variable_type(var)
             if vartype == "gridfunction":
                 for i in range(len(gri.glb_gridfcs_list)):
@@ -486,7 +494,7 @@ def read_gfs_from_memory(list_of_base_gridfunction_names_in_derivs, fdstencl, sy
     count = 0
     if idxs is None:
         idxs = set()
-    for gfidx in range(len(gri.glb_gridfcs_list)):
+    for gfidx in range(len(gri.glb_gridfcs_map)):
         for pt in range(len(sorted_list_of_points_read_from_memory[gfidx])):
             read_from_memory_Ccode += read_from_memory_Ccode_onept(read_from_memory_gf[count].name,
                                                                    sorted_list_of_points_read_from_memory[gfidx][pt],

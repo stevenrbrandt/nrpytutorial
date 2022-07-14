@@ -305,8 +305,9 @@ def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_inf
                 f"Error: Tried to register the gridfunction \"{gf_names[i]}\" twice (ignored type)"
         # If no duplicate found, append to "gridfunctions" list:
         var_data = (glb_gridfc(gf_type, gf_name, rank, DIM, f_infinity[i], wavespeed[i], centering[i], external_module))
+        if gf_name not in glb_gridfcs_map:
+            glb_gridfcs_list.append(var_data)
         glb_gridfcs_map[gf_name] = var_data
-        glb_gridfcs_list.append(var_data)
 
     # Step 5: Return SymPy object corresponding to symbol or
     #         list of symbols representing gridfunction in
