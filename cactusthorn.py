@@ -448,7 +448,9 @@ class CactusThorn:
     def declare_param(self, name, default, doc, vmin=None, vmax=None, options=None):
         self.params += [(name, default, doc, vmin, vmax, options)]
         ty = type(default)
-        if ty == int:
+        if ty == bool:
+            c_type = "bool"
+        elif ty == int:
             c_type = "int"
         elif ty == float:
             c_type = "REAL"
@@ -566,7 +568,9 @@ class CactusThorn:
                     t = typeof(default, vmin, vmax)
                     vmin = vmin if vmin is not None else '*'
                     vmax = vmax if vmax is not None else '*'
-                    if t == int:
+                    if t == bool:
+                        print(f'BOOLEAN {name} "{doc}" {{}} {default}', file=fd)
+                    elif t == int:
                         print(f'CCTK_INT {name} "{doc}" {{ {vmin}:{vmax} :: "" }} {default}', file=fd)
                     elif t == float:
                         print(f'CCTK_REAL {name} "{doc}" {{ {vmin}:{vmax} :: "" }} {default}', file=fd)
