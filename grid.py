@@ -152,7 +152,7 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = "", context = "DECL"):
             elif gftype == "CORE":
                 return retstring + "p." + varname
             elif gftype == "TILE_TMP":
-                return retstring + varname + f"({get_centering(varname)}_tmp_layout,p.I{ijklstring})"
+                return retstring + varname + f"({find_centering(varname)}_tmp_layout,p.I{ijklstring})"
             elif gftype == "SCALAR_TMP":
                 if context == "USE":
                     return retstring + varname;
@@ -203,8 +203,10 @@ def verify_gridfunction_basename_is_valid(gf_basename):
         print(" Gridfunctions with base names ending in an integer is forbidden; pick a new name.")
         sys.exit(1)
 
-def get_centering(gf_name):
-    return gf_centering.get(gf_name,None)
+def find_centering(gf_name):
+    gf = glb_gridfcs_map.get(gf_name, None)
+    if gf is not None:
+        return gf.centering
 
 import sys
 def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_infinity=None, wavespeed=None, centering=None, external_module=None):

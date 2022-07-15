@@ -205,13 +205,14 @@ def typeof(*args):
     return t
 
 class CactusFunc:
-    def __init__(self, name, body, schedule_bin, doc):
+    def __init__(self, name, body, schedule_bin, doc, centering):
         self.name = name
         self.body = body
         self.writegfs = set()
         self.readgfs = set()
         self.schedule_bin = schedule_bin
         self.doc = doc
+        self.centering = centering
 
 class CactusSrc:
     def __init__(self, name):
@@ -234,7 +235,7 @@ class CactusThorn:
         self.src_files[csrc.name] = csrc
         self.last_src_file = csrc
 
-    def add_func(self, name, body, schedule_bin, doc, where='interior', centering='VVV', sync=None):
+    def add_func(self, name, body, schedule_bin, doc, where='interior', centering=None, sync=None):
         self.sync[name] = sync
         check_centering(centering)
         if gri.ET_driver == "Carpet":
@@ -256,8 +257,15 @@ class CactusThorn:
                 writem = str(item.lhs)
                 if grid.find_gftype(writem,die=False) in ["TILE_TMP","SCALAR_TMP"]:
                     tmps.add(writem)
+                elif item.lhs is None:
+                    pass
                 else:
                     writegfs.add(writem)
+                    cent_gf = grid.find_centering(writem)
+                    assert cent_gf is not None, "Centering for grid function '{writem}' is unknown"
+                    if centering is None:
+                        centering = cent_gf
+                    assert cent_gf == centering, f"Centering of '{writem}' is '{cent_gf},' but it must match the loop centering of function '{name}': '{centering}'"
                 if hasattr(item.rhs, "free_symbols"):
                     for sym in item.rhs.free_symbols:
                         rdsym = str(sym)
@@ -275,6 +283,7 @@ class CactusThorn:
                     new_body += [lhrh(lhs=new_lhs, rhs=item.rhs)]
                 else:
                     new_body += [item]
+            assert centering is not None, "The centering for loop '{name}' is none"
             body = new_body
             #if use_fd_output:
             new_body = []
@@ -295,12 +304,12 @@ class CactusThorn:
         centerings_used = set()
         for gf in readgfs:
             gtype = grid.find_gftype(gf,die=False)
-            c = grid.get_centering(gf)
+            c = grid.find_centering(gf)
             if gtype in ["AUX","EVOL","AUXEVOL"] and centering is not None:
                 centerings_used.add(c)
         for gf in writegfs:
             gtype = grid.find_gftype(gf,die=False)
-            c = grid.get_centering(gf)
+            c = grid.find_centering(gf)
             if gtype in ["AUX","EVOL","AUXEVOL"] and centering is not None:
                 centerings_used.add(c)
         centerings_needed = set()
@@ -312,7 +321,7 @@ class CactusThorn:
                 layout_decls += f" CCTK_CENTERING_LAYOUT({c},({{ {nums} }})); "
         tmp_centerings = {}
         for gf in tmps:
-            c = grid.get_centering(gf)
+            c = grid.find_centering(gf)
             if c not in tmp_centerings:
                 tmp_centerings[c] = set()
             tmp_centerings[c].add(gf)
@@ -327,12 +336,12 @@ class CactusThorn:
             tmp_list = sorted(list(ctmps))
             for ix in range(len(tmp_list)):
                 tname = tmp_list[ix]
-                c = grid.get_centering(tname)
+                c = grid.find_centering(tname)
                 tmp_decls += f" GF3D5 {tname}(tiles_{c}({ix})); "
 
         body_str = layout_decls + tmp_decls + body_str
 
-        func = CactusFunc(name, body_str, schedule_bin, doc)
+        func = CactusFunc(name, body_str, schedule_bin, doc, centering)
         self.last_src_file.add_func(func, where)
         func.readgfs = readgfs
         func.writegfs = writegfs

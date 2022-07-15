@@ -53,7 +53,7 @@ def find_gfmodule_for_group(gf_group,die=True):
 
 def find_centering_for_group(gf_group,die=True):
     for gf_name in get_gfnames_for_group(gf_group):
-        return gri.get_centering(gf_name)
+        return gri.find_centering(gf_name)
     return None
 # =====================
 
