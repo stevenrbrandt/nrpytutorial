@@ -132,15 +132,17 @@ blocks:
             - git clone https://github.com/zachetienne/nrpytutorial.git
             - cd nrpytutorial
             - ./UnitTesting/run_NRPy_UnitTests.sh python2
-  - name: "Ubuntu Linux Bionic Python 3.8.3 (default Python 3 in Ubuntu Bionic)"
+  - name: "Ubuntu Linux Bionic Python 3.6.9 (default Python 3 in Ubuntu Bionic)"
     dependencies: []
     task:
       jobs:
-        - name: "Ubuntu Linux Bionic Python 3.8.3 (default Python 3 in Ubuntu Bionic)"
+        - name: "Ubuntu Linux Bionic Python 3.6.9 (default Python 3 in Ubuntu Bionic)"
           commands:
-            - pip3 install -U pip setuptools
-            - pip3 install sympy mpmath testfixtures nrpylatex
             - python3 --version
+            - python3 -m venv jup369
+            - source jup369/bin/activate
+            - pip install -U pip setuptools
+            - pip install sympy mpmath testfixtures nrpylatex
             - git clone https://github.com/zachetienne/nrpytutorial.git
             - cd nrpytutorial
             - ./UnitTesting/run_NRPy_UnitTests.sh python3
