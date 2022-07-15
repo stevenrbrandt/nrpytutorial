@@ -262,7 +262,7 @@ class CactusThorn:
                 else:
                     writegfs.add(writem)
                     cent_gf = grid.find_centering(writem)
-                    assert cent_gf is not None, "Centering for grid function '{writem}' is unknown"
+                    assert cent_gf is not None, f"Centering for grid function '{writem}' is unknown"
                     if centering is None:
                         centering = cent_gf
                     assert cent_gf == centering, f"Centering of '{writem}' is '{cent_gf},' but it must match the loop centering of function '{name}': '{centering}'"
