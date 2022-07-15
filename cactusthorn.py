@@ -561,7 +561,7 @@ class CactusThorn:
             with SafeWrite(self.configuration_ccl) as fd:
                 print(f"# Configuration definitions for thorn {self.thornname}",file=fd)
                 if gri.ET_driver == "CarpetX":
-                    print(f"REQUIRES CarpetX",file=fd)
+                    print(f"REQUIRES Loop",file=fd)
             with SafeWrite(self.param_ccl) as fd:
                 print(f"# Parameter definitions for thorn {self.thornname}",file=fd)
                 for name, default, doc, vmin, vmax, options in self.params:
@@ -736,6 +736,7 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                         print("#include <cctk_Arguments.h>", file=fd)
                         print("#include <cctk_Parameters.h>", file=fd)
                         print("", file=fd)
+                        print("#define CARPETX_GF3D5", file=fd)
                         print("#include <loop_device.hxx>", file=fd)
                         print("", file=fd)
                         print("#include <cmath>", file=fd)
@@ -751,8 +752,17 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                             print(f"  DECLARE_CCTK_ARGUMENTS_{func.name};",file=fd)
                         elif gri.ET_driver == "CarpetX":
                             print(f"  DECLARE_CCTK_ARGUMENTSX_{func.name};",file=fd)
-                            print( "  constexpr auto DI = PointDesc::DI;",file=fd)
                         print( "  DECLARE_CCTK_PARAMETERS;",file=fd)
+                        if gri.ET_driver == "CarpetX":
+                            print( "  constexpr auto DI = PointDesc::DI;",file=fd)
+                            print( "  const Loop::GF3D5layout VVV_layout(cctkGH, {0,0,0});",file=fd)
+                            print( "  const Loop::GF3D5layout VVC_layout(cctkGH, {0,0,1});",file=fd)
+                            print( "  const Loop::GF3D5layout VCV_layout(cctkGH, {0,1,0});",file=fd)
+                            print( "  const Loop::GF3D5layout VCC_layout(cctkGH, {0,1,1});",file=fd)
+                            print( "  const Loop::GF3D5layout CVV_layout(cctkGH, {1,0,0});",file=fd)
+                            print( "  const Loop::GF3D5layout CVC_layout(cctkGH, {1,0,1});",file=fd)
+                            print( "  const Loop::GF3D5layout CCV_layout(cctkGH, {1,1,0});",file=fd)
+                            print( "  const Loop::GF3D5layout CCC_layout(cctkGH, {1,1,1});",file=fd)
                         for ii in range(3):
                             print(f"  const CCTK_REAL invdx{ii} = 1/CCTK_DELTA_SPACE({ii});",file=fd)
                         print(f"  {func.body}",file=fd)
