@@ -326,13 +326,13 @@ class CactusThorn:
                 tmp_centerings[c] = set()
             tmp_centerings[c].add(gf)
         layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVV_tmp_layout(cctkGH,{{0,0,0}});"
-        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_tmp_layout(cctkGH,{{0,0,0}});"
-        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCV_tmp_layout(cctkGH,{{0,0,0}});"
-        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCC_tmp_layout(cctkGH,{{0,0,0}});"
-        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVV_tmp_layout(cctkGH,{{0,0,0}});"
-        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVC_tmp_layout(cctkGH,{{0,0,0}});"
-        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCV_tmp_layout(cctkGH,{{0,0,0}});"
-        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_tmp_layout(cctkGH,{{0,0,0}});"
+        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_tmp_layout(cctkGH,{{0,0,1}});"
+        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCV_tmp_layout(cctkGH,{{0,1,0}});"
+        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCC_tmp_layout(cctkGH,{{0,1,1}});"
+        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVV_tmp_layout(cctkGH,{{1,0,0}});"
+        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVC_tmp_layout(cctkGH,{{1,0,1}});"
+        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCV_tmp_layout(cctkGH,{{1,1,0}});"
+        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_tmp_layout(cctkGH,{{1,1,1}});"
 
         tmp_decls = ""
         for c in tmp_centerings:
@@ -342,7 +342,7 @@ class CactusThorn:
             for ix in range(len(tmp_list)):
                 tname = tmp_list[ix]
                 c = grid.find_centering(tname)
-                tmp_decls += f" GF3D5 {tname}(tiles_{c}({ix})); "
+                tmp_decls += f" const GF3D5 {tname}(tiles_{c}({ix})); "
 
         body_str = layout_decls + tmp_decls + body_str
 
@@ -442,7 +442,7 @@ class CactusThorn:
                 body = f"""
   {decl}
   {checkbounds}
-  grid.loop_{wtag}_device<{centering}_centered[0], {centering}_centered[1], {centering}_centered[2]>(
+  grid.loop_{wtag}_device<{centering}_centered[0], {centering}_centered[1], {centering}_centered[2], CCTK_VECSIZE>(
   grid.nghostzones, [=] CCTK_DEVICE (
   const PointDesc &p) CCTK_ATTRIBUTE_ALWAYS_INLINE {{
   const GF3D5index CCTK_ATTRIBUTE_UNUSED VVV_index(VVV_layout, p.I);
