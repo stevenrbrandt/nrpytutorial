@@ -230,6 +230,8 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
     outCparams = parse_outCparams_string(params)
     preindent = outCparams.preindent
     TYPE = par.parval_from_str("PRECISION")
+    if TYPE == "CCTK_REAL":
+        TYPE = "CCTK_REALVEC"
 
     if outCparams.enable_TYPE == "False":
         TYPE = ""

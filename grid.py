@@ -146,20 +146,26 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = "", context = "DECL"):
                 retstring += varname + "GF" + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
         elif ET_driver == "CarpetX":
             if gfarrayname == "rhs_gfs":
-                return retstring + varname + f"_rhsGF" + "({get_centering(varname)}_layout, p.I)"
+                return retstring + varname + f"_rhsGF" + "(mask, {get_centering(varname)}_index)"
             elif gftype == "EXTERNAL":
-                return retstring + varname + f"({find_centering(varname)}_layout, p.I)"
+                return retstring + varname + f"(mask, {find_centering(varname)}_index)"
             elif gftype == "CORE":
                 return retstring + "p." + varname
             elif gftype == "TILE_TMP":
-                return retstring + varname + f"({find_centering(varname)}_tmp_layout, p.I{ijklstring})"
+                if ijklstring == "":
+                    return retstring + varname + f"(mask, {find_centering(varname)}_tmp_index)"
+                else:
+                    return retstring + varname + f"(mask, {find_centering(varname)}_tmp_layout, p.I{ijklstring})"
             elif gftype == "SCALAR_TMP":
                 if context == "USE":
                     return retstring + varname;
                 else:
                     return retstring + "0.0/0.0";
             else:
-                return retstring + varname + f"GF({find_centering(varname)}_layout, p.I{ijklstring})"
+                if ijklstring == "":
+                    return retstring + varname + f"GF(mask, {find_centering(varname)}_index)"
+                else:
+                    return retstring + varname + f"GF(mask, {find_centering(varname)}_layout, p.I{ijklstring})"
     else:
         print("grid::GridFuncMemAccess = "+par.parval_from_str("GridFuncMemAccess")+" not supported")
         sys.exit(1)

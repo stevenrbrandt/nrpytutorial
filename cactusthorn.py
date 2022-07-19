@@ -325,9 +325,14 @@ class CactusThorn:
             if c not in tmp_centerings:
                 tmp_centerings[c] = set()
             tmp_centerings[c].add(gf)
-        for c in tmp_centerings:
-            nums = ",".join(["1" if n in ["c","C"] else "0" for n in c])
-            layout_decls += f" const GF3D5layout {c}_tmp_layout(cctkGH,{{ {nums} }}); "
+        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVV_tmp_layout(cctkGH,{{0,0,0}});"
+        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_tmp_layout(cctkGH,{{0,0,0}});"
+        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCV_tmp_layout(cctkGH,{{0,0,0}});"
+        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCC_tmp_layout(cctkGH,{{0,0,0}});"
+        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVV_tmp_layout(cctkGH,{{0,0,0}});"
+        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVC_tmp_layout(cctkGH,{{0,0,0}});"
+        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCV_tmp_layout(cctkGH,{{0,0,0}});"
+        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_tmp_layout(cctkGH,{{0,0,0}});"
 
         tmp_decls = ""
         for c in tmp_centerings:
@@ -440,6 +445,23 @@ class CactusThorn:
   grid.loop_{wtag}_device<{centering}_centered[0], {centering}_centered[1], {centering}_centered[2]>(
   grid.nghostzones, [=] CCTK_DEVICE (
   const PointDesc &p) CCTK_ATTRIBUTE_ALWAYS_INLINE {{
+  const GF3D5index CCTK_ATTRIBUTE_UNUSED VVV_index(VVV_layout, p.I);
+  const GF3D5index CCTK_ATTRIBUTE_UNUSED VVC_index(VVC_layout, p.I);
+  const GF3D5index CCTK_ATTRIBUTE_UNUSED VCV_index(VCV_layout, p.I);
+  const GF3D5index CCTK_ATTRIBUTE_UNUSED VCC_index(VCC_layout, p.I);
+  const GF3D5index CCTK_ATTRIBUTE_UNUSED CVV_index(CVV_layout, p.I);
+  const GF3D5index CCTK_ATTRIBUTE_UNUSED CVC_index(CVC_layout, p.I);
+  const GF3D5index CCTK_ATTRIBUTE_UNUSED CCV_index(CCV_layout, p.I);
+  const GF3D5index CCTK_ATTRIBUTE_UNUSED CCC_index(CCC_layout, p.I);
+  const GF3D5index CCTK_ATTRIBUTE_UNUSED VVV_tmp_index(VVV_tmp_layout, p.I);
+  const GF3D5index CCTK_ATTRIBUTE_UNUSED VVC_tmp_index(VVC_tmp_layout, p.I);
+  const GF3D5index CCTK_ATTRIBUTE_UNUSED VCV_tmp_index(VCV_tmp_layout, p.I);
+  const GF3D5index CCTK_ATTRIBUTE_UNUSED VCC_tmp_index(VCC_tmp_layout, p.I);
+  const GF3D5index CCTK_ATTRIBUTE_UNUSED CVV_tmp_index(CVV_tmp_layout, p.I);
+  const GF3D5index CCTK_ATTRIBUTE_UNUSED CVC_tmp_index(CVC_tmp_layout, p.I);
+  const GF3D5index CCTK_ATTRIBUTE_UNUSED CCV_tmp_index(CCV_tmp_layout, p.I);
+  const GF3D5index CCTK_ATTRIBUTE_UNUSED CCC_tmp_index(CCC_tmp_layout, p.I);
+  const CCTK_BOOLVEC mask CCTK_ATTRIBUTE_UNUSED = mask_for_loop_tail<CCTK_BOOLVEC>(p.i, p.imax);
   {kernel}
   }});
                 """.strip()
@@ -561,7 +583,7 @@ class CactusThorn:
             with SafeWrite(self.configuration_ccl) as fd:
                 print(f"# Configuration definitions for thorn {self.thornname}",file=fd)
                 if gri.ET_driver == "CarpetX":
-                    print(f"REQUIRES Loop",file=fd)
+                    print(f"REQUIRES Arith Loop",file=fd)
             with SafeWrite(self.param_ccl) as fd:
                 print(f"# Parameter definitions for thorn {self.thornname}",file=fd)
                 for name, default, doc, vmin, vmax, options in self.params:
@@ -580,6 +602,7 @@ class CactusThorn:
                 print(f"INHERITS: {', '.join(list(self.external_modules.keys()))}",file=fd)
                 if gri.ET_driver == "CarpetX":
                     print(f"USES INCLUDE HEADER: loop_device.hxx",file=fd)
+                    print(f"USES INCLUDE HEADER: simd.hxx",file=fd)
                 elif gri.ET_driver == "Carpet":
                     print("CCTK_INT FUNCTION MoLRegisterEvolved(CCTK_INT IN EvolvedIndex, CCTK_INT IN RHSIndex)",file=fd)
                     print("USES FUNCTION MoLRegisterEvolved",file=fd)
@@ -738,9 +761,12 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                         print("", file=fd)
                         print("#define CARPETX_GF3D5", file=fd)
                         print("#include <loop_device.hxx>", file=fd)
+                        print("#include <simd.hxx>", file=fd)
                         print("", file=fd)
                         print("#include <cmath>", file=fd)
+                        print("#include <tuple>", file=fd)
                         print("", file=fd)
+                        print("using namespace Arith;", file=fd)
                         print("using namespace Loop;", file=fd)
                         print("using std::cbrt, std::fmax, std::fmin, std::sqrt;", file=fd)
                     else:
@@ -754,17 +780,20 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                             print(f"  DECLARE_CCTK_ARGUMENTSX_{func.name};",file=fd)
                         print( "  DECLARE_CCTK_PARAMETERS;",file=fd)
                         if gri.ET_driver == "CarpetX":
-                            print( "  constexpr auto DI = PointDesc::DI;",file=fd)
-                            print( "  const Loop::GF3D5layout VVV_layout(cctkGH, {0,0,0});",file=fd)
-                            print( "  const Loop::GF3D5layout VVC_layout(cctkGH, {0,0,1});",file=fd)
-                            print( "  const Loop::GF3D5layout VCV_layout(cctkGH, {0,1,0});",file=fd)
-                            print( "  const Loop::GF3D5layout VCC_layout(cctkGH, {0,1,1});",file=fd)
-                            print( "  const Loop::GF3D5layout CVV_layout(cctkGH, {1,0,0});",file=fd)
-                            print( "  const Loop::GF3D5layout CVC_layout(cctkGH, {1,0,1});",file=fd)
-                            print( "  const Loop::GF3D5layout CCV_layout(cctkGH, {1,1,0});",file=fd)
-                            print( "  const Loop::GF3D5layout CCC_layout(cctkGH, {1,1,1});",file=fd)
+                            print( "  using CCTK_BOOLVEC = simdl<CCTK_REAL>;",file=fd)
+                            print( "  using CCTK_REALVEC = simd<CCTK_REAL>;",file=fd)
+                            print( "  constexpr std::size_t CCTK_VECSIZE CCTK_ATTRIBUTE_UNUSED = std::tuple_size_v<CCTK_REALVEC>;",file=fd)
+                            print( "  constexpr auto DI CCTK_ATTRIBUTE_UNUSED = PointDesc::DI;",file=fd)
+                            print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED VVV_layout(cctkGH, {0,0,0});",file=fd)
+                            print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_layout(cctkGH, {0,0,1});",file=fd)
+                            print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED VCV_layout(cctkGH, {0,1,0});",file=fd)
+                            print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED VCC_layout(cctkGH, {0,1,1});",file=fd)
+                            print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED CVV_layout(cctkGH, {1,0,0});",file=fd)
+                            print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED CVC_layout(cctkGH, {1,0,1});",file=fd)
+                            print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED CCV_layout(cctkGH, {1,1,0});",file=fd)
+                            print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_layout(cctkGH, {1,1,1});",file=fd)
                         for ii in range(3):
-                            print(f"  const CCTK_REAL invdx{ii} = 1/CCTK_DELTA_SPACE({ii});",file=fd)
+                            print(f"  const CCTK_REAL invdx{ii} CCTK_ATTRIBUTE_UNUSED = 1/CCTK_DELTA_SPACE({ii});",file=fd)
                         print(f"  {func.body}",file=fd)
                         print(f'}}',file=fd)
 

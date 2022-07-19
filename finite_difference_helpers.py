@@ -209,12 +209,17 @@ def type__var(in_var,FDparams, AddPrefix_for_UpDownWindVars=True,is_const=True):
             varname = "UpwindAlgInput"+varname
         if "_ddnD" in varname:  # For consistency with _dupD
             varname = "UpwindAlgInput"+varname
-    if FDparams.enable_SIMD == "True":
+    vartype = FDparams.PRECISION
+    if FDparams.enable_SIMD == "True" and vartype != "CCTK_REAL":
         return "const REAL_SIMD_ARRAY " + varname
+    if vartype == "CCTK_REAL" and FDparams.enable_SIMD == "True":
+        vartype = "CCTK_REALVEC"
+    if vartype == "CCTK_REAL":
+        vartype = "CCTK_REALVEC"
     if is_const:
-        return "const " + FDparams.PRECISION + " " + varname
+        return "const " + vartype + " " + varname
     else:
-        return FDparams.PRECISION + " " + varname
+        return vartype + " " + varname
 
 def read_from_memory_Ccode_onept(gfname,idx, FDparams, idxs):
     """
