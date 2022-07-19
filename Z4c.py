@@ -10,7 +10,8 @@ import indexedexp as ixp
 from cactusthorn import CactusThorn, loop
 from outputC import lhrh
 
-par.set_parval_from_str("PRECISION", "CCTK_REAL")
+# "CCTK_REAL" or "CCTK_REALVEC"
+par.set_parval_from_str("PRECISION", "CCTK_REALVEC")
 
 # Current options are Carpet and CarpetX
 grid.ET_driver = "CarpetX"
