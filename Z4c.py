@@ -149,7 +149,7 @@ GammatildeU_dD = ixp.declarerank2("GammatildeU_dD", None)
 alphaG_dD = ixp.declarerank1("alphaG_dD")
 alphaG_dDD = ixp.declarerank2("alphaG_dDD", "sym01")
 betaGU_dD = ixp.declarerank2("betaGU_dD", None)
-betaGU_dDD = ixp.declarerank3("betaGU_dDD", None)
+betaGU_dDD = ixp.declarerank3("betaGU_dDD", "sym12")
 
 # Our tile-local derivatives
 dchiD = ixp.register_gridfunctions_for_single_rankN(1, "TILE_TMP", "dchiD", centering=centering)
