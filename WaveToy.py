@@ -23,7 +23,7 @@ centering='CCC'
 # EVOL evolved gfs (3 time levels)
 uu_rhs, vv_rhs = thorn.register_gridfunctions("AUX", ["uu_rhs", "vv_rhs"], centering=centering)
 uu, vv = thorn.register_gridfunctions("EVOL", ["uu", "vv"], centering=centering)
-tmp0, tmp1 = thorn.register_gridfunctions("TMP",["tmp0v","tmp1v"],centering=centering)
+tmp0, tmp1 = thorn.register_gridfunctions("TILE_TMP",["tmp0v","tmp1v"],centering=centering)
 x,y,z = thorn.get_xyz()
 
 from outputC import lhrh
