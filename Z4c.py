@@ -8,7 +8,10 @@ from sympy.functions.elementary.miscellaneous import cbrt, Max, sqrt
 import NRPy_param_funcs as par
 import indexedexp as ixp
 from cactusthorn import CactusThorn, loop
-from outputC import lhrh
+from outputC import lhrh, outCparams
+
+# Temporary hack
+outCparams.CSE_enable = "False"
 
 # "CCTK_REAL" or "CCTK_REALVEC"
 par.set_parval_from_str("PRECISION", "CCTK_REALVEC")

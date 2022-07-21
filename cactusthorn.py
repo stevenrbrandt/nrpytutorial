@@ -255,8 +255,11 @@ class CactusThorn:
             for item in body:
                 assert type(item) == lhrh, "Equations should be stored in outputC.lhrh objects."
                 writem = str(item.lhs)
-                if grid.find_gftype(writem,die=False) in ["TILE_TMP","SCALAR_TMP"]:
+                gftype = grid.find_gftype(writem,die=False)
+                if gftype == "TILE_TMP":
                     tmps.add(writem)
+                elif gftype == "SCALAR_TMP":
+                    pass
                 elif item.lhs is None:
                     pass
                 else:
@@ -269,8 +272,11 @@ class CactusThorn:
                 if hasattr(item.rhs, "free_symbols"):
                     for sym in item.rhs.free_symbols:
                         rdsym = str(sym)
-                        if grid.find_gftype(rdsym,die=False) in ["TILE_TMP","SCALAR_TMP"]:
+                        gftype = grid.find_gftype(rdsym,die=False)
+                        if gftype == "TILE_TMP":
                             tmps.add(rdsym)
+                            continue
+                        elif gftype == "SCALAR_TMP":
                             continue
                         # Check if the symbol name is a derivative
                         g = re.match(r'(.*)_dD+\d+$', rdsym)
