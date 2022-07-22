@@ -1,7 +1,7 @@
 import grid
 import os
 from sympy import sympify
-from sympy import Eq, Ne, Piecewise
+from sympy import Eq, Ne, Piecewise, Rational
 from sympy import pi
 from sympy.functions.elementary.miscellaneous import cbrt, Max, sqrt
 
@@ -332,12 +332,12 @@ def RHS():
 
         # RHS
         [lhrh(lhs=chi_rhs,
-              rhs=2/3 * chi * (alphaG * (Khat + 2 * Theta) - sum1(lambda x: dbetaGUD[x][x])))],
+              rhs=Rational(2,3) * chi * (alphaG * (Khat + 2 * Theta) - sum1(lambda x: dbetaGUD[x][x])))],
 
         [lhrh(lhs=gammatildeDD_rhs[i][j],
               rhs=(-2 * alphaG * AtildeDD[i][j]
                    + sum1(lambda x: gammatildeDD[x][i] * dbetaGUD[x][j] + gammatildeDD[x][j] * dbetaGUD[x][i])
-                   - 2/3 * sum1(lambda x: gammatildeDD[i][j] * dbetaGUD[x][x])))
+                   - Rational(2,3) * sum1(lambda x: gammatildeDD[i][j] * dbetaGUD[x][x])))
          for i in range(3) for j in range(i+1)],
 
         [lhrh(lhs=gammatildeUU[i][j],
@@ -351,7 +351,7 @@ def RHS():
                    + 1 / chi * dgammatildeDDD[i][j][k]))
          for i in range(3) for j in range(i+1) for k in range(3)],
         [lhrh(lhs=GammaDDD[i][j][k],
-              rhs=1/2 * dgDDD[i][j][k] + dgDDD[i][k][j] - dgDDD[j][k][i])
+              rhs=Rational(1,2) * dgDDD[i][j][k] + dgDDD[i][k][j] - dgDDD[j][k][i])
          for i in range(3) for j in range(3) for k in range(j+1)],
         [lhrh(lhs=GammaUDD[i][j][k],
               rhs=sum1(lambda x: gUU[i][x] * GammaDDD[x][j][k]))
@@ -377,12 +377,12 @@ def RHS():
         [lhrh(lhs=Khat_rhs,
               rhs=(- sum2_symm(lambda x, y: gUU[x][y] * DDalphaGDD[x][y])
                    + alphaG * (+ sum2_symm(lambda x, y: AtildeUD[x][y] * AtildeUD[y][x])
-                               + 1/3 * (Khat + 2 * Theta)**2)
+                               + Rational(1,3) * (Khat + 2 * Theta)**2)
                    + 4 * pi * alphaG * (trS + rho)
                    + alphaG * kappa1 * (1 - kappa2) * Theta))],
 
         [lhrh(lhs=GammatildeDDD[i][j][k],
-              rhs=1/2 * dgammatildeDDD[i][j][k] + dgammatildeDDD[i][k][j] - dgammatildeDDD[j][k][i])
+              rhs=Rational(1,2) * dgammatildeDDD[i][j][k] + dgammatildeDDD[i][k][j] - dgammatildeDDD[j][k][i])
          for i in range(3) for j in range(3) for k in range(j+1)],
         [lhrh(lhs=GammatildeUDD[i][j][k],
               rhs=sum1(lambda x: gammatildeUU[i][x] * GammatildeDDD[x][j][k]))
@@ -397,17 +397,18 @@ def RHS():
               rhs=ddchiDD[i][j] - sum1(lambda x: GammaUDD[x][i][j] * dchiD[x]))
          for i in range(3) for j in range(i+1)],
         [lhrh(lhs=RchiDD[i][j],
-              rhs=(+ 1/2 / chi * DDchiDD[i][j]
-                   + 1/2 / chi * gammatildeDD[i][j] * sum2_symm(lambda x, y: gammatildeUU[x][y] * DDchiDD[x][y])
-                   - 1/4 / chi**2 * dchiD[i] * dchiD[j]
-                   - 3/4 / chi**2 * (gammatildeDD[i][j] * sum2_symm(lambda x, y:  gammatildeUU[x][y] * dchiD[x] * dchiD[y]))))
+              rhs=(+ Rational(1,2) / chi * DDchiDD[i][j]
+                   + Rational(1,2) / chi * gammatildeDD[i][j] * sum2_symm(lambda x, y: gammatildeUU[x][y] * DDchiDD[x][y])
+                   - Rational(1,4) / chi**2 * dchiD[i] * dchiD[j]
+                   - Rational(3,4) / chi**2 * (gammatildeDD[i][j] *
+                                               sum2_symm(lambda x, y: gammatildeUU[x][y] * dchiD[x] * dchiD[y]))))
          for i in range(3) for j in range(i+1)],
         [lhrh(lhs=RtildeDD[i][j],
-              rhs=(- 1/2 * sum2_symm(lambda x, y: gammatildeUU[x][y] * ddgammatildeDDDD[i][j][x][y])
-                   + 1/2 * sum1(lambda x: (+ gammatildeDD[x][i] * dGammatildeUD[x][j]
-                                           + gammatildeDD[x][j] * dGammatildeUD[x][i]))
-                   + 1/2 * sum1(lambda x: (+ GammatildebarU[x] * GammatildeDDD[i][j][x]
-                                           + GammatildebarU[x] * GammatildeDDD[j][i][x]))
+              rhs=(- Rational(1,2) * sum2_symm(lambda x, y: gammatildeUU[x][y] * ddgammatildeDDDD[i][j][x][y])
+                   + Rational(1,2) * sum1(lambda x: (+ gammatildeDD[x][i] * dGammatildeUD[x][j]
+                                                     + gammatildeDD[x][j] * dGammatildeUD[x][i]))
+                   + Rational(1,2) * sum1(lambda x: (+ GammatildebarU[x] * GammatildeDDD[i][j][x]
+                                                     + GammatildebarU[x] * GammatildeDDD[j][i][x]))
                    + sum2_symm(lambda x, y: (+ GammatildeUDD[x][i][y] * GammatildeUDU[j][x][y]
                                              + GammatildeUDD[x][j][y] * GammatildeUDU[i][x][y]
                                              + GammatildeUDD[x][i][y] * GammatildeUDU[x][j][y]))))
@@ -422,11 +423,11 @@ def RHS():
          for i in range(3) for j in range(i+1)],
         [lhrh(lhs=AtildeDD_rhs[i][j],
               rhs=(+ chi * (alphaRicciTmunuDD[i][j]
-                            - 1/3 * gDD[i][j] * sum2_symm(lambda x, y: gUU[x][y] * alphaRicciTmunuDD[x][y]))
+                            - Rational(1,3) * gDD[i][j] * sum2_symm(lambda x, y: gUU[x][y] * alphaRicciTmunuDD[x][y]))
                    + alphaG * (+ (Khat + 2 * Theta) * AtildeDD[i][j]
                                - 2 * sum1(lambda x: AtildeDD[x][i] * AtildeUD[x][j]))
                    + sum1(lambda x: AtildeDD[x][i] * dbetaGUD[x][j] + AtildeDD[x][j] * dbetaGUD[x][i])
-                   - 2/3 * AtildeDD[i][j] * sum1(lambda x: dbetaGUD[x][x])))
+                   - Rational(2,3) * AtildeDD[i][j] * sum1(lambda x: dbetaGUD[x][x])))
          for i in range(3) for j in range(i+1)],
 
         [lhrh(lhs=AtildeUU[i][j],
@@ -436,22 +437,22 @@ def RHS():
               rhs=(- 2 * sum1(lambda x: AtildeUU[i][x] * dalphaGD[x])
                    + 2 * alphaG *
                          (+ sum2_symm(lambda x, y: GammatildeUDD[i][x][y] * AtildeUU[x][y])
-                          - 3/2 / chi * sum1(lambda x: AtildeUU[i][x] * dchiD[x])
-                          - 1/3 * sum1(lambda x: gammatildeUU[i][x] * (2 * dKhatD[x] + dThetaD[x]))
+                          - Rational(3,2) / chi * sum1(lambda x: AtildeUU[i][x] * dchiD[x])
+                          - Rational(1,3) * sum1(lambda x: gammatildeUU[i][x] * (2 * dKhatD[x] + dThetaD[x]))
               
                           - 8 * pi * sum1(lambda x: gammatildeUU[i][x] * SiD[x]))
                    + sum2_symm(lambda x, y: gammatildeUU[x][y] * ddbetaGUDD[i][x][y])
-                   + 1/3 * sum2(lambda x, y: gammatildeUU[i][x] * ddbetaGUDD[y][x][y])
+                   + Rational(1,3) * sum2(lambda x, y: gammatildeUU[i][x] * ddbetaGUDD[y][x][y])
                    - sum1(lambda x: GammatildebarU[x] * dbetaGUD[i][x])
-                   + 2/3 * GammatildebarU[i] * sum1(lambda x: dbetaGUD[x][x])
+                   + Rational(2,3) * GammatildebarU[i] * sum1(lambda x: dbetaGUD[x][x])
                    - 2 * alphaG * kappa1 * (GammatildeU[i] - GammatildebarU[i])))
          for i in range(3)],
 
         [lhrh(lhs=Theta_rhs,
               rhs=Piecewise((0, set_Theta_zero),
-                            (+ 1/2 * alphaG * (+ Rsc
+                            (+ Rational(1,2) * alphaG * (+ Rsc
                                              - sum2_symm(lambda x, y: AtildeUU[x][y] * AtildeDD[x][y])
-                                             + 2/3 * (Khat + 2 * Theta)**2)
+                                             + Rational(2,3) * (Khat + 2 * Theta)**2)
                              - alphaG * (+ 8 * pi * rho
                                          + kappa1 * (2 + kappa2) * Theta), True)))],
 
@@ -504,7 +505,7 @@ def Constraints():
         # ZtildeC, eqn. (13)
         [lhrh(lhs=gammatildeUU[i][j], rhs=gammatildeUU_expr[i][j]) for i in range(3) for j in range(i+1)],
         [lhrh(lhs=GammatildeDDD[i][j][k],
-              rhs=1/2 * dgammatildeDDD[i][j][k] + dgammatildeDDD[i][k][j] - dgammatildeDDD[j][k][i])
+              rhs=Rational(1,2) * dgammatildeDDD[i][j][k] + dgammatildeDDD[i][k][j] - dgammatildeDDD[j][k][i])
          for i in range(3) for j in range(3) for k in range(j+1)],
         [lhrh(lhs=GammatildeUDD[i][j][k],
               rhs=sum1(lambda x: gammatildeUU[i][x] * GammatildeDDD[x][j][k]))
@@ -534,17 +535,18 @@ def Constraints():
               rhs=ddchiDD[i][j] - sum1(lambda x: GammaUDD[x][i][j] * dchiD[x]))
          for i in range(3) for j in range(i+1)],
         [lhrh(lhs=RchiDD[i][j],
-              rhs=(+ 1/2 / chi * DDchiDD[i][j]
-                   + 1/2 / chi * gammatildeDD[i][j] * sum2_symm(lambda x, y: gammatildeUU[x][y] * DDchiDD[x][y])
-                   - 1/4 / chi**2 * dchiD[i] * dchiD[j]
-                   - 3/4 / chi**2 * (gammatildeDD[i][j] * sum2_symm(lambda x, y:  gammatildeUU[x][y] * dchiD[x] * dchiD[y]))))
+              rhs=(+ Rational(1,2) / chi * DDchiDD[i][j]
+                   + Rational(1,2) / chi * gammatildeDD[i][j] * sum2_symm(lambda x, y: gammatildeUU[x][y] * DDchiDD[x][y])
+                   - Rational(1,4) / chi**2 * dchiD[i] * dchiD[j]
+                   - Rational(3,4) / chi**2 * (gammatildeDD[i][j] *
+                                               sum2_symm(lambda x, y:  gammatildeUU[x][y] * dchiD[x] * dchiD[y]))))
          for i in range(3) for j in range(i+1)],
         [lhrh(lhs=RtildeDD[i][j],
-              rhs=(- 1/2 * sum2_symm(lambda x, y: gammatildeUU[x][y] * ddgammatildeDDDD[i][j][x][y])
-                   + 1/2 * sum1(lambda x: (+ gammatildeDD[x][i] * dGammatildeUD[x][j]
-                                           + gammatildeDD[x][j] * dGammatildeUD[x][i]))
-                   + 1/2 * sum1(lambda x: (+ GammatildebarU[x] * GammatildeDDD[i][j][x]
-                                           + GammatildebarU[x] * GammatildeDDD[j][i][x]))
+              rhs=(- Rational(1,2) * sum2_symm(lambda x, y: gammatildeUU[x][y] * ddgammatildeDDDD[i][j][x][y])
+                   + Rational(1,2) * sum1(lambda x: (+ gammatildeDD[x][i] * dGammatildeUD[x][j]
+                                                     + gammatildeDD[x][j] * dGammatildeUD[x][i]))
+                   + Rational(1,2) * sum1(lambda x: (+ GammatildebarU[x] * GammatildeDDD[i][j][x]
+                                                     + GammatildebarU[x] * GammatildeDDD[j][i][x]))
                    + sum2_symm(lambda x, y: (+ GammatildeUDD[x][i][y] * GammatildeUDU[j][x][y]
                                              + GammatildeUDD[x][j][y] * GammatildeUDU[i][x][y]
                                              + GammatildeUDD[x][i][y] * GammatildeUDU[x][j][y]))))
@@ -557,7 +559,7 @@ def Constraints():
         [(lhrh(lhs=HCval,
                rhs=(+ Rsc
                     + sum2_symm(lambda x, y: AtildeUD[x][y] * AtildeUD[y][x])
-                    - 2/3 * (Khat + 2 * Theta)**2
+                    - Rational(2,3) * (Khat + 2 * Theta)**2
                     - 16 * pi * rho)))],
         [(lhrh(lhs=HC,
                rhs=HCval))],
@@ -583,8 +585,8 @@ def Constraints():
         [lhrh(lhs=MtildeCvalU[i],
               rhs=(+ sum1(lambda x: dAtildeUUD[i][x][x])
                    + sum2_symm(lambda x, y: GammatildeUDD[i][x][y] * AtildeUU[x][y])
-                   - 2/3 * sum1(lambda x: gammatildeUU[i][x] * (dKhatD[x] + 2 * dThetaD[x]))
-                   - 2/3 * sum1(lambda x: AtildeUU[i][x] * dchiD[x] / chi)
+                   - Rational(2,3) * sum1(lambda x: gammatildeUU[i][x] * (dKhatD[x] + 2 * dThetaD[x]))
+                   - Rational(2,3) * sum1(lambda x: AtildeUU[i][x] * dchiD[x] / chi)
                    - 8 * pi * sum1(lambda x: gammatildeUU[i][x] * SiD[x])))
          for i in range(3)],
         [lhrh(lhs=MtildeCU[i],
