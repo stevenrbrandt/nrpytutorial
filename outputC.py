@@ -392,12 +392,12 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
 
         for symgroup in range(1,3):
             if symgroup == 1:
-                sympyexpr = sympyexpr_group1
-                output_varname_str = names_group1
+                sympyexpr_group = sympyexpr_group1
+                names_group = names_group1
                 fix = "_g1_"
             else:
-                sympyexpr = sympyexpr_group2
-                output_varname_str = names_group2
+                sympyexpr_group = sympyexpr_group2
+                names_group = names_group2
                 fix = "_g2_"
 
             # Start processing a group
@@ -406,10 +406,10 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
             sympy_minor_version = int(sympy_version.split(".")[1])
             if sympy_major_version < 1 or (sympy_major_version == 1 and sympy_minor_version < 3):
                 print('Warning: SymPy version', sympy_version, 'does not support CSE postprocessing.')
-                CSE_results = sp.cse(sympyexpr, sp.numbered_symbols(outCparams.CSE_varprefix + fix),
+                CSE_results = sp.cse(sympyexpr_group, sp.numbered_symbols(outCparams.CSE_varprefix + fix),
                                      order=outCparams.CSE_sorting)
             else:
-                CSE_results = cse_postprocess(sp.cse(sympyexpr, sp.numbered_symbols(outCparams.CSE_varprefix + fix),
+                CSE_results = cse_postprocess(sp.cse(sympyexpr_group, sp.numbered_symbols(outCparams.CSE_varprefix + fix),
                                                      order=outCparams.CSE_sorting))
     
             for commonsubexpression in CSE_results[0]:
@@ -426,11 +426,11 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
     
             for i, result in enumerate(CSE_results[1]):
                 if outCparams.enable_SIMD == "True":
-                    outstring += outtypestring + output_varname_str[i] + " = " + \
+                    outstring += outtypestring + names_group[i] + " = " + \
                                  str(expr_convert_to_SIMD_intrins(result,map_sym_to_rat,varprefix,outCparams.SIMD_find_more_FMAsFMSs)) + ";\n"
                 else:
                     result = dosubs(result)
-                    outstring += outtypestring+ccode_postproc(sp.ccode(dosubs(result),output_varname_str[i],
+                    outstring += outtypestring+ccode_postproc(sp.ccode(dosubs(result),names_group[i],
                                                                        user_functions=custom_functions_for_SymPy_ccode))+"\n"
             # Finish processing a group
 
