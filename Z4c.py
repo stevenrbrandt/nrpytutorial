@@ -11,7 +11,7 @@ from cactusthorn import CactusThorn, loop
 from outputC import lhrh, outCparams
 
 # Temporary hack
-outCparams.CSE_enable = "False"
+#outCparams.CSE_enable = "False"
 
 # "CCTK_REAL" or "CCTK_REALVEC"
 par.set_parval_from_str("PRECISION", "CCTK_REALVEC")
