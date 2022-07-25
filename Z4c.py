@@ -12,11 +12,8 @@ import indexedexp as ixp
 from cactusthorn import CactusThorn, loop
 from outputC import lhrh, outCparams
 
-import safewrite
-# safewrite.nochange = True
-safewrite.verbose = True
-
-outCparams.CSE_enable = "True"
+# Temporary hack
+#outCparams.CSE_enable = "False"
 
 # "CCTK_REAL" or "CCTK_REALVEC"
 par.set_parval_from_str("PRECISION", "CCTK_REALVEC")

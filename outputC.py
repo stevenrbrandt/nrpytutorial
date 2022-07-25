@@ -22,6 +22,7 @@ import sympy as sp                            # SymPy: The Python computer algeb
 import re, sys, os, stat                      # Standard Python: regular expressions, system, and multiplatform OS funcs
 from collections import namedtuple            # Standard Python: Enable namedtuple data type
 from suffixes import dosubs
+from grid import find_gftype
 
 lhrh = namedtuple('lhrh', 'lhs rhs')
 outCparams = namedtuple('outCparams', 'preindent includebraces declareoutputvars outCfileaccess outCverbose CSE_enable CSE_varprefix CSE_sorting CSE_preprocess enable_SIMD SIMD_find_more_subs SIMD_find_more_FMAsFMSs SIMD_debug enable_TYPE')
@@ -500,78 +501,87 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
                     else:      RATIONAL_decls += str(p) + ';\n'
 
         #####
-        # Prior to the introduction of the SCALAR_TMP type, NRPy+
-        # did not insert sympy.Eq objects into the list of functions
-        # that were passed to the CSE. SCALAR_TMP places certain
-        # ordering requirements on the system which can only be
-        # untangled if sympy.Eq objects are used.
-        ###
-        
-        # This set of symbols does include the SCALAR_TMPs
-        # But includes them as sq.Eq objects.
+        # Prior to the introduction of the SCALR_TMP type, NRPy+
+        # generated its output in three blocks:
+        #
+        # 1) Reads - get values from grid functions
+        # 2) Assign CSE variables
+        # 3) Writes - put values back into grid functions
+        #
+        # The SCALAR_TMP type, however, is essentially a manual
+        # version of a CSE variable. As such, assignment of the
+        # SCALAR_TMP cannot go in either step 2 or 3, or the
+        # order of assignment might become incorrect. To fix
+        # this, we divide the sympyexpr and corresponding
+        # output_varname_str variable into two groups. The first
+        # group contains only SCALAR_TMP vars, the second group
+        # contains everything else. The generated code now looks
+        # like this:
+        #
+        # 1) Reads - get values from grid functions
+        # 2) Assign CSE variables based on SCALAR_TMP assignments
+        # 3) Writes - assign values to SCALAR_TMPs
+        # 2) Assign CSE variables based on group 2
+        # 3) Writes - put values back into grid functions for group 2
+        #
+        # If no SCALAR_TMPs are present, then group1 will be empty.
+        #
         sympyexpr_group1 = []
-        names_group1 = []
-
-        # This set of symbols does not include the SCALAR_TMPs
         sympyexpr_group2 = []
+        names_group1 = []
         names_group2 = []
-
-        # Synthesizing `muladd` calls seems to slow down the code
-        # sympyexpr = list(map(map_synthesize_muladd, sympyexpr))
-        from grid import find_gftype, var_from_access
         for ii in range(len(sympyexpr)):
             nm = output_varname_str[ii]
-            var = var_from_access(nm)
-            typ = find_gftype(var,die=False)
-            if typ == "SCALAR_TMP":
-                sympyexpr_group1 += [ sp.Eq(sp.sympify(var), sympyexpr[ii]) ]
-                names_group1 += [nm]
-            else:
+            if find_gftype(nm,die=False) == "SCALAR_TMP":
                 sympyexpr_group1 += [sympyexpr[ii]]
                 names_group1 += [nm]
+            else:
                 sympyexpr_group2 += [sympyexpr[ii]]
                 names_group2 += [nm]
 
-        sympyexpr_group = sympyexpr_group1
-        names_group = names_group1
-        # Start processing a group
-        sympy_version = sp.__version__.replace('rc', '...').replace('b', '...')
-        sympy_major_version = int(sympy_version.split(".")[0])
-        sympy_minor_version = int(sympy_version.split(".")[1])
-        if sympy_major_version < 1 or (sympy_major_version == 1 and sympy_minor_version < 3):
-            print('Warning: SymPy version', sympy_version, 'does not support CSE postprocessing.')
-            CSE_results = sp.cse(sympyexpr_group, sp.numbered_symbols(outCparams.CSE_varprefix),
-                                 order=outCparams.CSE_sorting)
-        else:
-            CSE_tmp = sp.cse(sympyexpr_group, sp.numbered_symbols(outCparams.CSE_varprefix),
-                                                 order=outCparams.CSE_sorting)
-            CSE_results = cse_postprocess(CSE_tmp)
-
-        # cse_postprocess moves SCALAR_TMP out of the group
-        sympyexpr_group = sympyexpr_group2
-        names_group = names_group2
-
-        for commonsubexpression in CSE_results[0]:
-            FULLTYPESTRING = "const " + TYPE + " "
-            if outCparams.enable_TYPE == "False":
-                FULLTYPESTRING = ""
-
-            if outCparams.enable_SIMD == "True":
-                outstring += indent + FULLTYPESTRING + str(commonsubexpression[0]) + " = " + \
-                             str(expr_convert_to_SIMD_intrins(commonsubexpression[1],map_sym_to_rat,varprefix,outCparams.SIMD_find_more_FMAsFMSs)) + ";\n"
+        for symgroup in range(1,3):
+            if symgroup == 1:
+                sympyexpr = sympyexpr_group1
+                output_varname_str = names_group1
+                fix = "_g1_"
             else:
-                outstring += indent + FULLTYPESTRING + ccode_postproc(sp.ccode(dosubs(commonsubexpression[1]), commonsubexpression[0],
-                                                                user_functions=custom_functions_for_SymPy_ccode)) + "\n"
+                sympyexpr = sympyexpr_group2
+                output_varname_str = names_group2
+                fix = "_g2_"
 
-        for i, result in enumerate(CSE_results[1]):
-            if outCparams.enable_SIMD == "True":
-                outstring += outtypestring + names_group[i] + " = " + \
-                             str(expr_convert_to_SIMD_intrins(result,map_sym_to_rat,varprefix,outCparams.SIMD_find_more_FMAsFMSs)) + ";\n"
+            # Start processing a group
+            sympy_version = sp.__version__.replace('rc', '...').replace('b', '...')
+            sympy_major_version = int(sympy_version.split(".")[0])
+            sympy_minor_version = int(sympy_version.split(".")[1])
+            if sympy_major_version < 1 or (sympy_major_version == 1 and sympy_minor_version < 3):
+                print('Warning: SymPy version', sympy_version, 'does not support CSE postprocessing.')
+                CSE_results = sp.cse(sympyexpr, sp.numbered_symbols(outCparams.CSE_varprefix + fix),
+                                     order=outCparams.CSE_sorting)
             else:
-                result = dosubs(result)
-                outstring += outtypestring+ccode_postproc(sp.ccode(result,output_varname_str[i],
-                                                                   user_functions=custom_functions_for_SymPy_ccode))+"\n"
-        # Finish processing a group
+                CSE_results = cse_postprocess(sp.cse(sympyexpr, sp.numbered_symbols(outCparams.CSE_varprefix + fix),
+                                                     order=outCparams.CSE_sorting))
+    
+            for commonsubexpression in CSE_results[0]:
+                FULLTYPESTRING = "const " + TYPE + " "
+                if outCparams.enable_TYPE == "False":
+                    FULLTYPESTRING = ""
+    
+                if outCparams.enable_SIMD == "True":
+                    outstring += indent + FULLTYPESTRING + str(commonsubexpression[0]) + " = " + \
+                                 str(expr_convert_to_SIMD_intrins(commonsubexpression[1],map_sym_to_rat,varprefix,outCparams.SIMD_find_more_FMAsFMSs)) + ";\n"
+                else:
+                    outstring += indent + FULLTYPESTRING + ccode_postproc(sp.ccode(dosubs(commonsubexpression[1]), commonsubexpression[0],
+                                                                    user_functions=custom_functions_for_SymPy_ccode)) + "\n"
+    
+            for i, result in enumerate(CSE_results[1]):
+                if outCparams.enable_SIMD == "True":
+                    outstring += outtypestring + output_varname_str[i] + " = " + \
+                                 str(expr_convert_to_SIMD_intrins(result,map_sym_to_rat,varprefix,outCparams.SIMD_find_more_FMAsFMSs)) + ";\n"
+                else:
+                    result = dosubs(result)
+                    outstring += outtypestring+ccode_postproc(sp.ccode(dosubs(result),output_varname_str[i],
+                                                                       user_functions=custom_functions_for_SymPy_ccode))+"\n"
+            # Finish processing a group
 
         # Complication: SIMD functions require numerical constants to be stored in SIMD arrays
         # Resolution: This function extends lists "SIMD_const_varnms" and "SIMD_const_values",
