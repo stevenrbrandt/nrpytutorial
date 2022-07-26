@@ -230,7 +230,7 @@ def Initial():
         centering=centering)
 Initial()
 
-# Enforce constaints
+# Enforce constraints
 
 detgammatilde = thorn.register_gridfunctions("SCALAR_TMP", ["detgammatilde"], centering=centering)
 trAtilde = thorn.register_gridfunctions("SCALAR_TMP", ["trAtilde"], centering=centering)
@@ -253,7 +253,7 @@ def Enforce():
         body=enforce_eqns,
         where='interior',
         schedule_bin="Z4cNRPy_PostStepGroup",
-        doc="Enforce constaints",
+        doc="Enforce constraints",
         sync="chiGF gammatildeDDGF KhatGF AtildeDDGF GammatildeUGF ThetaGF alphaGGF betaGUGF",
         centering=centering
         )
@@ -616,7 +616,7 @@ def Constraints():
          for i in range(3) for j in range(i+1)],
         [lhrh(lhs=Rsc,
               rhs=sum2_symm(lambda x, y: gUU[x][y] * RDD[x][y]))],
-        # [CONTINUE CHECKING HERE]
+        # arXiv:1212.2901 [gr-qc], (14)
         [lhrh(lhs=HCval,
               rhs=(+ Rsc
                    + sum2_symm(lambda x, y: AtildeUD[x][y] * AtildeUD[y][x])
@@ -643,6 +643,7 @@ def Constraints():
         [lhrh(lhs=SiD[i],
               rhs=-1 / alphaG * (eTtiD[i] - sum1(lambda x:  betaGU[x] * eTijDD[i][x])))
          for i in range(3)],
+        # arXiv:1212.2901 [gr-qc], (15)
         [lhrh(lhs=MtildeCvalU[i],
               rhs=(+ sum1(lambda x: dAtildeUUD[i][x][x])
                    + sum2_symm(lambda x, y: GammatildeUDD[i][x][y] * AtildeUU[x][y])
