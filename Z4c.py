@@ -331,6 +331,10 @@ def RHS():
             [lhrh(lhs=dKhatD[i], rhs=Khat_dD[i]) for i in range(3)],
             [loop],
         ],
+        [[
+            [lhrh(lhs=dAtildeDDD[i][j][k], rhs=AtildeDD_dD[i][j][k]) for k in range(3)],
+            [loop],
+        ] for i in range(3) for j in range(i+1)],
         [
             [lhrh(lhs=dThetaD[i], rhs=Theta_dD[i]) for i in range(3)],
             [loop],
@@ -449,10 +453,6 @@ def RHS():
               rhs=- DDalphaGDD[i][j] + alphaG * (RDD[i][j] - 8 * pi * SijDD[i][j]))
          for i in range(3) for j in range(i+1)],
         # arXiv:1212.2901 [gr-qc], (4)
-        [[
-            [lhrh(lhs=dAtildeDDD[i][j][k], rhs=AtildeDD_dD[i][j][k]) for k in range(3)],
-            [loop],
-        ] for i in range(3) for j in range(i+1)],
         [lhrh(lhs=AtildeDD_rhs[i][j],
               rhs=(+ chi * (alphaRicciTmunuDD[i][j]
                             - Rational(1,3) * gDD[i][j] * sum2_symm(lambda x, y: gUU[x][y] * alphaRicciTmunuDD[x][y]))
