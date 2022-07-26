@@ -278,21 +278,7 @@ class CactusThorn:
             use_fd_output = False
             for item in body:
                 assert type(item) == lhrh, "Equations should be stored in outputC.lhrh objects."
-                writem = str(item.lhs)
-                gftype = grid.find_gftype(writem,die=False)
-                if gftype == "TILE_TMP":
-                    tmps.add(writem)
-                elif gftype == "SCALAR_TMP":
-                    pass
-                elif item.lhs is None:
-                    pass
-                else:
-                    writegfs.add(writem)
-                    cent_gf = grid.find_centering(writem)
-                    assert cent_gf is not None, f"Centering for grid function '{writem}' is unknown"
-                    if centering is None:
-                        centering = cent_gf
-                    assert cent_gf == centering, f"Centering of '{writem}' is '{cent_gf},' but it must match the loop centering of function '{name}': '{centering}'"
+
                 if hasattr(item.rhs, "free_symbols"):
                     for sym in item.rhs.free_symbols:
                         rdsym = str(sym)
@@ -308,11 +294,28 @@ class CactusThorn:
                             rdsym = g.group(1)
                         if rdsym not in writegfs:
                             readgfs.add(rdsym)
+
+                writem = str(item.lhs)
+                gftype = grid.find_gftype(writem,die=False)
+                if gftype == "TILE_TMP":
+                    tmps.add(writem)
+                elif gftype == "SCALAR_TMP":
+                    pass
+                elif item.lhs is None:
+                    pass
+                else:
+                    writegfs.add(writem)
+                    cent_gf = grid.find_centering(writem)
+                    assert cent_gf is not None, f"Centering for grid function '{writem}' is unknown"
+                    if centering is None:
+                        centering = cent_gf
+                    assert cent_gf == centering, f"Centering of '{writem}' is '{cent_gf},' but it must match the loop centering of function '{name}': '{centering}'"
                 if type(item.lhs) == Symbol:
                     new_lhs=gri.gfaccess(varname=str(item.lhs),context="USE")
                     new_body += [lhrh(lhs=new_lhs, rhs=item.rhs)]
                 else:
                     new_body += [item]
+
             assert centering is not None, "The centering for loop '{name}' is none"
             body = new_body
             #if use_fd_output:
