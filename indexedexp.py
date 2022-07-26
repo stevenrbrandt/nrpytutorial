@@ -382,6 +382,11 @@ def add_index_group(basename, IDX_OBJ_TMP):
 
 def register_gridfunctions_for_single_rankN(rank, gf_type, gf_basename, symmetry_option="", DIM=-1, f_infinity=0.0, wavespeed=1.0,external_module=None,centering=None,namefun=None):
 
+    if rank==0:
+        return gri.register_gridfunctions(gf_type, [gf_basename], rank=rank, is_indexed=False, DIM=DIM,
+                                          f_infinity=f_infinity, wavespeed=wavespeed,
+                                          external_module=external_module, centering=centering)
+
     # Step 0: Verify the gridfunction basename is valid:
     gri.verify_gridfunction_basename_is_valid(gf_basename)
 

@@ -633,7 +633,10 @@ class CactusThorn:
             with SafeWrite(self.interface_ccl) as fd:
                 print(f"# Interface definitions for thorn {self.thornname}",file=fd)
                 print(f"IMPLEMENTS: {self.thornname}",file=fd)
-                print(f"INHERITS: {', '.join(list(self.external_modules.keys()))}",file=fd)
+                for v in grid.glb_gridfcs_map.values():
+                    if v.external_module is not None:
+                        self.external_modules[v.external_module]=1
+                print(f"INHERITS: {', '.join(sorted(list(self.external_modules.keys())))}",file=fd)
                 if gri.ET_driver == "CarpetX":
                     print(f"USES INCLUDE HEADER: loop_device.hxx",file=fd)
                     print(f"USES INCLUDE HEADER: simd.hxx",file=fd)
