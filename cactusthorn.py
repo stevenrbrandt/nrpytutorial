@@ -358,14 +358,15 @@ class CactusThorn:
             if c not in tmp_centerings:
                 tmp_centerings[c] = set()
             tmp_centerings[c].add(gf)
-        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVV_tmp_layout(cctkGH,{{0,0,0}});"
-        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_tmp_layout(cctkGH,{{0,0,1}});"
-        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCV_tmp_layout(cctkGH,{{0,1,0}});"
-        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCC_tmp_layout(cctkGH,{{0,1,1}});"
-        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVV_tmp_layout(cctkGH,{{1,0,0}});"
-        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVC_tmp_layout(cctkGH,{{1,0,1}});"
-        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCV_tmp_layout(cctkGH,{{1,1,0}});"
-        layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_tmp_layout(cctkGH,{{1,1,1}});"
+        if grid.ET_driver == "CarpetX":
+            layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVV_tmp_layout(cctkGH,{{0,0,0}});"
+            layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_tmp_layout(cctkGH,{{0,0,1}});"
+            layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCV_tmp_layout(cctkGH,{{0,1,0}});"
+            layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCC_tmp_layout(cctkGH,{{0,1,1}});"
+            layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVV_tmp_layout(cctkGH,{{1,0,0}});"
+            layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVC_tmp_layout(cctkGH,{{1,0,1}});"
+            layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCV_tmp_layout(cctkGH,{{1,1,0}});"
+            layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_tmp_layout(cctkGH,{{1,1,1}});"
 
         tmp_decls = ""
         for c in tmp_centerings:
