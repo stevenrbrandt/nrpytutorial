@@ -16,6 +16,29 @@ from safewrite import SafeWrite
 from sympy.core.symbol import Symbol
 import indexedexp as ixp
 
+msgs = {}
+def check_eqns(name, eqns):
+    scalar_reads = set()
+    reads = set()
+    writes = set()
+    for lr in eqns:
+        if lr.lhs is None:
+            for vr in scalar_reads:
+                v = str(vr)
+                reads.remove(v)
+            scalar_reads.clear()
+            continue
+        for vr in lr.rhs.free_symbols:
+            v = str(vr)
+            if v not in writes:
+                gftype = gri.find_gftype(v, die=False)
+                assert gftype not in ["SCALAR_TMP","TILE_TMP"], \
+                    f"Read before write of variable '{v}' which is of type {gftype} in routine {name}"
+                reads.add(v)
+                if gftype == "SCALAR_TMP":
+                    scalar_reads.add(v)
+        writes.add(str(lr.lhs))
+
 today = date.today().strftime("%B %d, %Y")
 
 makefile_init="""\
@@ -236,6 +259,7 @@ class CactusThorn:
         self.last_src_file = csrc
 
     def add_func(self, name, body, schedule_bin, doc, where='interior', centering=None, sync=None):
+        check_eqns(name, body)
         self.sync[name] = sync
         check_centering(centering)
         if gri.ET_driver == "Carpet":
@@ -281,8 +305,8 @@ class CactusThorn:
                         # Check if the symbol name is a derivative
                         g = re.match(r'(.*)_dD+\d+$', rdsym)
                         if g:
-                            readgfs.add(g.group(1))
-                        else:
+                            rdsym = g.group(1)
+                        if rdsym not in writegfs:
                             readgfs.add(rdsym)
                 if type(item.lhs) == Symbol:
                     new_lhs=gri.gfaccess(varname=str(item.lhs),context="USE")

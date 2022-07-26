@@ -195,7 +195,7 @@ def Initial():
         [lhrh(lhs=alphaG, rhs=alp)],
         [lhrh(lhs=betaGU[i], rhs=betaU[i]) for i in range(3)],
     ])
-    
+
     thorn.add_func(
         "Z4cNRPy_Initial1",
         body=initial1_eqns,
@@ -320,7 +320,7 @@ def RHS():
         ],
         [[
             [lhrh(lhs=dgammatildeDDD[i][j][k], rhs=gammatildeDD_dD[i][j][k]) for k in range(3)],
-            [lhrh(lhs=ddgammatildeDDDD[i][j][k][l], rhs=gammatildeDD_dDD[i][j][k][l]) for k in range(3) for l in range(i+1)],
+            [lhrh(lhs=ddgammatildeDDDD[i][j][k][l], rhs=gammatildeDD_dDD[i][j][k][l]) for k in range(3) for l in range(k+1)],
             [loop],
         ] for i in range(3) for j in range(i+1)],
         [[
@@ -449,6 +449,10 @@ def RHS():
               rhs=- DDalphaGDD[i][j] + alphaG * (RDD[i][j] - 8 * pi * SijDD[i][j]))
          for i in range(3) for j in range(i+1)],
         # arXiv:1212.2901 [gr-qc], (4)
+        [[
+            [lhrh(lhs=dAtildeDDD[i][j][k], rhs=AtildeDD_dD[i][j][k]) for k in range(3)],
+            [loop],
+        ] for i in range(3) for j in range(i+1)],
         [lhrh(lhs=AtildeDD_rhs[i][j],
               rhs=(+ chi * (alphaRicciTmunuDD[i][j]
                             - Rational(1,3) * gDD[i][j] * sum2_symm(lambda x, y: gUU[x][y] * alphaRicciTmunuDD[x][y]))

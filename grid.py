@@ -71,6 +71,7 @@ def find_gfnames():
     return sorted(list(glb_gridfcs_map.keys()))
 
 def find_gftype(varname,die=True):
+    assert type(varname) == str
     var_data = glb_gridfcs_map.get(varname, None)
     if var_data is None:
         if die:
@@ -162,7 +163,7 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = "", context = "DECL"):
                 if context == "USE":
                     return retstring + varname;
                 else:
-                    return retstring + "0.0/0.0";
+                    return None
             else:
                 if ijklstring == "":
                     return retstring + varname + f"GF({mask}{find_centering(varname)}_index)"

@@ -247,7 +247,7 @@ def read_from_memory_Ccode_onept(gfname,idx, FDparams, idxs):
     if FDparams.enable_SIMD == "True":
         retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = ReadSIMD(&" + gfaccess_str + ");"
     elif gri.find_gftype(gfname) == "SCALAR_TMP":
-        retstring = type__var(gfname, FDparams, is_const=False) + varsuffix(gfname, idx4, FDparams) + " = " + gfaccess_str + ";"
+        retstring = type__var(gfname, FDparams, is_const=False) + varsuffix(gfname, idx4, FDparams) +";\n"
     else:
         retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = " + gfaccess_str + ";"
     return retstring+"\n"
