@@ -10,7 +10,7 @@ import indexedexp as ixp
 from cactusthorn import CactusThorn, loop
 from outputC import lhrh, outCparams
 
-outCparams.CSE_enable = "False"
+# outCparams.CSE_enable = "False"
 
 # "CCTK_REAL" or "CCTK_REALVEC"
 par.set_parval_from_str("PRECISION", "CCTK_REALVEC")
