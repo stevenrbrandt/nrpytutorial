@@ -103,6 +103,7 @@ f_mu_S = thorn.declare_param('f_mu_S', default=1.0, doc="f_mu_S")
 eta = thorn.declare_param('eta', default=2.0, doc="eta")
 alphaG_floor = thorn.declare_param('alphaG_floor', default=1.0e-10, vmin=0.0, doc="alphaG_floor")
 chi_floor = thorn.declare_param('chi_floor', default=1.0e-10, vmin=0.0, doc="chi_floor")
+eps_diss = thorn.declare_param('eps_diss', default=0.2, vmin=0.0, vmax=1.0, doc="eps_diss")
 
 gDD = ixp.register_gridfunctions_for_single_rankN(2, "EXTERNAL", "metric", "sym01", centering=centering, external_module="ADMBase", namefun=lambda sym,ind,shape: namefun(sym,ind,shape, "g"))
 KDD = ixp.register_gridfunctions_for_single_rankN(2, "EXTERNAL", "extcurv", "sym01", centering=centering, external_module="ADMBase", namefun=lambda sym,ind,shape: namefun(sym,ind,shape, "k"))
@@ -141,30 +142,49 @@ allC = thorn.register_gridfunctions("AUX", ["allC"], centering=centering)
 # Derivatives as calculated by NRPy
 chi_dD = ixp.declarerank1("chi_dD")
 chi_dDD = ixp.declarerank2("chi_dDD", "sym01")
+chi_dupD = ixp.declarerank1("chi_dupD")
+chi_ddnD = ixp.declarerank1("chi_ddnD")
+chi_dKOD = ixp.declarerank1("chi_dKOD")
 gammatildeDD_dD = ixp.declarerank3("gammatildeDD_dD", "sym01")
 gammatildeDD_dDD = ixp.declarerank4("gammatildeDD_dDD", "sym01_sym23")
+gammatildeDD_dKOD = ixp.declarerank3("gammatildeDD_dKOD", "sym01")
 Khat_dD = ixp.declarerank1("Khat_dD")
+Khat_dKOD = ixp.declarerank1("Khat_dKOD")
 AtildeDD_dD = ixp.declarerank3("AtildeDD_dD", "sym01")
+AtildeDD_dKOD = ixp.declarerank3("AtildeDD_dKOD", "sym01")
 Theta_dD = ixp.declarerank1("Theta_dD")
+Theta_dKOD = ixp.declarerank1("Theta_dKOD")
 GammatildeU_dD = ixp.declarerank2("GammatildeU_dD", None)
+GammatildeU_dKOD = ixp.declarerank2("GammatildeU_dKOD", None)
 alphaG_dD = ixp.declarerank1("alphaG_dD")
 alphaG_dDD = ixp.declarerank2("alphaG_dDD", "sym01")
+alphaG_dKOD = ixp.declarerank1("alphaG_dKOD")
 betaGU_dD = ixp.declarerank2("betaGU_dD", None)
 betaGU_dDD = ixp.declarerank3("betaGU_dDD", "sym12")
+betaGU_dKOD = ixp.declarerank2("betaGU_dKOD", None)
 
 # Our tile-local derivatives
 dchiD = ixp.register_gridfunctions_for_single_rankN(1, "TILE_TMP", "dchiD", centering=centering)
 ddchiDD = ixp.register_gridfunctions_for_single_rankN(2, "TILE_TMP", "ddchiDD", "sym01", centering=centering)
+dbetaGchi = thorn.register_gridfunctions("TILE_TMP", ["dbetaGchi"], centering=centering)
+disschi = thorn.register_gridfunctions("TILE_TMP", ["disschi"], centering=centering)
 dgammatildeDDD = ixp.register_gridfunctions_for_single_rankN(3, "TILE_TMP", "dgammatildeDDD", "sym01", centering=centering)
 ddgammatildeDDDD = ixp.register_gridfunctions_for_single_rankN(4, "TILE_TMP", "ddgammatildeDDDD", "sym01_sym23", centering=centering)
+dissgammatildeDD = ixp.register_gridfunctions_for_single_rankN(2, "TILE_TMP", "dissgammatildeDD", "sym01", centering=centering)
 dKhatD = ixp.register_gridfunctions_for_single_rankN(1, "TILE_TMP", "dKhatD", centering=centering)
+dissKhat = thorn.register_gridfunctions("TILE_TMP", ["dissKhat"], centering=centering)
 dAtildeDDD = ixp.register_gridfunctions_for_single_rankN(3, "TILE_TMP", "dAtildeDDD", "sym01", centering=centering)
+dissAtildeDD = ixp.register_gridfunctions_for_single_rankN(2, "TILE_TMP", "dissAtildeDD", "sym01", centering=centering)
 dThetaD = ixp.register_gridfunctions_for_single_rankN(1, "TILE_TMP", "dThetaD", centering=centering)
+dissTheta = thorn.register_gridfunctions("TILE_TMP", ["dissTheta"], centering=centering)
 dGammatildeUD = ixp.register_gridfunctions_for_single_rankN(2, "TILE_TMP", "dGammatildeUD", None, centering=centering)
+dissGammatildeU = ixp.register_gridfunctions_for_single_rankN(1, "TILE_TMP", "dissGammatildeU", None, centering=centering)
 dalphaGD = ixp.register_gridfunctions_for_single_rankN(1, "TILE_TMP", "dalphaGD", centering=centering)
 ddalphaGDD = ixp.register_gridfunctions_for_single_rankN(2, "TILE_TMP", "ddalphaGDD", "sym01", centering=centering)
+dissalphaG = thorn.register_gridfunctions("TILE_TMP", ["dissalphaG"], centering=centering)
 dbetaGUD = ixp.register_gridfunctions_for_single_rankN(2, "TILE_TMP", "dbetaGUD", None, centering=centering)
 ddbetaGUDD = ixp.register_gridfunctions_for_single_rankN(3, "TILE_TMP", "ddbetaGUDD", "sym12", centering=centering)
+dissbetaGU = ixp.register_gridfunctions_for_single_rankN(1, "TILE_TMP", "dissbetaGU", None, centering=centering)
 
 # Expressions
 
@@ -315,37 +335,47 @@ def RHS():
         [
             [lhrh(lhs=dchiD[i], rhs=chi_dD[i]) for i in range(3)],
             [lhrh(lhs=ddchiDD[i][j], rhs=chi_dDD[i][j]) for i in range(3) for j in range(i+1)],
+            # [lhrh(lhs=dbetaGchi, rhs=sum1(lambda x: (+ betaGU[x] * (chi_dupD[x] + chi_ddnD[x])
+            #                                          + abs(betaGU[x]) * (chi_dupD[x] - chi_ddnD[x])) / 2))],
+            [lhrh(lhs=disschi, rhs=sum1(lambda x: chi_dKOD[x]))],
             [loop],
         ],
         [[
             [lhrh(lhs=dgammatildeDDD[i][j][k], rhs=gammatildeDD_dD[i][j][k]) for k in range(3)],
             [lhrh(lhs=ddgammatildeDDDD[i][j][k][l], rhs=gammatildeDD_dDD[i][j][k][l]) for k in range(3) for l in range(k+1)],
+            [lhrh(lhs=dissgammatildeDD[i][j], rhs=sum1(lambda x: gammatildeDD_dKOD[i][j][x]))],
             [loop],
         ] for i in range(3) for j in range(i+1)],
         [[
             [lhrh(lhs=dGammatildeUD[i][j], rhs=GammatildeU_dD[i][j]) for j in range(3)],
+            [lhrh(lhs=dissGammatildeU[i], rhs=sum1(lambda x: GammatildeU_dKOD[i][x]))],
             [loop],
         ] for i in range(3)],
         [
             [lhrh(lhs=dKhatD[i], rhs=Khat_dD[i]) for i in range(3)],
+            [lhrh(lhs=dissKhat, rhs=sum1(lambda x: Khat_dKOD[x]))],
             [loop],
         ],
         [[
             [lhrh(lhs=dAtildeDDD[i][j][k], rhs=AtildeDD_dD[i][j][k]) for k in range(3)],
+            [lhrh(lhs=dissAtildeDD[i][j], rhs=sum1(lambda x: AtildeDD_dKOD[i][j][x]))],
             [loop],
         ] for i in range(3) for j in range(i+1)],
         [
             [lhrh(lhs=dThetaD[i], rhs=Theta_dD[i]) for i in range(3)],
+            [lhrh(lhs=dissTheta, rhs=sum1(lambda x: Theta_dKOD[x]))],
             [loop],
         ],
         [
             [lhrh(lhs=dalphaGD[i], rhs=alphaG_dD[i]) for i in range(3)],
             [lhrh(lhs=ddalphaGDD[i][j], rhs=alphaG_dDD[i][j]) for i in range(3) for j in range(i+1)],
+            [lhrh(lhs=dissalphaG, rhs=sum1(lambda x: alphaG_dKOD[x]))],
             [loop],
         ],
         [[
             [lhrh(lhs=dbetaGUD[i][j], rhs=betaGU_dD[i][j]) for j in range(3)],
             [lhrh(lhs=ddbetaGUDD[i][j][k], rhs=betaGU_dDD[i][j][k]) for j in range(3) for k in range(j+1)],
+            [lhrh(lhs=dissbetaGU[i], rhs=sum1(lambda x: betaGU_dKOD[i][x]))],
             [loop],
         ] for i in range(3)],
 
@@ -371,14 +401,18 @@ def RHS():
          for i in range(3) for j in range(3)],
         # arXiv:1212.2901 [gr-qc], (1)
         [lhrh(lhs=chi_rhs,
-              rhs=Rational(2,3) * chi * (alphaG * (Khat + 2 * Theta) - sum1(lambda x: DbetaGUD[x][x])))],
+              rhs=(+ Rational(2,3) * chi * (alphaG * (Khat + 2 * Theta) - sum1(lambda x: DbetaGUD[x][x]))
+                   # - Rational(2,3) * sum1(lambda x: betaGU[x] * dchiD[x])
+                   # + Rational(2,3) * dbetaGchi
+                   + eps_diss * disschi))],
 
         # arXiv:1212.2901 [gr-qc], (2)
         [lhrh(lhs=gammatildeDD_rhs[i][j],
               rhs=(-2 * alphaG * AtildeDD[i][j]
                    + sum1(lambda x: betaGU[x] * dgammatildeDDD[i][j][x])
                    + sum1(lambda x: gammatildeDD[x][i] * dbetaGUD[x][j] + gammatildeDD[x][j] * dbetaGUD[x][i])
-                   - Rational(2,3) * sum1(lambda x: gammatildeDD[i][j] * dbetaGUD[x][x])))
+                   - Rational(2,3) * sum1(lambda x: gammatildeDD[i][j] * dbetaGUD[x][x])
+                   + eps_diss * dissgammatildeDD[i][j]))
          for i in range(3) for j in range(i+1)],
 
         [lhrh(lhs=DDalphaGDD[i][j],
@@ -406,7 +440,8 @@ def RHS():
                                + Rational(1,3) * (Khat + 2 * Theta)**2)
                    + 4 * pi * alphaG * (trS + rho)
                    + alphaG * kappa1 * (1 - kappa2) * Theta)
-                   + sum1(lambda x: betaGU[x] * dKhatD[x]))],
+                   + sum1(lambda x: betaGU[x] * dKhatD[x])
+                   + eps_diss * dissKhat)],
 
         [lhrh(lhs=GammatildeDDD[i][j][k],
               rhs=Rational(1,2) * (dgammatildeDDD[i][j][k] + dgammatildeDDD[i][k][j] - dgammatildeDDD[j][k][i]))
@@ -459,7 +494,8 @@ def RHS():
                                - 2 * sum1(lambda x: AtildeDD[x][i] * AtildeUD[x][j]))
                    + sum1(lambda x: betaGU[x] * dAtildeDDD[i][j][x])
                    + sum1(lambda x: AtildeDD[x][i] * dbetaGUD[x][j] + AtildeDD[x][j] * dbetaGUD[x][i])
-                   - Rational(2,3) * AtildeDD[i][j] * sum1(lambda x: dbetaGUD[x][x])))
+                   - Rational(2,3) * AtildeDD[i][j] * sum1(lambda x: dbetaGUD[x][x])
+                   + eps_diss * dissAtildeDD[i][j]))
          for i in range(3) for j in range(i+1)],
 
         [lhrh(lhs=AtildeUU[i][j],
@@ -478,7 +514,8 @@ def RHS():
                    + sum1(lambda x: betaGU[x] * dGammatildeUD[i][x])
                    - sum1(lambda x: GammatildedirectU[x] * dbetaGUD[i][x])
                    + Rational(2,3) * GammatildedirectU[i] * sum1(lambda x: dbetaGUD[x][x])
-                   - 2 * alphaG * kappa1 * (GammatildeU[i] - GammatildedirectU[i])))
+                   - 2 * alphaG * kappa1 * (GammatildeU[i] - GammatildedirectU[i])
+                   + eps_diss * dissGammatildeU[i]))
          for i in range(3)],
 
         # arXiv:1212.2901 [gr-qc], (6)
@@ -489,13 +526,16 @@ def RHS():
                                                           + Rational(2,3) * (Khat + 2 * Theta)**2)
                               - alphaG * (+ 8 * pi * rho
                                           + kappa1 * (2 + kappa2) * Theta)
-                              + sum1(lambda x: betaGU[x] * dThetaD[x])), True)))],
+                              + sum1(lambda x: betaGU[x] * dThetaD[x])
+                              + eps_diss * dissTheta), True)))],
 
         [lhrh(lhs=alphaG_rhs,
-              rhs=-alphaG * f_mu_L * Khat)],
+              rhs=(- alphaG * f_mu_L * Khat
+                   + eps_diss * dissalphaG))],
 
         [lhrh(lhs=betaGU_rhs[i],
-              rhs=f_mu_S * GammatildeU[i] - eta * betaGU[i])
+              rhs=(+ f_mu_S * GammatildeU[i] - eta * betaGU[i]
+                   + eps_diss * dissbetaGU[i]))
          for i in range(3)],
     ])
     
