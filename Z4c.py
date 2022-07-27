@@ -489,7 +489,8 @@ def RHS():
         # arXiv:1212.2901 [gr-qc], (4)
         [lhrh(lhs=rhs_AtildeDD[i][j],
               rhs=(+ chi * (alphaRicciTmunuDD[i][j]
-                            - Rational(1,3) * gDD[i][j] * sum2_symm(lambda x, y: gUU[x][y] * alphaRicciTmunuDD[x][y]))
+                            - (Rational(1,3) * gammatildeDD[i][j] *
+                               sum2_symm(lambda x, y: gammatildeUU[x][y] * alphaRicciTmunuDD[x][y])))
                    + alphaG * (+ (Khat + 2 * Theta) * AtildeDD[i][j]
                                - 2 * sum1(lambda x: AtildeDD[x][i] * AtildeUD[x][j]))
                    + sum1(lambda x: betaGU[x] * dAtildeDDD[i][j][x])
