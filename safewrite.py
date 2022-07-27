@@ -9,6 +9,11 @@ clang_formatter = get_executable("clang-format")
 
 verbose = False
 
+# ANSI colors
+red = "\033[31;1m"
+green = "\033[32;1m"
+reset = "\033[0m"
+
 class SafeWrite:
     def __init__(self, fname, do_format=False):
         self.fname = fname
@@ -18,6 +23,7 @@ class SafeWrite:
         self.fd = StringIO()
         return self.fd
     def __exit__(self, ty, val, tb):
+        print("Checking",self.fname,end="...")
         newcontent = self.fd.getvalue()
         if self.do_format:
             pipe = Popen([clang_formatter],stdout=PIPE,stdin=PIPE,universal_newlines=True)
@@ -35,6 +41,8 @@ class SafeWrite:
         else:
             do_write = True
         if do_write:
-            print("Write:",self.fname)
             with open(self.fname, "w") as fd:
                 fd.write(newcontent)
+            print(" "+red+"[written]"+reset)
+        else:
+            print(" "+green+"[no changes]"+reset)
