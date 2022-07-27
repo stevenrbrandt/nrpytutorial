@@ -126,11 +126,10 @@ alphaG = thorn.register_gridfunctions("EVOL", ["alphaG"], centering=centering)
 betaGU = ixp.register_gridfunctions_for_single_rankN(1, "EVOL", "betaGU", centering=centering)
 
 rhs_chi = thorn.register_gridfunctions("AUX", ["rhs_chi"], centering=centering)
-gammatildeRhsDD = ixp.register_gridfunctions_for_single_rankN(2, "AUX", "gammatildeRhsDD", "sym01", centering=centering)
+rhs_gammatildeDD = ixp.register_gridfunctions_for_single_rankN(2, "AUX", "rhs_gammatildeDD", "sym01", centering=centering)
 rhs_Khat = thorn.register_gridfunctions("AUX", ["rhs_Khat"], centering=centering)
-AtildeRhsDD = ixp.register_gridfunctions_for_single_rankN(2, "AUX", "AtildeRhsDD", "sym01", centering=centering)
-Atilde1RhsDD = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "Atilde1RhsDD", "sym01", centering=centering)
-GammatildeRhsU = ixp.register_gridfunctions_for_single_rankN(1, "AUX", "GammatildeRhsU", centering=centering)
+rhs_AtildeDD = ixp.register_gridfunctions_for_single_rankN(2, "AUX", "rhs_AtildeDD", "sym01", centering=centering)
+rhs_GammatildeU = ixp.register_gridfunctions_for_single_rankN(1, "AUX", "rhs_GammatildeU", centering=centering)
 rhs_Theta = thorn.register_gridfunctions("AUX", ["rhs_Theta"], centering=centering)
 rhs_alphaG = thorn.register_gridfunctions("AUX", ["rhs_alphaG"], centering=centering)
 rhs_betaGU = ixp.register_gridfunctions_for_single_rankN(1, "AUX", "rhs_betaGU", centering=centering)
@@ -546,7 +545,7 @@ def RHS():
         where='interior',
         schedule_bin="ODESolvers_RHS",
         doc="Calculate RHS",
-        sync="rhs_chiGF gammatildeRhsDDGF rhs_KhatGF AtildeRhsDDGF GammatildeUGF rhs_ThetaGF rhs_alphaGGF rhs_betaGUGF",
+        sync="rhs_chiGF rhs_gammatildeDDGF rhs_KhatGF rhs_AtildeDDGF GammatildeUGF rhs_ThetaGF rhs_alphaGGF rhs_betaGUGF",
         centering=centering)
 RHS()
 
