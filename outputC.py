@@ -51,6 +51,157 @@ custom_functions_for_SymPy_ccode = {
 ##    (lambda b, e: e != 2, 'pow')]
 }
 
+
+# SymPy helpers
+
+def expr_map_pre(f, expr):
+    expr = f(expr)
+    if hasattr(expr, 'args') and len(expr.args) > 0:
+        expr = expr.func(*map(lambda arg: expr_map_pre(f, arg), expr.args))
+    return expr
+
+def expr_map_post(f, expr):
+    if hasattr(expr, 'args') and len(expr.args) > 0:
+        expr = expr.func(*map(lambda arg: expr_map_post(f, arg), expr.args))
+    expr = f(expr)
+    return expr
+
+neg = sp.Function('neg')
+
+def synthesize_neg(expr):
+    if expr.is_Mul and expr.args[0] == -1:
+        return neg(sp.Mul(*expr.args[1:]))
+    return expr
+
+def replace_neg(expr):
+    if expr.is_Function and expr.func == neg:
+        assert len(expr.args) == 1
+        return sp.Mul(-1, expr.args[0])
+    return expr
+
+negone = sp.sympify(-1)
+
+muladd = sp.Function('muladd')
+mulsub = sp.Function('mulsub')
+negmuladd = sp.Function('negmuladd')
+negmulsub = sp.Function('negmulsub')
+def muladdop(negmul, negadd):
+    if negmul:
+        return negmulsub if negadd else negmuladd
+    else:
+        return mulsub if negadd else muladd
+
+def synthesize_muladd(expr):
+    expr1 = expr
+    outer_negmul = False
+    outer_negadd = False
+    if expr1.is_Function and expr1.func == neg:
+        expr1 = expr1.args[0]
+        outer_negmul = not outer_negmul
+        outer_negadd = not outer_negadd
+    # TODO: break up long chains of additions into a tree
+    if expr1.is_Add:
+        add_args = expr.args
+        for i, arg in enumerate(add_args):
+            negmul = outer_negmul
+            negadd = outer_negadd
+            if arg.is_Function and arg.func == neg:
+                arg = arg.args[0]
+                negmul = not negmul
+            # TODO: find all the enclosed multiplications
+            if arg.is_Mul:
+                mul_args = arg.args
+                assert len(mul_args) >= 2
+                mul_expr1 = mul_args[0]
+                mul_expr2 = sp.Mul(*mul_args[1:])
+        
+                add_expr = sp.Add(*(add_args[0:i] + add_args[i+1:]))
+        
+                if add_expr.is_Function and add_expr.func == neg:
+                    add_expr = add_expr.args[0]
+                    negadd = not negadd
+        
+                if mul_expr1.is_Function and mul_expr1.func == neg:
+                    mul_expr1 = mul_expr1.args[0]
+                    negmul = not negmul
+                if mul_expr2.is_Function and mul_expr2.func == neg:
+                    mul_expr2 = mul_expr2.args[0]
+                    negmul = not negmul
+        
+                if negmul:
+                    op = negmulsub if negadd else negmuladd
+                else:
+                    op = mulsub if negadd else muladd
+        
+                return op(mul_expr1, mul_expr2, synthesize_muladd(add_expr))
+        # mul_exprs = []
+        # negmuls = []
+        # add_exprs = []
+        # for i, arg in enumerate(add_args):
+        #     negmul = outer_negmul
+        #     if arg.is_Function and arg.func == neg:
+        #         arg = arg.args[0]
+        #         negmul = not negmul
+        #     if arg.is_Mul:
+        #         mul_exprs.append(arg)
+        #         negmuls.append(negmul)
+        #     else:
+        #         add_exprs.append(arg)
+        # def combine(mul_exprs, negmuls, add_exprs):
+        #     assert len(mul_exprs) == len(negmuls)
+        #     if len(mul_exprs) == 0:
+        #         return sp.Add(*add_exprs)
+        #     if len(add_exprs) == 0:
+        #         expr = sp.Add(*mul_exprs)
+        #         if sum(negmuls) % 2 != 0:
+        #             expr = sp.Mul(negone, expr)
+        #         return expr
+        #     if len(mul_exprs) == 1:
+        #         mul_expr = mul_exprs[0]
+        #         negmul = negmuls[0]
+        #         assert mul_expr.is_Mul
+        #         mul_args = mul_expr.args
+        # 
+        #         assert len(mul_args) >= 2
+        #         mul_expr1 = mul_args[0]
+        #         mul_expr2 = sp.Mul(*mul_args[1:])
+        #         add_expr = sp.Add(*add_exprs)
+        #         negadd = False
+        # 
+        #         if add_expr.is_Function and add_expr.func == neg:
+        #             add_expr = add_expr.args[0]
+        #             negadd = not negadd
+        # 
+        #         if mul_expr1.is_Function and mul_expr1.func == neg:
+        #             mul_expr1 = mul_expr1.args[0]
+        #             negmul = not negmul
+        #         if mul_expr2.is_Function and mul_expr2.func == neg:
+        #             mul_expr2 = mul_expr2.args[0]
+        #             negmul = not negmul
+        # 
+        #         return muladdop(negmul, negadd)(mul_expr1, mul_expr2, add_expr)
+        #     nmuls = len(mul_exprs)
+        #     nadds = len(add_exprs)
+        #     part1 = combine(mul_exprs[0:nmuls//2], negmuls[0:nmuls//2], add_exprs[0:nadds//2])
+        #     part2 = combine(mul_exprs[nmuls//2:], negmuls[nmuls//2:], add_exprs[nadds//2:] + [part1])
+        #     return part2
+        # return combine(mul_exprs, negmuls, add_exprs)
+
+    return expr
+
+def map_synthesize_muladd(expr):
+    expr = expr_map_post(synthesize_neg, expr)
+    expr = expr_map_post(synthesize_muladd, expr)
+    expr = expr_map_post(replace_neg, expr)
+    return expr
+
+# a,b,c,d,e,f = sp.symbols('a b c d e f')
+# expr = sp.sympify('a*b - c*d - e*f')
+# print(expr)
+# expr = map_synthesize_muladd(expr)
+# print(expr)
+# assert False
+
 # Parameter initialization is called once, within nrpy.py.
 par.initialize_param(par.glb_param("char", __name__, "PRECISION", "double")) # __name__ = "outputC", this module's name.
 # par.initialize_param(par.glb_param("bool", thismodule, "enable_SIMD", False))
@@ -276,7 +427,6 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
         sympyexpr = sympyexprtmp
     sympyexpr = sympyexpr[:]  # pass-by-value (copy list)
 
-
     # Step 3: If outCparams.verbose = True, then output the original SymPy
     #         expression(s) in code comments prior to actual C code
     if outCparams.outCverbose == "True":
@@ -325,8 +475,10 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
 
     if outCparams.CSE_enable == "False":
         # If CSE is disabled:
+        sympyexpr = list(map(map_synthesize_muladd, sympyexpr))
         for i in range(len(sympyexpr)):
             outstring += outtypestring + ccode_postproc(sp.ccode(dosubs(sympyexpr[i]), output_varname_str[i],
+                                                                 allow_unknown_functions=True,
                                                                  user_functions=custom_functions_for_SymPy_ccode))+"\n"
     # Step 6b: If CSE enabled, then perform CSE using SymPy and then
     #          resulting C code.
@@ -381,6 +533,7 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
         sympyexpr_group2 = []
         names_group1 = []
         names_group2 = []
+        sympyexpr = list(map(map_synthesize_muladd, sympyexpr))
         for ii in range(len(sympyexpr)):
             nm = output_varname_str[ii]
             if find_gftype(nm,die=False) == "SCALAR_TMP":
@@ -422,6 +575,7 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
                                  str(expr_convert_to_SIMD_intrins(commonsubexpression[1],map_sym_to_rat,varprefix,outCparams.SIMD_find_more_FMAsFMSs)) + ";\n"
                 else:
                     outstring += indent + FULLTYPESTRING + ccode_postproc(sp.ccode(dosubs(commonsubexpression[1]), commonsubexpression[0],
+                                                                    allow_unknown_functions=True,
                                                                     user_functions=custom_functions_for_SymPy_ccode)) + "\n"
     
             for i, result in enumerate(CSE_results[1]):
@@ -431,6 +585,7 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
                 else:
                     result = dosubs(result)
                     outstring += outtypestring+ccode_postproc(sp.ccode(dosubs(result),names_group[i],
+                                                                       allow_unknown_functions=True,
                                                                        user_functions=custom_functions_for_SymPy_ccode))+"\n"
             # Finish processing a group
 
@@ -496,7 +651,6 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
         elif outCparams.outCfileaccess == "w":
             successstr = "Wrote "
         print(successstr + "to file \"" + filename + "\"")
-
 
 outC_NRPy_basic_defines_h_dict = {}
 
