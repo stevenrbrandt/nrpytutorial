@@ -337,45 +337,45 @@ def RHS():
             [lhrh(lhs=ddchiDD[i][j], rhs=chi_dDD[i][j]) for i in range(3) for j in range(i+1)],
             # [lhrh(lhs=dbetaGchi, rhs=sum1(lambda x: (+ betaGU[x] * (chi_dupD[x] + chi_ddnD[x])
             #                                          + abs(betaGU[x]) * (chi_dupD[x] - chi_ddnD[x])) / 2))],
-            [lhrh(lhs=disschi, rhs=sum1(lambda x: chi_dKOD[x]))],
+            # [lhrh(lhs=disschi, rhs=sum1(lambda x: chi_dKOD[x]))],
             [loop],
         ],
         [[
             [lhrh(lhs=dgammatildeDDD[i][j][k], rhs=gammatildeDD_dD[i][j][k]) for k in range(3)],
             [lhrh(lhs=ddgammatildeDDDD[i][j][k][l], rhs=gammatildeDD_dDD[i][j][k][l]) for k in range(3) for l in range(k+1)],
-            [lhrh(lhs=dissgammatildeDD[i][j], rhs=sum1(lambda x: gammatildeDD_dKOD[i][j][x]))],
+            # [lhrh(lhs=dissgammatildeDD[i][j], rhs=sum1(lambda x: gammatildeDD_dKOD[i][j][x]))],
             [loop],
         ] for i in range(3) for j in range(i+1)],
         [[
             [lhrh(lhs=dGammatildeUD[i][j], rhs=GammatildeU_dD[i][j]) for j in range(3)],
-            [lhrh(lhs=dissGammatildeU[i], rhs=sum1(lambda x: GammatildeU_dKOD[i][x]))],
+            # [lhrh(lhs=dissGammatildeU[i], rhs=sum1(lambda x: GammatildeU_dKOD[i][x]))],
             [loop],
         ] for i in range(3)],
         [
             [lhrh(lhs=dKhatD[i], rhs=Khat_dD[i]) for i in range(3)],
-            [lhrh(lhs=dissKhat, rhs=sum1(lambda x: Khat_dKOD[x]))],
+            # [lhrh(lhs=dissKhat, rhs=sum1(lambda x: Khat_dKOD[x]))],
             [loop],
         ],
         [[
             [lhrh(lhs=dAtildeDDD[i][j][k], rhs=AtildeDD_dD[i][j][k]) for k in range(3)],
-            [lhrh(lhs=dissAtildeDD[i][j], rhs=sum1(lambda x: AtildeDD_dKOD[i][j][x]))],
+            # [lhrh(lhs=dissAtildeDD[i][j], rhs=sum1(lambda x: AtildeDD_dKOD[i][j][x]))],
             [loop],
         ] for i in range(3) for j in range(i+1)],
         [
             [lhrh(lhs=dThetaD[i], rhs=Theta_dD[i]) for i in range(3)],
-            [lhrh(lhs=dissTheta, rhs=sum1(lambda x: Theta_dKOD[x]))],
+            # [lhrh(lhs=dissTheta, rhs=sum1(lambda x: Theta_dKOD[x]))],
             [loop],
         ],
         [
             [lhrh(lhs=dalphaGD[i], rhs=alphaG_dD[i]) for i in range(3)],
             [lhrh(lhs=ddalphaGDD[i][j], rhs=alphaG_dDD[i][j]) for i in range(3) for j in range(i+1)],
-            [lhrh(lhs=dissalphaG, rhs=sum1(lambda x: alphaG_dKOD[x]))],
+            # [lhrh(lhs=dissalphaG, rhs=sum1(lambda x: alphaG_dKOD[x]))],
             [loop],
         ],
         [[
             [lhrh(lhs=dbetaGUD[i][j], rhs=betaGU_dD[i][j]) for j in range(3)],
             [lhrh(lhs=ddbetaGUDD[i][j][k], rhs=betaGU_dDD[i][j][k]) for j in range(3) for k in range(j+1)],
-            [lhrh(lhs=dissbetaGU[i], rhs=sum1(lambda x: betaGU_dKOD[i][x]))],
+            # [lhrh(lhs=dissbetaGU[i], rhs=sum1(lambda x: betaGU_dKOD[i][x]))],
             [loop],
         ] for i in range(3)],
 
@@ -404,7 +404,8 @@ def RHS():
               rhs=(+ Rational(2,3) * chi * (alphaG * (Khat + 2 * Theta) - sum1(lambda x: DbetaGUD[x][x]))
                    # - Rational(2,3) * sum1(lambda x: betaGU[x] * dchiD[x])
                    # + Rational(2,3) * dbetaGchi
-                   + eps_diss * disschi))],
+                   # + eps_diss * disschi
+                   ))],
 
         # arXiv:1212.2901 [gr-qc], (2)
         [lhrh(lhs=rhs_gammatildeDD[i][j],
@@ -412,7 +413,8 @@ def RHS():
                    + sum1(lambda x: betaGU[x] * dgammatildeDDD[i][j][x])
                    + sum1(lambda x: gammatildeDD[x][i] * dbetaGUD[x][j] + gammatildeDD[x][j] * dbetaGUD[x][i])
                    - Rational(2,3) * sum1(lambda x: gammatildeDD[i][j] * dbetaGUD[x][x])
-                   + eps_diss * dissgammatildeDD[i][j]))
+                   # + eps_diss * dissgammatildeDD[i][j]
+                   ))
          for i in range(3) for j in range(i+1)],
 
         [lhrh(lhs=DDalphaGDD[i][j],
@@ -439,9 +441,10 @@ def RHS():
                    + alphaG * (+ sum2_symm(lambda x, y: AtildeUD[x][y] * AtildeUD[y][x])
                                + Rational(1,3) * (Khat + 2 * Theta)**2)
                    + 4 * pi * alphaG * (trS + rho)
-                   + alphaG * kappa1 * (1 - kappa2) * Theta)
+                   + alphaG * kappa1 * (1 - kappa2) * Theta
                    + sum1(lambda x: betaGU[x] * dKhatD[x])
-                   + eps_diss * dissKhat)],
+                   # + eps_diss * dissKhat
+                   ))],
 
         [lhrh(lhs=GammatildeDDD[i][j][k],
               rhs=Rational(1,2) * (dgammatildeDDD[i][j][k] + dgammatildeDDD[i][k][j] - dgammatildeDDD[j][k][i]))
@@ -496,14 +499,15 @@ def RHS():
                    + sum1(lambda x: betaGU[x] * dAtildeDDD[i][j][x])
                    + sum1(lambda x: AtildeDD[x][i] * dbetaGUD[x][j] + AtildeDD[x][j] * dbetaGUD[x][i])
                    - Rational(2,3) * AtildeDD[i][j] * sum1(lambda x: dbetaGUD[x][x])
-                   + eps_diss * dissAtildeDD[i][j]))
+                   # + eps_diss * dissAtildeDD[i][j]
+                   ))
          for i in range(3) for j in range(i+1)],
 
         [lhrh(lhs=AtildeUU[i][j],
               rhs=sum1(lambda x: gammatildeUU[i][x] * AtildeUD[j][x]))
          for i in range(3) for j in range(i+1)],
         # arXiv:1212.2901 [gr-qc], (5)
-        [lhrh(lhs=GammatildeU[i],
+        [lhrh(lhs=rhs_GammatildeU[i],
               rhs=(- 2 * sum1(lambda x: AtildeUU[i][x] * dalphaGD[x])
                    + 2 * alphaG *
                          (+ sum2_symm(lambda x, y: GammatildeUDD[i][x][y] * AtildeUU[x][y])
@@ -516,7 +520,8 @@ def RHS():
                    - sum1(lambda x: GammatildedirectU[x] * dbetaGUD[i][x])
                    + Rational(2,3) * GammatildedirectU[i] * sum1(lambda x: dbetaGUD[x][x])
                    - 2 * alphaG * kappa1 * (GammatildeU[i] - GammatildedirectU[i])
-                   + eps_diss * dissGammatildeU[i]))
+                   # + eps_diss * dissGammatildeU[i]
+                   ))
          for i in range(3)],
 
         # arXiv:1212.2901 [gr-qc], (6)
@@ -528,16 +533,53 @@ def RHS():
                               - alphaG * (+ 8 * pi * rho
                                           + kappa1 * (2 + kappa2) * Theta)
                               + sum1(lambda x: betaGU[x] * dThetaD[x])
-                              + eps_diss * dissTheta), True)))],
+                              # + eps_diss * dissTheta
+                              ), True)))],
 
         [lhrh(lhs=rhs_alphaG,
               rhs=(- alphaG * f_mu_L * Khat
-                   + eps_diss * dissalphaG))],
+                   # + eps_diss * dissalphaG
+                   ))],
 
         [lhrh(lhs=rhs_betaGU[i],
               rhs=(+ f_mu_S * GammatildeU[i] - eta * betaGU[i]
-                   + eps_diss * dissbetaGU[i]))
+                   # + eps_diss * dissbetaGU[i]
+                   ))
          for i in range(3)],
+        [loop],
+
+        [
+            [lhrh(lhs=rhs_chi, rhs=rhs_chi + eps_diss * sum1(lambda x: chi_dKOD[x]))],
+            [loop],
+        ],
+        [[
+            [lhrh(lhs=rhs_gammatildeDD[i][j], rhs=rhs_gammatildeDD[i][j] + eps_diss * sum1(lambda x: gammatildeDD_dKOD[i][j][x]))],
+            [loop],
+        ] for i in range(3) for j in range(i+1)],
+        [[
+            [lhrh(lhs=rhs_GammatildeU[i], rhs=rhs_GammatildeU[i] + eps_diss * sum1(lambda x: GammatildeU_dKOD[i][x]))],
+            [loop],
+        ] for i in range(3)],
+        [
+            [lhrh(lhs=rhs_Khat, rhs=rhs_Khat + eps_diss * sum1(lambda x: Khat_dKOD[x]))],
+            [loop],
+        ],
+        [[
+            [lhrh(lhs=rhs_AtildeDD[i][j], rhs=rhs_AtildeDD[i][j] + eps_diss * sum1(lambda x: AtildeDD_dKOD[i][j][x]))],
+            [loop],
+        ] for i in range(3) for j in range(i+1)],
+        [
+            [lhrh(lhs=rhs_Theta, rhs=rhs_Theta + eps_diss * sum1(lambda x: Theta_dKOD[x]))],
+            [loop],
+        ],
+        [
+            [lhrh(lhs=rhs_alphaG, rhs=rhs_alphaG + eps_diss * sum1(lambda x: alphaG_dKOD[x]))],
+            [loop],
+        ],
+        [[
+            [lhrh(lhs=rhs_betaGU[i], rhs=rhs_betaGU[i] + eps_diss * sum1(lambda x: betaGU_dKOD[i][x]))],
+            [loop],
+        ] for i in range(3)],
     ])
     
     thorn.add_func(
