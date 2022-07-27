@@ -43,7 +43,6 @@ class SafeWrite:
             do_write = True
         if do_write:
             assert nochange == False
-            print("Write:",self.fname)
             with open(self.fname, "w") as fd:
                 fd.write(newcontent)
             print(" "+red+"[written]"+reset)
