@@ -8,6 +8,7 @@ from clang_format import _get_executable as get_executable
 clang_formatter = get_executable("clang-format")
 
 verbose = False
+nochange = False
 
 # ANSI colors
 red = "\033[31;1m"
@@ -41,6 +42,8 @@ class SafeWrite:
         else:
             do_write = True
         if do_write:
+            assert nochange == False
+            print("Write:",self.fname)
             with open(self.fname, "w") as fd:
                 fd.write(newcontent)
             print(" "+red+"[written]"+reset)
