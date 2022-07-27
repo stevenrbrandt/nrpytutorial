@@ -125,14 +125,15 @@ Theta = thorn.register_gridfunctions("EVOL", ["Theta"], centering=centering)
 alphaG = thorn.register_gridfunctions("EVOL", ["alphaG"], centering=centering)
 betaGU = ixp.register_gridfunctions_for_single_rankN(1, "EVOL", "betaGU", centering=centering)
 
-chi_rhs = thorn.register_gridfunctions("AUX", ["chi_rhs"], centering=centering)
-gammatildeDD_rhs = ixp.register_gridfunctions_for_single_rankN(2, "AUX", "gammatildeDD_rhs", "sym01", centering=centering)
-Khat_rhs = thorn.register_gridfunctions("AUX", ["Khat_rhs"], centering=centering)
-AtildeDD_rhs = ixp.register_gridfunctions_for_single_rankN(2, "AUX", "AtildeDD_rhs", "sym01", centering=centering)
-GammatildeU_rhs = ixp.register_gridfunctions_for_single_rankN(1, "AUX", "GammatildeU_rhs", centering=centering)
-Theta_rhs = thorn.register_gridfunctions("AUX", ["Theta_rhs"], centering=centering)
-alphaG_rhs = thorn.register_gridfunctions("AUX", ["alphaG_rhs"], centering=centering)
-betaGU_rhs = ixp.register_gridfunctions_for_single_rankN(1, "AUX", "betaGU_rhs", centering=centering)
+rhs_chi = thorn.register_gridfunctions("AUX", ["rhs_chi"], centering=centering)
+gammatildeRhsDD = ixp.register_gridfunctions_for_single_rankN(2, "AUX", "gammatildeRhsDD", "sym01", centering=centering)
+rhs_Khat = thorn.register_gridfunctions("AUX", ["rhs_Khat"], centering=centering)
+AtildeRhsDD = ixp.register_gridfunctions_for_single_rankN(2, "AUX", "AtildeRhsDD", "sym01", centering=centering)
+Atilde1RhsDD = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "Atilde1RhsDD", "sym01", centering=centering)
+GammatildeRhsU = ixp.register_gridfunctions_for_single_rankN(1, "AUX", "GammatildeRhsU", centering=centering)
+rhs_Theta = thorn.register_gridfunctions("AUX", ["rhs_Theta"], centering=centering)
+rhs_alphaG = thorn.register_gridfunctions("AUX", ["rhs_alphaG"], centering=centering)
+rhs_betaGU = ixp.register_gridfunctions_for_single_rankN(1, "AUX", "rhs_betaGU", centering=centering)
 
 ZetatildeCU = ixp.register_gridfunctions_for_single_rankN(1, "AUX", "ZetatildeCU", centering=centering)
 HC = thorn.register_gridfunctions("AUX", ["HC"], centering=centering)
@@ -400,7 +401,7 @@ def RHS():
               rhs=dbetaGUD[i][j] + sum1(lambda x: GammaUDD[i][x][j] * betaGU[x]))
          for i in range(3) for j in range(3)],
         # arXiv:1212.2901 [gr-qc], (1)
-        [lhrh(lhs=chi_rhs,
+        [lhrh(lhs=rhs_chi,
               rhs=(+ Rational(2,3) * chi * (alphaG * (Khat + 2 * Theta) - sum1(lambda x: DbetaGUD[x][x]))
                    # - Rational(2,3) * sum1(lambda x: betaGU[x] * dchiD[x])
                    # + Rational(2,3) * dbetaGchi
@@ -434,7 +435,7 @@ def RHS():
         [lhrh(lhs=trS,
               rhs=sum2_symm(lambda x, y: gUU[x][y] * SijDD[x][y]))],
         # arXiv:1212.2901 [gr-qc], (3)
-        [lhrh(lhs=Khat_rhs,
+        [lhrh(lhs=rhs_Khat,
               rhs=(- sum2_symm(lambda x, y: gUU[x][y] * DDalphaGDD[x][y])
                    + alphaG * (+ sum2_symm(lambda x, y: AtildeUD[x][y] * AtildeUD[y][x])
                                + Rational(1,3) * (Khat + 2 * Theta)**2)
@@ -519,7 +520,7 @@ def RHS():
          for i in range(3)],
 
         # arXiv:1212.2901 [gr-qc], (6)
-        [lhrh(lhs=Theta_rhs,
+        [lhrh(lhs=rhs_Theta,
               rhs=Piecewise((0, set_Theta_zero),
                             ((+ Rational(1,2) * alphaG * (+ Rsc
                                                           - sum2_symm(lambda x, y: AtildeUU[x][y] * AtildeDD[x][y])
@@ -529,11 +530,11 @@ def RHS():
                               + sum1(lambda x: betaGU[x] * dThetaD[x])
                               + eps_diss * dissTheta), True)))],
 
-        [lhrh(lhs=alphaG_rhs,
+        [lhrh(lhs=rhs_alphaG,
               rhs=(- alphaG * f_mu_L * Khat
                    + eps_diss * dissalphaG))],
 
-        [lhrh(lhs=betaGU_rhs[i],
+        [lhrh(lhs=rhs_betaGU[i],
               rhs=(+ f_mu_S * GammatildeU[i] - eta * betaGU[i]
                    + eps_diss * dissbetaGU[i]))
          for i in range(3)],
@@ -545,7 +546,7 @@ def RHS():
         where='interior',
         schedule_bin="ODESolvers_RHS",
         doc="Calculate RHS",
-        sync="chi_rhsGF gammatildeDD_rhsGF Khat_rhsGF AtildeDD_rhsGF GammatildeU_rhsGF Theta_rhsGF alphaG_rhsGF betaGU_rhsGF",
+        sync="rhs_chiGF gammatildeRhsDDGF rhs_KhatGF AtildeRhsDDGF GammatildeUGF rhs_ThetaGF rhs_alphaGGF rhs_betaGUGF",
         centering=centering)
 RHS()
 

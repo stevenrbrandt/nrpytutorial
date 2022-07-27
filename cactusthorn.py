@@ -653,8 +653,8 @@ class CactusThorn:
                     if ixp.find_gftype_for_group(gf_group,die=False) in ["TILE_TMP","SCALAR_TMP"]:
                         continue
 
-                    rhs=gf_group + "_rhs"
-                    if re.match(r'.*_rhs',gf_group):
+                    rhs="rhs_" + gf_group 
+                    if re.match(r'rhs_.*',gf_group):
                         tag = "TAGS='checkpoint=\"no\"'"
                         rhs_pairs.add(gf_group)
                     elif rhs in all_group_names:
@@ -692,7 +692,7 @@ void {self.thornname}_RegisterVars(CCTK_ARGUMENTS)
   int ierr, var, rhs;""".strip(),file=fd)
                     for rhs_var in rhs_pairs:
                         var = rhs_var[:-4]
-                        assert var + "_rhs" == rhs_var
+                        assert "rhs_" + var == rhs_var
                         print("   ",f"""
   var   = CCTK_VarIndex("{self.thornname}::{var}GF");
   rhs   = CCTK_VarIndex("{self.thornname}::{rhs_var}GF");
