@@ -7,6 +7,15 @@ from outputC import lhrh
 from colored import colored
 from here import here, herecc
 
+def getTypes():
+    a,b = sp.symbols("a b")
+    return type(a+b)
+
+# Need to get type type of two symbols added together
+# comparing with sp.core.add.Add seems to sometimes
+# not work.
+Add = getTypes()
+
 properties = {}
 variants = {}
 definitions = {}
@@ -198,7 +207,7 @@ def getname(expr):
 def makesum(expr, dim=3):
     #globs = inspect.stack()[2].frame.f_globals
 
-    if type(expr) == sp.core.add.Add:
+    if type(expr) == Add:
         sume = sp.sympify(0)
         for a in expr.args:
             sume += makesum(expr,dim)

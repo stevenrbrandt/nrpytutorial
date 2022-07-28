@@ -10,6 +10,10 @@ import indexedexp as ixp
 from cactusthorn import CactusThorn, loop
 from outputC import lhrh, outCparams
 
+import safewrite
+#safewrite.nochange = True
+safewrite.verbose = True
+
 # outCparams.CSE_enable = "False"
 
 # "CCTK_REAL" or "CCTK_REALVEC"
@@ -178,9 +182,11 @@ gfdecl("g","gammatilde",[ua,ub],"dgammatilde",[ua,ub,lc],"Theta_val","trK","chi_
 def Initial():
     initial1_eqns = flatten([
         [lhrh(lhs=chi_val, rhs=1 / cbrt(detg_expr))],
-        [lhrh(lhs=gUU[i][j], rhs=gUU_expr[i][j]) for i in range(3) for j in range(i+1)],
+        #[lhrh(lhs=gUU[i][j], rhs=gUU_expr[i][j]) for i in range(3) for j in range(i+1)],
+        geneqns(lhs=g[ua,ub],values=gUU_expr),
         [lhrh(lhs=Theta_val, rhs=sympify(0))],
-        [lhrh(lhs=trK, rhs=sum2_symm(lambda x, y: gUU[x][y] * kDD[x][y]))],
+        #[lhrh(lhs=trK, rhs=sum2_symm(lambda x, y: gUU[x][y] * kDD[x][y]))],
+        geneqns(lhs=trK, rhs=g[ua,ub]*k[la,lb]),
         [lhrh(lhs=chi, rhs=chi_val)],
         [lhrh(lhs=gammatildeDD[i][j], rhs=chi_val * gDD[i][j]) for i in range(3) for j in range(i+1)],
         [lhrh(lhs=Theta, rhs=Theta_val)],
