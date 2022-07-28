@@ -5,20 +5,26 @@ import indexedexp as ixp
 from here import here
 from outputC import lhrh
 from colored import colored
-
-safewrite.verbose = True
-safewrite.nochange = True
+from here import here, herecc
 
 properties = {}
 variants = {}
 definitions = {}
 
-verbose = True
+verbose = False
 
 sim_params = {}
+
 def gfparams(**kw):
+    global sim_params
+    sim_params = {}
     for k in kw:
-        sim_params[k] = kw[k]
+        if k == "symmetries":
+            sim_params["symmetry_option"] = kw[k]
+        else:
+            sim_params[k] = kw[k]
+    if "DIM" not in sim_params:
+        sim_params["DIM"] = 3
 
 def gfdecl(*args):
     g = inspect.stack()[1].frame.f_globals
@@ -29,7 +35,8 @@ def gfdecl(*args):
             #sim_params["gf_basename"] = name
             #g[name] = ixp.register_gridfunctions_for_single_rankN(**sim_params)
         elif type(arg) == list:
-            gfparams(rank=len(arg))
+            #gfparams(rank=len(arg))
+            rank = len(arg)
             suffix = ""
             for k in arg:
                 assert type(k) == sp.tensor.indexed.Idx
@@ -40,17 +47,18 @@ def gfdecl(*args):
                 else:
                     assert False,f"{k} {type(k)}"
             for basename in namelist:
-                assert not re.match(r'.*[DU]',basename), f"Bad declaration for '{basename}'. Basenames should not end in D or U."
+                assert not re.match(r'^.*[DU]$',basename), f"Bad declaration for '{basename}'. Basenames should not end in D or U."
                 fullname = basename + suffix
                 if basename not in g:
-                    if sim_params["rank"]>0:
+                    if rank>0:
                         g[basename] = sp.IndexedBase(basename,shape=tuple([sim_params["DIM"]]*len((arg))))
                 name = basename + suffix
                 copy = {}
                 for k in sim_params:
                     copy[k] = sim_params[k]
                 copy["gf_basename"] = name
-                if copy["rank"] < 2:
+                copy["rank"] = rank
+                if rank < 2:
                     copy["symmetry_option"] = None
                 if copy["gf_type"] != "EXTERNAL":
                     copy["external_module"] = None
@@ -84,10 +92,6 @@ def gfdecl(*args):
             namelist = []
     assert len(namelist)==0, "Missing final index args"
 
-def nf(sym,ind,shape):
-    symbase = re.sub("[UD]+$","",sym)
-    return namefun(sym,ind,shape,symbase)
-
 def declIndexes():
     g = inspect.stack()[1].frame.f_globals
     for c in range(ord('a'),ord('z')+1):
@@ -104,6 +108,10 @@ def namefun(symbol, index, shape, prefix):
     result = [sp.Symbol(symbol + ''.join(ixnam(n) for n in index + [i]))
             if symbol else sp.sympify(0) for i in range(shape[0])]
     return result
+
+def name_xyz(sym,ind,shape):
+    symbase = re.sub("[UD]+$","",sym)
+    return namefun(sym,ind,shape,symbase)
 
 def matchindex(s):
     return re.match(r'^([ul])([a-z])$', str(s))
