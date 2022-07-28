@@ -87,13 +87,6 @@ def namefun(symbol, index, shape, prefix):
             if symbol else sp.sympify(0) for i in range(shape[0])]
     return result
 
-d = ["x", "y", "z"]
-for i in range(3):
-    for j in range(i,3):
-        n1 = f"metric{i}{j}"
-        n2 = f"g{d[i]}{d[j]}"
-        grid.rename(n1,n2)
-
 # TODO: turn these into a Cactus parameters
 set_Theta_zero = thorn.declare_param('set_Theta_zero', default=False, doc="set_Theta_zero")
 kappa1 = thorn.declare_param('kappa1', default=0.02, doc="kappa1")

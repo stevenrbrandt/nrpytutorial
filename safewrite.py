@@ -4,16 +4,12 @@ from difflib import context_diff
 import sys
 from subprocess import Popen, PIPE
 from clang_format import _get_executable as get_executable
+from colored import colored
 
 clang_formatter = get_executable("clang-format")
 
 verbose = False
 nochange = False
-
-# ANSI colors
-red = "\033[31;1m"
-green = "\033[32;1m"
-reset = "\033[0m"
 
 class SafeWrite:
     def __init__(self, fname, do_format=False):
@@ -45,6 +41,6 @@ class SafeWrite:
             assert nochange == False
             with open(self.fname, "w") as fd:
                 fd.write(newcontent)
-            print(" "+red+"[written]"+reset)
+            print(colored("[written]","red"))
         else:
-            print(" "+green+"[no changes]"+reset)
+            print(colored("[no changes]","green"))
