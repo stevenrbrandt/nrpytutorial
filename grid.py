@@ -161,7 +161,7 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = "", context = "DECL"):
                     return retstring + varname + f"({mask}{find_centering(varname)}_tmp_layout, p.I{ijklstring})"
             elif gftype == "SCALAR_TMP":
                 if context == "USE":
-                    return retstring + varname;
+                    return retstring + "const " + vartype + " " + varname
                 else:
                     return None
             else:
