@@ -576,7 +576,7 @@ def RHS():
         where='interior',
         schedule_bin="ODESolvers_RHS",
         doc="Calculate RHS",
-        sync="rhs_chiGF rhs_gammatildeDDGF rhs_KhatGF rhs_AtildeDDGF GammatildeUGF rhs_ThetaGF rhs_alphaGGF rhs_betaGUGF",
+        sync="rhs_chiGF rhs_gammatildeDDGF rhs_KhatGF rhs_AtildeDDGF rhs_GammatildeUGF rhs_ThetaGF rhs_alphaGGF rhs_betaGUGF",
         centering=centering)
 RHS()
 
