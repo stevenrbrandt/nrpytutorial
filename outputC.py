@@ -727,8 +727,8 @@ def add_to_Cfunction_dict(includes=None, prefunc="", desc="", c_type="void", nam
                                                            enableCparameters, rel_path_to_Cparams))
 
     outC_function_outdir_dict[name + namesuffix] = path_from_rootsrcdir_to_this_Cfunc
-    print(name, namesuffix, path_from_rootsrcdir_to_this_Cfunc)
-    print(outC_function_outdir_dict)
+    # print(name, namesuffix, path_from_rootsrcdir_to_this_Cfunc)
+    # print(outC_function_outdir_dict)
     outC_function_prototype_dict[name + namesuffix], outC_function_dict[name + namesuffix] = \
         Cfunction(includes, prefunc, desc, c_type, name + namesuffix, params, preloop, body, loopopts, postloop,
                   enableCparameters, rel_path_to_Cparams)
