@@ -475,7 +475,8 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
 
     if outCparams.CSE_enable == "False":
         # If CSE is disabled:
-        sympyexpr = list(map(map_synthesize_muladd, sympyexpr))
+        # Synthesizing `muladd` calls seems to slow down the code
+        # sympyexpr = list(map(map_synthesize_muladd, sympyexpr))
         for i in range(len(sympyexpr)):
             outstring += outtypestring + ccode_postproc(sp.ccode(dosubs(sympyexpr[i]), output_varname_str[i],
                                                                  allow_unknown_functions=True,
@@ -533,7 +534,8 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
         sympyexpr_group2 = []
         names_group1 = []
         names_group2 = []
-        sympyexpr = list(map(map_synthesize_muladd, sympyexpr))
+        # Synthesizing `muladd` calls seems to slow down the code
+        # sympyexpr = list(map(map_synthesize_muladd, sympyexpr))
         for ii in range(len(sympyexpr)):
             nm = output_varname_str[ii]
             if find_gftype(nm,die=False) == "SCALAR_TMP":
