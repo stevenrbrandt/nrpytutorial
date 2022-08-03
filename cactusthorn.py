@@ -483,29 +483,14 @@ class CactusThorn:
                     wtag = 'bnd'
                 else:
                     assert False, "where should be in ['interior', 'everywhere', 'boundary']"
-                #TODO: need to decide how to do loops with centering other than VVV
                 body = f"""
   {decl}
   {checkbounds}
   grid.loop_{wtag}_device<{centering}_centered[0], {centering}_centered[1], {centering}_centered[2], CCTK_VECSIZE>(
   grid.nghostzones, [=] CCTK_DEVICE (
   const PointDesc &p) CCTK_ATTRIBUTE_ALWAYS_INLINE {{
-  const GF3D5index CCTK_ATTRIBUTE_UNUSED VVV_index(VVV_layout, p.I);
-  const GF3D5index CCTK_ATTRIBUTE_UNUSED VVC_index(VVC_layout, p.I);
-  const GF3D5index CCTK_ATTRIBUTE_UNUSED VCV_index(VCV_layout, p.I);
-  const GF3D5index CCTK_ATTRIBUTE_UNUSED VCC_index(VCC_layout, p.I);
-  const GF3D5index CCTK_ATTRIBUTE_UNUSED CVV_index(CVV_layout, p.I);
-  const GF3D5index CCTK_ATTRIBUTE_UNUSED CVC_index(CVC_layout, p.I);
-  const GF3D5index CCTK_ATTRIBUTE_UNUSED CCV_index(CCV_layout, p.I);
-  const GF3D5index CCTK_ATTRIBUTE_UNUSED CCC_index(CCC_layout, p.I);
-  const GF3D5index CCTK_ATTRIBUTE_UNUSED VVV_tmp_index(VVV_tmp_layout, p.I);
-  const GF3D5index CCTK_ATTRIBUTE_UNUSED VVC_tmp_index(VVC_tmp_layout, p.I);
-  const GF3D5index CCTK_ATTRIBUTE_UNUSED VCV_tmp_index(VCV_tmp_layout, p.I);
-  const GF3D5index CCTK_ATTRIBUTE_UNUSED VCC_tmp_index(VCC_tmp_layout, p.I);
-  const GF3D5index CCTK_ATTRIBUTE_UNUSED CVV_tmp_index(CVV_tmp_layout, p.I);
-  const GF3D5index CCTK_ATTRIBUTE_UNUSED CVC_tmp_index(CVC_tmp_layout, p.I);
-  const GF3D5index CCTK_ATTRIBUTE_UNUSED CCV_tmp_index(CCV_tmp_layout, p.I);
-  const GF3D5index CCTK_ATTRIBUTE_UNUSED CCC_tmp_index(CCC_tmp_layout, p.I);
+  const GF3D5index CCTK_ATTRIBUTE_UNUSED {centering}_index({centering}_layout, p.I);
+  const GF3D5index CCTK_ATTRIBUTE_UNUSED {centering}_tmp_index({centering}_tmp_layout, p.I);
   const CCTK_BOOLVEC mask CCTK_ATTRIBUTE_UNUSED = mask_for_loop_tail<CCTK_BOOLVEC>(p.i, p.imax);
   {kernel}
   }});
@@ -809,6 +794,8 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                         print("", file=fd)
                         print("#define CARPETX_GF3D5", file=fd)
                         print("#include <loop_device.hxx>", file=fd)
+                        # Activate this line to disable SIMD parallelization
+                        # print("#define SIMD_CPU", file=fd)
                         print("#include <simd.hxx>", file=fd)
                         print("", file=fd)
                         print("#include <cmath>", file=fd)
