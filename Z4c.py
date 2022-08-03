@@ -253,10 +253,11 @@ def Enforce():
     thorn.add_func(
         "Z4cNRPy_Enforce",
         body=enforce_eqns,
-        where='interior',
+        # where='interior',
+        where='everywhere',
         schedule_bin="Z4cNRPy_PostStepGroup",
         doc="Enforce constraints",
-        sync="chiGF gammatildeDDGF KhatGF AtildeDDGF GammatildeUGF ThetaGF alphaGGF betaGUGF",
+        # sync="chiGF gammatildeDDGF KhatGF AtildeDDGF GammatildeUGF ThetaGF alphaGGF betaGUGF",
         centering=centering
         )
 Enforce()
@@ -276,10 +277,11 @@ def ADM():
     thorn.add_func(
         "Z4cNRPy_ADM",
         body=adm_eqns,
-        where='interior',
+        # where='interior',
+        where='everywhere',
         schedule_bin="Z4cNRPy_PostStepGroup AFTER Z4cNRPy_Enforce",
         doc="Calculate ADM variables",
-        sync="ADMBase::metric ADMBase::curv ADMBase::lapse ADMBase::dtlapse ADMBase::shift ADMBase::dtshift",
+        # sync="ADMBase::metric ADMBase::curv ADMBase::lapse ADMBase::dtlapse ADMBase::shift ADMBase::dtshift",
         centering=centering)
 ADM()
 
