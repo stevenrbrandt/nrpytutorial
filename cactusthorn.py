@@ -359,24 +359,35 @@ class CactusThorn:
                 tmp_centerings[c] = set()
             tmp_centerings[c].add(gf)
         if grid.ET_driver == "CarpetX":
-            layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVV_tmp_layout(cctkGH,{{0,0,0}});"
-            layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_tmp_layout(cctkGH,{{0,0,1}});"
-            layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCV_tmp_layout(cctkGH,{{0,1,0}});"
-            layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCC_tmp_layout(cctkGH,{{0,1,1}});"
-            layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVV_tmp_layout(cctkGH,{{1,0,0}});"
-            layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVC_tmp_layout(cctkGH,{{1,0,1}});"
-            layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCV_tmp_layout(cctkGH,{{1,1,0}});"
-            layout_decls += f" const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_tmp_layout(cctkGH,{{1,1,1}});"
+            if where == 'interior':
+                layout_decls += f"  // Allocate temporary grid functions without ghost zones\n"
+                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVV_tmp_layout(cctkGH, {{0,0,0}}, {{0,0,0}});\n"
+                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_tmp_layout(cctkGH, {{0,0,1}}, {{0,0,0}});\n"
+                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCV_tmp_layout(cctkGH, {{0,1,0}}, {{0,0,0}});\n"
+                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCC_tmp_layout(cctkGH, {{0,1,1}}, {{0,0,0}});\n"
+                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVV_tmp_layout(cctkGH, {{1,0,0}}, {{0,0,0}});\n"
+                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVC_tmp_layout(cctkGH, {{1,0,1}}, {{0,0,0}});\n"
+                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCV_tmp_layout(cctkGH, {{1,1,0}}, {{0,0,0}});\n"
+                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_tmp_layout(cctkGH, {{1,1,1}}, {{0,0,0}});\n"
+            else:
+                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVV_tmp_layout(cctkGH, {{0,0,0}});\n"
+                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_tmp_layout(cctkGH, {{0,0,1}});\n"
+                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCV_tmp_layout(cctkGH, {{0,1,0}});\n"
+                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCC_tmp_layout(cctkGH, {{0,1,1}});\n"
+                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVV_tmp_layout(cctkGH, {{1,0,0}});\n"
+                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVC_tmp_layout(cctkGH, {{1,0,1}});\n"
+                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCV_tmp_layout(cctkGH, {{1,1,0}});\n"
+                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_tmp_layout(cctkGH, {{1,1,1}});\n"
 
         tmp_decls = ""
         for c in tmp_centerings:
             ctmps = tmp_centerings[c]
-            tmp_decls=f"const GF3D5vector<CCTK_REAL> tiles_{c}({c}_tmp_layout, {len(ctmps)}); "
+            tmp_decls=f"  const GF3D5vector<CCTK_REAL> tiles_{c}({c}_tmp_layout, {len(ctmps)});\n"
             tmp_list = sorted(list(ctmps))
             for ix in range(len(tmp_list)):
                 tname = tmp_list[ix]
                 c = grid.find_centering(tname)
-                tmp_decls += f" const GF3D5 {tname}(tiles_{c}({ix})); "
+                tmp_decls += f"  const GF3D5 {tname}(tiles_{c}({ix}));\n"
 
         body_str = layout_decls + tmp_decls + body_str
 
@@ -462,7 +473,7 @@ class CactusThorn:
   }} }} }}
                     """.strip()
                 else:
-                    assert False, f"where={where} is not suppprted"
+                    assert False, f"where={where} is not supported"
             elif gri.ET_driver == "CarpetX":
                 if where == 'everywhere':
                     wtag = 'all'
