@@ -600,6 +600,12 @@ class CactusThorn:
 
     def generate(self,dirname=None,cactus_config="sim",cactus_thornlist=None,schedule_raw=""):
         assert self.ET_driver == grid.ET_driver
+        if self.ET_driver == "CarpetX":
+            assert os.path.exists(os.path.join(dirname,"arrangements","CarpetX","CarpetX")), \
+                "Generating for CarpetX, but the CarpetX driver is not present."
+        else:
+            assert os.path.exists(os.path.join(dirname,"arrangements","Carpet","Carpet")), \
+                "Generating for Carpet, but the Carpet driver is not present."
         rhs_pairs = set()
         cwd = None
         try:
