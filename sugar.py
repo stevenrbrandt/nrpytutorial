@@ -1,3 +1,4 @@
+import grid
 import inspect, re
 import sympy as sp
 import safewrite
@@ -6,6 +7,105 @@ from here import here
 from outputC import lhrh
 from colored import colored
 from here import here, herecc
+from traceback import print_exc
+
+import nrpylatex
+herecc(nrpylatex.__file__)
+from nrpylatex import parse_latex
+
+import warnings
+warnings.filterwarnings('ignore',r'some variable\(s\) in the namespace were overridden')
+
+coords = None
+
+def set_coords(*c):
+    global coords
+    latex = "% coord ["+", ".join(c)+"]"
+    parse_latex(latex)
+    coords = c
+
+###
+class Seq:
+    """
+    Convert a sequence of D's and U's signifying "down" and "up" indexes
+    into a latex equivalent which, when combined with specific index values
+    becomes a format sequence for latex. Thus, "DD" becomes "_{%s %s}",
+    "U" becomes "^{%s}" and "UUD" becomes "^{%s %s}_{%s}".
+    """
+    def __init__(self,seq):
+        self.fmt = ""
+        self.prev = ""
+        for letter in seq:
+            self.add(letter)
+        if self.fmt != "":
+            self.fmt += "}"
+    def add(self, letter):
+        if letter in ["l","D"]:
+            if self.prev == letter:
+                self.fmt += " %s"
+            elif self.fmt == "":
+                self.fmt += "_{%s"
+            else:
+                self.fmt += "}_{%s"
+        elif letter in ["u","U"]:
+            if self.prev == letter:
+                self.fmt += " %s"
+            elif self.fmt == "":
+                self.fmt += "^{%s"
+            else:
+                self.fmt += "}^{%s"
+        else:
+            assert False
+        self.prev = letter
+            
+
+def _latex_def(basename, fmt, gf, args):
+    assert coords is not None, "Please call set_coords()"
+    if type(gf) == list:
+        for i in range(len(gf)):
+            _latex_def(basename, fmt, gf[i], args + [coords[i]])
+    else:
+        indexes = fmt % tuple(args)
+        latex = f"% \\text{{{basename}}}{indexes} = \\text{{{gf}}}"
+        parse_latex(latex)
+
+
+def latex_def(basename, sig, gf):
+    s = Seq(sig)
+    _latex_def(basename, s.fmt, gf, [])
+###
+def matchexpr(expr):
+    result = []
+    while True:
+        g = re.match(r'\s+|%.*|\\text{([a-z]+)}|([a-z]+)|([\^_]){ *((?:[a-z] )*[a-z]) *}|([\^_])([a-z])|=',expr)
+        if g:
+            s = g.group(0)
+            if g.group(1) is not None:
+                result += [("symbol",g.group(1))]
+            elif g.group(2) is not None:
+                result += [("symbol",g.group(2))]
+            elif g.group(3) is not None:
+                if g.group(3) == "^":
+                    typestr = "upindex"
+                else:
+                    typestr = "downindex"
+                answer = re.split(r'\s+',g.group(4))
+                result += [(typestr,answer)] 
+            elif g.group(5) is not None:
+                if g.group(5) == "^":
+                    typestr = "upindex"
+                else:
+                    typestr = "downindex"
+                answer = [g.group(6)]
+                result += [(typestr,answer)] 
+            elif g.group(0) == "=":
+                result += [("equals","=")]
+            expr = expr[g.end():]
+        else:
+            result += [("end",expr)]
+            break
+    return result
+###
 
 def getTypes():
     a,b = sp.symbols("a b")
@@ -36,7 +136,12 @@ def gfparams(**kw):
         sim_params["DIM"] = 3
 
 def gfdecl(*args):
-    g = inspect.stack()[1].frame.f_globals
+    if len(args)>0 and type(args[-1]) == dict:
+        g = args[-1]
+        args = args[:-1]
+    else:
+       g = inspect.stack()[1].frame.f_globals
+    here("gfdecl:",args)
     namelist = []
     for arg in args:
         if type(arg) == str:
@@ -75,9 +180,9 @@ def gfdecl(*args):
                 assert fullname not in properties, f"Redefinition of {fullname}"
 
                 base_variants = variants.get(basename,set())
+                sym1 = copy.get("symmetry_option", "")
                 for k in base_variants:
                     variant_copy = properties.get(k)
-                    sym1 = copy.get("symmetry_option", "")
                     sym2 = variant_copy.get("symmetry_option", "")
                     assert sym1 == sym2, \
                         f"Inconsistent declaration of {basename}. Variant {k} has {sym2}, and {fullname} has {sym1}"
@@ -89,6 +194,10 @@ def gfdecl(*args):
                     if len(base_variants) > 0:
                         print("  ",colored("Previous Definitions:","yellow"),base_variants)
                     print()
+                latex = f"% define {fullname} --dim {properties.get('DIM',3)}"
+                if sym1 not in ["", None]:
+                    latex += f" --sym {sym1}"
+                parse_latex(latex)
 
                 base_variants.add(fullname)
                 variants[basename] = base_variants
@@ -96,10 +205,49 @@ def gfdecl(*args):
                 properties[fullname] = copy
 
                 gf = ixp.register_gridfunctions_for_single_rankN(**copy)
+
+                namefun = copy.get("namefun",None)
+                if namefun is not None:
+                    latex_def(basename, suffix, gf)
+
                 g[name] = gf
                 definitions[name] = gf
             namelist = []
     assert len(namelist)==0, "Missing final index args"
+
+indexdefs = {}
+
+def gflatex(inp):
+    globs = inspect.stack()[1].frame.f_globals
+    assert "," not in inp, f"Commas are not valid in input: '{inp}'"
+    args = matchexpr(inp)
+    assert len(args) > 0, f"Failed to parse {inp}"
+    assert args[-1][0] == "end", args[-1]
+    end_len = len(args[-1][1])
+    assert end_len == 0, f"Parse failure in input: '{inp[:end_len]}{colored('|','red')}{inp[end_len:]}"
+    symbol = None
+    indexes = []
+    for a in args:
+        if a[0] == "symbol":
+            if symbol is not None:
+                here(symbol, indexes)
+                gfdecl(symbol, indexes, globs)
+                symbol = None
+                indexes = []
+            symbol = a[1]
+        elif a[0] == "upindex":
+            for letter in a[1]:
+                pair = indexdefs[letter]
+                up = pair[1]
+                indexes += [ up ]
+        elif a[0] == "downindex":
+            for letter in a[1]:
+                pair = indexdefs[letter]
+                down = pair[0]
+                indexes += [ down ]
+    if symbol is not None:
+        here(symbol,indexes)
+        gfdecl(symbol, indexes, globs)
 
 def declIndexes():
     g = inspect.stack()[1].frame.f_globals
@@ -108,6 +256,7 @@ def declIndexes():
         dn, up = sp.symbols(f"l{letter} u{letter}", cls=sp.Idx)
         g[f"l{letter}"] = dn
         g[f"u{letter}"] = up
+        indexdefs[letter] = (dn, up)
 
 def ixnam(i):
     return ["x", "y", "z"][i]
@@ -168,7 +317,7 @@ def lookup(array, indexes, i=0):
     
 def getsyms(syms):
     li = []
-    if syms == "":
+    if syms in [None,""]:
         return li
     for sym in syms.split('_'):
         g = re.match(r'^(a?sym)(\d)(\d)', sym)
@@ -253,9 +402,35 @@ def makesum(expr, dim=3):
                 else:
                     nm += "D"
                 indexes += [int(g.group(2))]
-            #here("sym:",sym,"->",lookup(globs[nm],indexes))
             subs[sym] = lookup(definitions[nm],indexes)
     return expr.subs(subs)
+
+def geneqns2(lhs,rhs):
+    lhs_str = r"\text{result}"
+    last = ""
+    suffix = ""
+    for a in lhs.args[1:]:
+        sa = str(a)
+        assert len(sa) == 2
+        if sa[0] == 'u':
+            if last != "u":
+                if last != "":
+                    lhs_str += "}"
+                lhs_str += "^{"
+            suffix += "U"
+        else:
+            if last != "l":
+                if last != "":
+                    lhs_str += "}"
+                lhs_str += "_{"
+            suffix += "D"
+        lhs_str += sa[1] +  " "
+        last = sa[0]
+    latex = lhs_str + "}=" + rhs
+    here(latex)
+    r=parse_latex(latex,verbose=True)
+
+    return geneqns(lhs=lhs, values=globals()["result"+suffix])
 
 def geneqns(lhs,rhs=None,values=None,DIM=3):
     globs = inspect.stack()[1].frame.f_globals
@@ -284,7 +459,9 @@ def geneqns(lhs,rhs=None,values=None,DIM=3):
         props = properties[nm]
         symmetries = props.get("symmetry_option","")
         for index in incrindexes([0] * len(indexes),3, getsyms(symmetries)):
-            result += [lhrh(lhs=lookup(globs[nm],index),rhs=lookup(values, index))]
+            result += [lhrh(lhs=lookup(definitions[nm],index),rhs=lookup(values, index))]
+        for r in result:
+            pass #here(r)
         return result #generatevalues(lhs,rhs,[0]*len(indexes),symmetries)
     else:
         assert False, "Must supply either values or rhs to geneqns"
