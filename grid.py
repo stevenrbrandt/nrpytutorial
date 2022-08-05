@@ -9,6 +9,7 @@ import sympy as sp                  # Import SymPy, a computer algebra system wr
 from collections import namedtuple  # Standard Python `collections` module: defines named tuples data structure
 import os                           # Standard Python module for multiplatform OS-level functions
 from suffixes import setsuffix
+import re
 
 # Initialize globals related to the grid
 ET_driver = ""
@@ -109,27 +110,15 @@ def find_gfmodule(varname,die=True):
 from_access = {}
 
 def var_from_access(access):
-    access = access.strip() # This really shouldn't be necessary
     v = from_access.get(access, None)
     if v is not None:
         return v
-    g = re.match(r'^(\w+)(\[\w+\])*$', access)
-    if g:
-        return g.group(1)
-    g = re.match(r'in_gfs\w*\[IDX4S\((\w+),i0,i1,i2\)\]', access)
-    if g:
-        return g.group(1)
+    if re.match(r'^\w+$', access):
+        return access
     g = re.match(r'^const\s+(\w+)\s+(\w+)', access)
     if g:
         return g.group(2)
-    g = re.match(r'^\*?([\w.]+?)[DU]*\d*$', access)
-    if g:
-        return g.group(1)
-    g = re.match(r'^(\w+)\[CCTK_GFINDEX3D\(cctkGH,i0,i1,i2\)\]', access)
-    if g:
-        return g.group(1)
-    return "?"
-    #raise Exception("Could not identify a variable name from the access string '"+access+"'")
+    raise Exception(f"Could not identify a variable name from the access string '{access}'")
 
 def gfaccess(gfarrayname = "", varname = "", ijklstring = "", context = "DECL"):
     ret = _gfaccess(gfarrayname, varname, ijklstring, context)
@@ -137,7 +126,7 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = "", context = "DECL"):
     return ret
     
 def _gfaccess(gfarrayname, varname, ijklstring, context):
-    var_data = glb_gridfcs_map().get(varname, None)
+    var_data = glb_gridfcs_map.get(varname, None)
 
     assert context in ["DECL","USE"], "The context must be either DECL or USE, not '"+context+"'"
 

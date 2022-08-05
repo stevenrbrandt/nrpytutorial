@@ -22,7 +22,8 @@ import sympy as sp                            # SymPy: The Python computer algeb
 import re, sys, os, stat                      # Standard Python: regular expressions, system, and multiplatform OS funcs
 from collections import namedtuple            # Standard Python: Enable namedtuple data type
 from suffixes import dosubs
-from grid import find_gftype
+from grid import find_gftype, var_from_access
+from here import here
 
 lhrh = namedtuple('lhrh', 'lhs rhs')
 outCparams = namedtuple('outCparams', 'preindent includebraces declareoutputvars outCfileaccess outCverbose CSE_enable CSE_varprefix CSE_sorting CSE_preprocess enable_SIMD SIMD_find_more_subs SIMD_find_more_FMAsFMSs SIMD_debug enable_TYPE')
@@ -532,22 +533,22 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
         names_group2 = []
         for ii in range(len(sympyexpr)):
             nm = output_varname_str[ii]
-            if find_gftype(nm,die=False) == "SCALAR_TMP":
-                sympyexpr_group1 += [sympyexpr[ii]]
-                names_group1 += [nm]
+            var = var_from_access(nm)
+            typ = find_gftype(var,die=False)
+            here(nm,"->",var,"=",typ)
+            if typ == "SCALAR_TMP":
+                sympyexpr_group1 += [[sympyexpr[ii]]]
+                names_group1 += [[nm]]
             else:
                 sympyexpr_group2 += [sympyexpr[ii]]
                 names_group2 += [nm]
+        sympyexpr_group1 += [sympyexpr_group2]
+        names_group1 += [names_group2]
 
-        for symgroup in range(1,3):
-            if symgroup == 1:
-                sympyexpr = sympyexpr_group1
-                output_varname_str = names_group1
-                fix = "_g1_"
-            else:
-                sympyexpr = sympyexpr_group2
-                output_varname_str = names_group2
-                fix = "_g2_"
+        for symgroup in range(len(names_group1)):
+            sympyexpr_group = sympyexpr_group1[symgroup]
+            names_group = names_group1[symgroup]
+            fix = f"_g{symgroup}_"
 
             # Start processing a group
             sympy_version = sp.__version__.replace('rc', '...').replace('b', '...')
