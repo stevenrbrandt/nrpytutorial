@@ -141,7 +141,6 @@ def gfdecl(*args):
         args = args[:-1]
     else:
        g = inspect.stack()[1].frame.f_globals
-    here("gfdecl:",args)
     namelist = []
     for arg in args:
         if type(arg) == str:
@@ -427,7 +426,6 @@ def geneqns2(lhs,rhs):
         lhs_str += sa[1] +  " "
         last = sa[0]
     latex = lhs_str + "}=" + rhs
-    here(latex)
     r=parse_latex(latex,verbose=True)
 
     return geneqns(lhs=lhs, values=globals()["result"+suffix])

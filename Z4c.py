@@ -16,7 +16,7 @@ try:
     safewrite.nochange = False
     safewrite.verbose = True
     
-    outCparams.CSE_enable = "False"
+    #outCparams.CSE_enable = "False"
     
     # "CCTK_REAL" or "CCTK_REALVEC"
     par.set_parval_from_str("PRECISION", "CCTK_REALVEC")
@@ -218,6 +218,7 @@ try:
             [lhrh(lhs=gammatildeUU[i][j],
                   rhs=gammatildeUU_expr[i][j])
              for i in range(3) for j in range(i+1)],
+            #geneqns(lhs=gammatilde[ua][ub],values=gammatildeUU_expr),
             [lhrh(lhs=dgammatildeUUD[i][j][k],
                   rhs=- sum2_symm(lambda x, y: gammatildeUU[i][x] * gammatildeUU[j][y] * dgammatildeDDD[x][y][k]))
              for i in range(3) for j in range(i+1) for k in range(3)],

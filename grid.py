@@ -9,6 +9,7 @@ import sympy as sp                  # Import SymPy, a computer algebra system wr
 from collections import namedtuple  # Standard Python `collections` module: defines named tuples data structure
 import os                           # Standard Python module for multiplatform OS-level functions
 from suffixes import setsuffix
+import re
 
 renames = {}
 
@@ -91,7 +92,25 @@ def find_gfmodule(varname,die=True):
     else:
         return var_data.external_module
 
+from_access = {}
+
+def var_from_access(access):
+    v = from_access.get(access, None)
+    if v is not None:
+        return v
+    if re.match(r'^\w+$', access):
+        return access
+    g = re.match(r'^const\s+(\w+)\s+(\w+)', access)
+    if g:
+        return g.group(2)
+    raise Exception(f"Could not identify a variable name from the access string '{access}'")
+
 def gfaccess(gfarrayname = "", varname = "", ijklstring = "", context = "DECL"):
+    ret = _gfaccess(gfarrayname, varname, ijklstring, context)
+    from_access[ret] = varname
+    return ret
+    
+def _gfaccess(gfarrayname, varname, ijklstring, context):
     var_data = glb_gridfcs_map.get(varname, None)
 
     assert context in ["DECL","USE"], f"The context must be either DECL or USE, not '{context}'"
