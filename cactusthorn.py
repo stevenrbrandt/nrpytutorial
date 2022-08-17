@@ -859,13 +859,17 @@ schedule {self.thornname}_RegisterVars in MoL_Register
         return x,y,z
 
     def update_thornlist(self, entry, thorn_list):
+        if not thorn_list.startswith("/"):
+            thorn_list = os.path.join(os.getcwd(), thorn_list)
         if os.path.exists(thorn_list):
             with open(thorn_list, "r") as fd:
                 contents = fd.read()
             if re.search(f'^{entry}\\b', contents, re.MULTILINE):
-                print(f"Thorn {entry} is already in {os.getcwd()}/{thorn_list}")
+                print(f"Thorn {entry} is already in {thorn_list}")
             else:
-                print(f"Appending {entry} to {os.getcwd()}/{thorn_list}")
+                if not thorn_list.startswith("/"):
+                    thorn_list = os.path.join(os.getcwd(), thorn_list)
+                print(f"Appending {entry} to {thorn_list}")
                 with open(thorn_list, "a") as fd:
                     print(entry, file=fd)
         else:
