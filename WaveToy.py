@@ -21,7 +21,7 @@ centering='CCC'
 # AUXEVOL needed for the evo, can be freed after evaluating rhs (1 time level)
 # AUX uu_rhs (1 time level)
 # EVOL evolved gfs (3 time levels)
-uu_rhs, vv_rhs = thorn.register_gridfunctions("AUX", ["uu_rhs", "vv_rhs"], centering=centering)
+uu_rhs, vv_rhs = thorn.register_gridfunctions("AUX", ["rhs_uu", "rhs_vv"], centering=centering)
 uu, vv = thorn.register_gridfunctions("EVOL", ["uu", "vv"], centering=centering)
 if grid.ET_driver == "CarpetX":
     tmp0, tmp1 = thorn.register_gridfunctions("TILE_TMP",["tmp0v","tmp1v"],centering=centering)
