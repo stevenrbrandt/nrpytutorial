@@ -692,7 +692,7 @@ void {self.thornname}_RegisterVars(CCTK_ARGUMENTS)
   DECLARE_CCTK_ARGUMENTS_{self.thornname}_RegisterVars;
   DECLARE_CCTK_PARAMETERS;
   int ierr, var, rhs;""".strip(),file=fd)
-                    for rhs_var in rhs_pairs:
+                    for rhs_var in sorted(rhs_pairs):
                         var = rhs_var[4:]
                         assert "rhs_" + var == rhs_var, f"rhs_{var} != {rhs_var}"
                         print("   ",f"""
