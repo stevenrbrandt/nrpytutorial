@@ -206,6 +206,42 @@ def cse_postprocess(cse_output):
     """
     replaced, reduced = cse_output
     replaced, reduced = replaced[:], reduced[:]
+
+    # SCALAR_TMP's are coming in as sp.Eq. They are
+    # effectively "replace" expressions put in by hand.
+    # Move them to the replaced array.
+    reduced2 = []
+    for k in range(len(reduced)):
+        if type(reduced[k]) == sp.Eq:
+            replaced += [(reduced[k].lhs, reduced[k].rhs)]
+        else:
+            reduced2 += [reduced[k]]
+    reduced = reduced2
+
+    # Sort the replaced expressions
+    # so that none are evaluated before
+    # they are set.
+    lookup = {}
+    for repl in replaced:
+        lookup[str(repl[0])] = repl
+    replaced2 = []
+    while len(lookup) > 0:
+        new_lookup = {}
+        for repl in lookup.values():
+            found = False
+            for sym in repl[1].free_symbols:
+                if str(sym) in lookup:
+                    found = True
+                    break
+            if found:
+                new_lookup[str(repl[0])] = repl
+            else:
+                replaced2 += [repl]
+        assert len(new_lookup) < len(lookup)
+        lookup = new_lookup
+    assert len(replaced) == len(replaced2)
+    replaced = replaced2
+
     i = 0
     while i < len(replaced):
         sym, expr = replaced[i]; args = expr.args

@@ -873,4 +873,4 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                 with open(thorn_list, "a") as fd:
                     print(entry, file=fd)
         else:
-            print(f"Thornlist {os.getcwd()}/{thorn_list} does not exist. Entry {entry} not added.")
+            print(f"Thornlist {thorn_list} does not exist. Entry {entry} not added.")
