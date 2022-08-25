@@ -1,4 +1,5 @@
 import grid
+import sys
 import inspect, re
 import sympy as sp
 import safewrite
@@ -10,13 +11,24 @@ from here import here, herecc
 from traceback import print_exc
 
 import nrpylatex
-herecc(nrpylatex.__file__)
-from nrpylatex import parse_latex
+from nrpylatex import parse_latex as parse_latex_
 
 import warnings
 warnings.filterwarnings('ignore',r'some variable\(s\) in the namespace were overridden')
 
 coords = None
+
+class excepthook:
+    def __init__(self):
+        self.excepthook = sys.excepthook
+    def __enter__(self):
+        pass
+    def __exit__(self, ty, val, tb):
+        sys.excepthook = self.excepthook
+
+def parse_latex(*args,**kwargs):
+    with excepthook():
+        return parse_latex_(*args,**kwargs)
 
 def set_coords(*c):
     global coords
@@ -229,7 +241,6 @@ def gflatex(inp):
     for a in args:
         if a[0] == "symbol":
             if symbol is not None:
-                here(symbol, indexes)
                 gfdecl(symbol, indexes, globs)
                 symbol = None
                 indexes = []
@@ -245,7 +256,6 @@ def gflatex(inp):
                 down = pair[0]
                 indexes += [ down ]
     if symbol is not None:
-        here(symbol,indexes)
         gfdecl(symbol, indexes, globs)
 
 def declIndexes():
