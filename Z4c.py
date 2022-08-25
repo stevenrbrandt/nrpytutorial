@@ -14,9 +14,9 @@ try:
     
     import safewrite
     safewrite.nochange = False
-    safewrite.verbose = True
+    safewrite.verbose = False
     
-    #outCparams.CSE_enable = "False"
+    outCparams.CSE_enable = "True"
     
     # "CCTK_REAL" or "CCTK_REALVEC"
     par.set_parval_from_str("PRECISION", "CCTK_REALVEC")
