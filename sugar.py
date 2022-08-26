@@ -283,7 +283,15 @@ def name_xyz(sym,ind,shape):
 def matchindex(s):
     return re.match(r'^([ul])([a-z])$', str(s))
 
+UP_INDEX         = 1
+DOWN_INDEX       = 2
+CONTRACTED_INDEX = UP_INDEX | DOWN_INDEX
+
 def getindexes(expr):
+    """
+    getindexes(expr) finds all the symbols in expr that
+    represent up or down indexes.
+    """
     indexes = {}
     for sym in expr.free_symbols:
         ssym = str(sym)
@@ -292,9 +300,9 @@ def getindexes(expr):
             updn = g.group(1)
             let = g.group(2)
             if updn == "u":
-                mask = 1
+                mask = UP_INDEX
             else:
-                mask = 2
+                mask = DOWN_INDEX
             indexes[let] = indexes.get(let,0) | mask
     return indexes
 
@@ -418,8 +426,11 @@ def geneqns2(lhs,rhs):
     lhs_str = r"\text{result}"
     last = ""
     suffix = ""
+    # We expect a tensor expression of the form Foo[la,lb,ua,ub]
+    assert type(lhs) == sp.Indexed, f"Type of lhs was '{type(lhs)}', not Indexed"
     for a in lhs.args[1:]:
         sa = str(a)
+        # Ensure that we have an index, ua, ub,... or la, lb, ...
         assert len(sa) == 2
         if sa[0] == 'u':
             if last != "u":
@@ -428,6 +439,7 @@ def geneqns2(lhs,rhs):
                 lhs_str += "^{"
             suffix += "U"
         else:
+            assert sa[0] == 'l'
             if last != "l":
                 if last != "":
                     lhs_str += "}"
@@ -447,10 +459,10 @@ def geneqns(lhs,rhs=None,values=None,DIM=3):
         lhs_indexes = getindexes(lhs)
         rhs_indexes = getindexes(rhs)
         for k in lhs_indexes:
-            assert lhs_indexes[k] != 3, f"Contracted indexes are not allowed on the left hand side: '{lhs}'"
+            assert lhs_indexes[k] != CONTRACTED_INDEX, f"Contracted indexes are not allowed on the left hand side: '{lhs}'"
             assert lhs_indexes.get(k,-1) == rhs_indexes.get(k,-1), f"Free index '{k}' does not match on the lhs and rhs."
         for k in rhs_indexes:
-            if rhs_indexes[k] == 3:
+            if rhs_indexes[k] == CONTRACTED_INDEX:
                 continue
             assert lhs_indexes.get(k,-1) == rhs_indexes.get(k,-1), f"Free index '{k}' does not match on the rhs and lhs."
         if len(lhs_indexes)==0:
@@ -462,11 +474,11 @@ def geneqns(lhs,rhs=None,values=None,DIM=3):
         assert values is not None, "Must supply either values or rhs to geneqns"
         indexes = getindexes(lhs)
         for index in indexes:
-            assert indexes[index] != 3, f"Error, contracted index in lhs: '{index}'"
+            assert indexes[index] != CONTRACTED_INDEX, f"Error, contracted index in lhs: '{index}'"
         nm = str(lhs.base)+getsuffix(lhs)
         props = properties[nm]
         symmetries = props.get("symmetry_option","")
-        for index in incrindexes([0] * len(indexes),3, getsyms(symmetries)):
+        for index in incrindexes([0] * len(indexes), DIM, getsyms(symmetries)):
             result += [lhrh(lhs=lookup(definitions[nm],index),rhs=lookup(values, index))]
         for r in result:
             pass #here(r)
