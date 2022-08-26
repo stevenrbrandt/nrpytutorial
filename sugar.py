@@ -12,6 +12,7 @@ from traceback import print_exc
 
 import nrpylatex
 from nrpylatex import parse_latex as parse_latex_
+from here import here, herecc
 
 import warnings
 warnings.filterwarnings('ignore',r'some variable\(s\) in the namespace were overridden')
@@ -306,14 +307,35 @@ def getindexes(expr):
             indexes[let] = indexes.get(let,0) | mask
     return indexes
 
-def incrindexes(indexes_input,dim,symmetries):
-    indexes = [x for x in indexes_input]
+def incrindexes(indexes_input,dim,symmetries=[]):
+    """
+    This function is designed to generate all permuations
+    of values for a set of indexes. The `indexes_input`
+    should be an array of zeros. Thus incrindexes(2,2) should yield
+    the sequence [0,0], [0,1], [1,0], [1,1]. Symmetries
+    is passed in as a triple of values which represent a pair indexes
+    plus a sign. If the indices are switched, a symmetric (or antisymmetric)
+    part of the matrix is identified.
+    Thus, incrindexes(2,2,[0,1,1]) should yield [0,0], [1,0], and [1,1].
+    By symmetry, the index [0,1] is not needed.
+    """
+    # Make a copy of the input
+    indexes = [0]*indexes_input
     yield indexes
     while True:
         for i in range(len(indexes)):
             indexes[i] += 1
             max_val = dim
             for symmetry in symmetries:
+
+                # Check the symmetry
+                assert len(symmetry) == 3, f"The symmetry is {symmetry}, it should be (index1,index2,sign)"
+                assert symmetry[2] in [1, -1] # Third index is the sign
+                assert type(symmetry) in [list, tuple]
+
+                # We want the symmetry ordered
+                assert symmetry[0] < symmetry[1]
+
                 if symmetry[0] == i:
                     j = symmetry[1]
                     max_val = min(max_val,indexes[j]+1)
@@ -333,6 +355,10 @@ def lookup(array, indexes, i=0):
         return lookup(array[indexes[i]], indexes, i+1)
     
 def getsyms(syms):
+    """
+    Parse a symmetry string and return a triple of the
+    form index1, index2, and sign.
+    """
     li = []
     if syms in [None,""]:
         return li
@@ -343,7 +369,9 @@ def getsyms(syms):
             sign = 1
         else:
             sign = -1
-        li += [(int(g.group(2)),int(g.group(3)),sign)]
+        sym = (int(g.group(2)),int(g.group(3)),sign)
+        assert sym[0] < sym[1], f"Symmetry indexes should be in order: {sym}"
+        li += [sym]
     return li
 
 def getsuffix(expr):
@@ -478,7 +506,7 @@ def geneqns(lhs,rhs=None,values=None,DIM=3):
         nm = str(lhs.base)+getsuffix(lhs)
         props = properties[nm]
         symmetries = props.get("symmetry_option","")
-        for index in incrindexes([0] * len(indexes), DIM, getsyms(symmetries)):
+        for index in incrindexes(len(indexes), DIM, getsyms(symmetries)):
             result += [lhrh(lhs=lookup(definitions[nm],index),rhs=lookup(values, index))]
         for r in result:
             pass #here(r)
