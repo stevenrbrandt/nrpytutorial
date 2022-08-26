@@ -16,6 +16,15 @@ from safewrite import SafeWrite
 from sympy.core.symbol import Symbol
 import indexedexp as ixp
 
+def flatten(lists):
+    new_list = []
+    for item in lists:
+        if type(item) == list:
+            new_list += flatten(item)
+        else:
+            new_list += [item]
+    return new_list
+
 msgs = {}
 def check_eqns(name, eqns):
     scalar_reads = set()
@@ -259,6 +268,7 @@ class CactusThorn:
         self.last_src_file = csrc
 
     def add_func(self, name, body, schedule_bin, doc, where='interior', centering=None, sync=None):
+        body = flatten(body)
         check_eqns(name, body)
         self.sync[name] = sync
         check_centering(centering)

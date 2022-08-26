@@ -41,15 +41,6 @@ import sympy as sp
 
 # Generic helpers
 
-def flatten(lists):
-    new_list = []
-    for item in lists:
-        if type(item) == list:
-            new_list += flatten(item)
-        else:
-            new_list += [item]
-    return new_list
-
 def sum1(expr):
     result = sympify(0)
     for i in range(3):
@@ -182,7 +173,7 @@ gfparams(gf_type="SCALAR_TMP",symmetries="sym01",centering=centering)
 gfdecl("g","gammatilde",[ua,ub],"dgammatilde",[ua,ub,lc],"Theta_val","trK","chi_val",[])
 
 def Initial():
-    initial1_eqns = flatten([
+    initial1_eqns = [
         [lhrh(lhs=chi_val, rhs=1 / cbrt(detg_expr))],
         #[lhrh(lhs=gUU[i][j], rhs=gUU_expr[i][j]) for i in range(3) for j in range(i+1)],
         geneqns(lhs=g[ua,ub],values=gUU_expr),
@@ -199,7 +190,7 @@ def Initial():
         [lhrh(lhs=alphaG, rhs=alp)],
         #[lhrh(lhs=betaGU[i], rhs=betaU[i]) for i in range(3)],
         geneqns2(lhs=betaG[ui], rhs=r"\beta^i"),
-    ])
+    ]
 
     thorn.add_func(
         "Z4cNRPy_Initial1",
@@ -209,7 +200,7 @@ def Initial():
         doc="Convert ADM to Z4c variables, part 1",
         centering=centering)
     
-    initial2_eqns = flatten([
+    initial2_eqns = [
         [[
             [lhrh(lhs=dgammatildeDDD[i][j][k], rhs=gammatildeDD_dD[i][j][k]) for k in range(3)],
             [loop],
@@ -224,7 +215,7 @@ def Initial():
         [[lhrh(lhs=GammatildeU[i],
                rhs=- sum1(lambda x: dgammatildeUUD[i][x][x]))]
          for i in range(3)],
-    ])
+    ]
     
     thorn.add_func(
         "Z4cNRPy_Initial2",
@@ -244,7 +235,7 @@ gfdecl("detgammatilde","trAtilde",[])
 #trAtilde = thorn.register_gridfunctions("SCALAR_TMP", ["trAtilde"], centering=centering)
 
 def Enforce():
-    enforce_eqns = flatten([
+    enforce_eqns = [
         # Enforce floors
         [lhrh(lhs=gammatildeUU[i][j], rhs=gammatildeUU_expr[i][j]) for i in range(3) for j in range(i+1)],
         [lhrh(lhs=detgammatilde, rhs=detgammatilde_expr)],
@@ -254,7 +245,7 @@ def Enforce():
         # Enforce algebraic constraints; see arXiv:1212.2901 [gr-qc]
         [lhrh(lhs=gammatildeDD[i][j], rhs=(1 / cbrt(detgammatilde)) * gammatildeDD[i][j]) for i in range(3) for j in range(i+1)],
         [lhrh(lhs=AtildeDD[i][j], rhs=(AtildeDD[i][j] - trAtilde / 3 * gammatildeDD[i][j])) for i in range(3) for j in range(i+1)],
-    ])
+    ]
     
     thorn.add_func(
         "Z4cNRPy_Enforce",
@@ -270,7 +261,7 @@ Enforce()
 
 # Calculate ADM variables
 def ADM():
-    adm_eqns = flatten([
+    adm_eqns = [
         [lhrh(lhs=gDD[i][j], rhs=1 / chi * gammatildeDD[i][j]) for i in range(3) for j in range(i+1)],
         [lhrh(lhs=kDD[i][j], rhs=1 / chi * (AtildeDD[i][j] + (Khat + 2 * Theta) / 3 * gammatildeDD[i][j]))
          for i in range(3) for j in range(i+1)],
@@ -278,7 +269,7 @@ def ADM():
         [lhrh(lhs=dtalp, rhs=-alphaG * f_mu_L * Khat)],
         [lhrh(lhs=betaU[i], rhs=betaGU[i]) for i in range(3)],
         [lhrh(lhs=dtbetaU[i], rhs=f_mu_S * GammatildeU[i] - eta * betaGU[i]) for i in range(3)],
-    ])
+    ]
     
     thorn.add_func(
         "Z4cNRPy_ADM",
@@ -326,7 +317,7 @@ HCval = thorn.register_gridfunctions("SCALAR_TMP", ["HCval"], centering=centerin
 MtildeCvalU = ixp.register_gridfunctions_for_single_rankN(1, "SCALAR_TMP", "MtildeCvalU", None, centering=centering)
 
 def RHS():
-    rhs_eqns = flatten([
+    rhs_eqns = [
         # Derivatives
         [
             [lhrh(lhs=dchiD[i], rhs=chi_dD[i]) for i in range(3)],
@@ -576,7 +567,7 @@ def RHS():
             [lhrh(lhs=rhs_betaGU[i], rhs=rhs_betaGU[i] + eps_diss * sum1(lambda x: betaGU_dKOD[i][x]))],
             [loop],
         ] for i in range(3)],
-    ])
+    ]
     
     thorn.add_func(
         "Z4cNRPy_RHS",
@@ -591,7 +582,7 @@ RHS()
 # Evaluate constraints
 
 def Constraints():
-    constraints_eqns = flatten([
+    constraints_eqns = [
         # Derivatives
         [
             [lhrh(lhs=dchiD[i], rhs=chi_dD[i]) for i in range(3)],
@@ -739,7 +730,7 @@ def Constraints():
                                + sum2_symm(lambda x, y: gammatildeDD[x][y] * MtildeCvalU[x] * MtildeCvalU[y])
                                + Theta**2
                                + 2 * sum2_symm(lambda x, y: gammatildeDD[x][y] * ZetatildeCvalU[x] * ZetatildeCvalU[y])))))],
-    ])
+    ]
     
     thorn.add_func(
         "Z4cNRPy_Constraints",
