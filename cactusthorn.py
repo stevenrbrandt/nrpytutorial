@@ -425,7 +425,10 @@ class CactusThorn:
             checkbounds = f"""
   if(cctk_nghostzones[0] < {maxx}) CCTK_ERROR("cctk_nghostzones[0] must be at least {maxx}");
   if(cctk_nghostzones[1] < {maxy}) CCTK_ERROR("cctk_nghostzones[1] must be at least {maxy}");
-  if(cctk_nghostzones[2] < {maxz}) CCTK_ERROR("cctk_nghostzones[2] must be at least {maxz}");"""
+  if(cctk_nghostzones[2] < {maxz}) CCTK_ERROR("cctk_nghostzones[2] must be at least {maxz}");
+  if(2*cctk_nghostzones[0] >= cctk_lsh[0]) CCTK_ERROR("cctk_nghostzones[0] is too large");
+  if(2*cctk_nghostzones[1] >= cctk_lsh[1]) CCTK_ERROR("cctk_nghostzones[1] is too large");
+  if(2*cctk_nghostzones[2] >= cctk_lsh[2]) CCTK_ERROR("cctk_nghostzones[2] is too large");"""
             decl = ""
             if gri.ET_driver == "Carpet":
                 if where == "interior":
