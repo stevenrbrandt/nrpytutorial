@@ -6,9 +6,9 @@ typedef struct __ghostzone_map__ {
                   // can be easily extended if needed, though.
 } gz_map;
 
-const int8_t MAXFACE = -1;
-const int8_t NUL     = +0;
-const int8_t MINFACE = +1;
+#define MAXFACE -1
+#define NUL     0
+#define MINFACE 1
 
 typedef struct __parity__ {
   int8_t parity[10]; // We store the 10 parity conditions in 10 int8_t integers,
