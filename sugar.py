@@ -1,3 +1,4 @@
+import os
 import grid
 import sys
 import inspect, re
@@ -9,6 +10,7 @@ from outputC import lhrh
 from colored import colored
 from here import here, herecc
 from traceback import print_exc
+from inspect import currentframe
 
 import nrpylatex
 from nrpylatex import parse_latex as parse_latex_
@@ -86,33 +88,51 @@ def _latex_def(basename, fmt, gf, args):
 def latex_def(basename, sig, gf):
     s = Seq(sig)
     _latex_def(basename, s.fmt, gf, [])
-###
-def matchexpr(expr):
+
+def match_expr(expr):
+    """
+    Parse a sequence of tensor expressions, e.g. T_{a b} beta^a, into a tuple sequence.
+    """
     result = []
     while True:
-        g = re.match(r'\s+|%.*|\\text{([a-z]+)}|([a-z]+)|([\^_]){ *((?:[a-z] )*[a-z]) *}|([\^_])([a-z])|=',expr)
+        g = re.match(r'''(?x)
+        \s+| # spaces
+        %.*| # comments
+        \\text{([a-z_]+)}| # var name, group 1
+        \\(hat|tilde|bar){\\?([a-z_]+)}| # var name, group 2 and 3
+        \\?([a-z]+)| # var name, group 4
+        ([\^_]){\ *((?:[a-z]\ )*[a-z])\ *}| # multi-index, group 5 and 6
+        ([\^_])([a-z])| # single index, group 7 and 8
+        =
+        ''',expr)
         if g:
             s = g.group(0)
+            assert s != '', f"{g.group(0)}, {expr}"
             if g.group(1) is not None:
                 result += [("symbol",g.group(1))]
             elif g.group(2) is not None:
-                result += [("symbol",g.group(2))]
-            elif g.group(3) is not None:
-                if g.group(3) == "^":
-                    typestr = "upindex"
-                else:
-                    typestr = "downindex"
-                answer = re.split(r'\s+',g.group(4))
-                result += [(typestr,answer)] 
+                assert g.group(3) is not None
+                result += [("symbol",g.group(3)+g.group(2))]
+            elif g.group(4) is not None:
+                result += [("symbol",g.group(4))]
             elif g.group(5) is not None:
                 if g.group(5) == "^":
                     typestr = "upindex"
                 else:
                     typestr = "downindex"
-                answer = [g.group(6)]
+                answer = re.split(r'\s+',g.group(6))
+                result += [(typestr,answer)] 
+            elif g.group(7) is not None:
+                if g.group(7) == "^":
+                    typestr = "upindex"
+                else:
+                    typestr = "downindex"
+                answer = [g.group(8)]
                 result += [(typestr,answer)] 
             elif g.group(0) == "=":
                 result += [("equals","=")]
+                result += [("end",expr[g.end():])]
+                break
             expr = expr[g.end():]
         else:
             result += [("end",expr)]
@@ -229,20 +249,24 @@ def gfdecl(*args):
 
 indexdefs = {}
 
-def gflatex(inp):
-    globs = inspect.stack()[1].frame.f_globals
+def latex_tensor(inp, globs = None):
+    """
+    Parse a sequence of tensor expressions, e.g. T_{a b} beta^a, into a tuple sequence.
+    """
+    if globs is None:
+        globs = currentframe().f_back.f_globals
+    assert type(inp) == str, "input shoud be str"
     assert "," not in inp, f"Commas are not valid in input: '{inp}'"
-    args = matchexpr(inp)
+    args = match_expr(inp)
     assert len(args) > 0, f"Failed to parse {inp}"
     assert args[-1][0] == "end", args[-1]
-    end_len = len(args[-1][1])
-    assert end_len == 0, f"Parse failure in input: '{inp[:end_len]}{colored('|','red')}{inp[end_len:]}"
     symbol = None
     indexes = []
+    results = []
     for a in args:
         if a[0] == "symbol":
             if symbol is not None:
-                gfdecl(symbol, indexes, globs)
+                results += [(symbol, indexes)]
                 symbol = None
                 indexes = []
             symbol = a[1]
@@ -256,8 +280,25 @@ def gflatex(inp):
                 pair = indexdefs[letter]
                 down = pair[0]
                 indexes += [ down ]
-    if symbol is not None:
-        gfdecl(symbol, indexes, globs)
+    results += [(symbol, indexes)]
+    return results
+
+def symlatex(inp, globs=None):
+    if globs is None:
+        globs = currentframe().f_back.f_globals
+    symbol, indexes = latex_tensor(inp,globs)[0]
+    if len(indexes) == 0:
+        estr = symbol
+    else:
+        estr = f"{symbol}{indexes}"
+    return eval(estr,globs)
+
+def gflatex(inp, globs = None):
+    if globs is None:
+        globs = currentframe().f_back.f_globals
+    for symbol, indexes in latex_tensor(inp, globs):
+        if symbol is not None:
+            gfdecl(symbol, indexes, globs)
 
 def declIndexes():
     g = inspect.stack()[1].frame.f_globals
@@ -399,8 +440,6 @@ def getname(expr):
     return nm
 
 def makesum(expr, dim=3):
-    #globs = inspect.stack()[2].frame.f_globals
-
     if type(expr) == Add:
         sume = sp.sympify(0)
         for a in expr.args:
@@ -450,11 +489,22 @@ def makesum(expr, dim=3):
             subs[sym] = lookup(definitions[nm],indexes)
     return expr.subs(subs)
 
+def geneqns3(eqn,globs=None):
+    if globs is None:
+        globs = currentframe().f_back.f_globals
+    m = match_expr(eqn)
+    if m[-2][0] == "equals":
+        ltx = parse_latex(m[-1][1])
+    sy = symlatex(eqn,globs)
+    return geneqns2(lhs=sy, rhs=m[-1][1])
+
 def geneqns2(lhs,rhs):
     lhs_str = r"\text{result}"
     last = ""
     suffix = ""
+
     # We expect a tensor expression of the form Foo[la,lb,ua,ub]
+    # We will create a latex expression for this to pass to nrpylatex.
     assert type(lhs) == sp.Indexed, f"Type of lhs was '{type(lhs)}', not Indexed"
     for a in lhs.args[1:]:
         sa = str(a)
@@ -476,12 +526,16 @@ def geneqns2(lhs,rhs):
         lhs_str += sa[1] +  " "
         last = sa[0]
     latex = lhs_str + "}=" + rhs
-    r=parse_latex(latex,verbose=True)
+
+    # The parse expression is of the form "result_{a b ...}^{c d ...} = foo_{a b ...}^{c d ...}"
+    # When evaluated, it will assign to the "result" global variable.
+    parse_latex(latex,verbose=True)
 
     return geneqns(lhs=lhs, values=globals()["result"+suffix])
 
-def geneqns(lhs,rhs=None,values=None,DIM=3):
-    globs = inspect.stack()[1].frame.f_globals
+def geneqns(lhs,rhs=None,values=None,DIM=3,globs = None):
+    if globs is None:
+        globs = currentframe().f_back.f_globals
     if values is None:
         assert rhs is not None, "Must supply either values or rhs to geneqns"
         lhs_indexes = getindexes(lhs)
