@@ -12,7 +12,7 @@ from cactusthorn import CactusThorn, loop
 from outputC import lhrh, outCparams
 
 import safewrite
-safewrite.nochange = False
+safewrite.nochange = True
 safewrite.verbose = False
 
 outCparams.CSE_enable = "True"
@@ -182,7 +182,7 @@ def Initial():
         [lhrh(lhs=chi, rhs=chi_val)],
         #[lhrh(lhs=gammatildeDD[i][j], rhs=chi_val * gDD[i][j]) for i in range(3) for j in range(i+1)],
         #geneqns2(lhs=gammatilde[li,lj], rhs=r"\text{chi_val} g_{i j}"),
-        geneqns3(r"\tilde{\gamma}_{i j} = \text{chi_val} g_{i j}",globals()),
+        geneqns3(r"\tilde{\gamma}_{i j} = \text{chi_val} g_{i j}"),
         [lhrh(lhs=Theta, rhs=Theta_val)],
         [lhrh(lhs=Khat, rhs=trK - 2 * Theta_val)],
         [lhrh(lhs=AtildeDD[i][j], rhs=chi_val * (kDD[i][j] - trK / 3 * gDD[i][j])) for i in range(3) for j in range(i+1)],

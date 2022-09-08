@@ -1,7 +1,7 @@
 import os
 import grid
 import sys
-import inspect, re
+import re
 import sympy as sp
 import safewrite
 import indexedexp as ixp
@@ -173,7 +173,7 @@ def gfdecl(*args):
         g = args[-1]
         args = args[:-1]
     else:
-       g = inspect.stack()[1].frame.f_globals
+       g = currentframe().f_back.f_globals
     namelist = []
     for arg in args:
         if type(arg) == str:
@@ -240,6 +240,12 @@ def gfdecl(*args):
 
                 namefun = copy.get("namefun",None)
                 if namefun is not None:
+                    # - basename is something like "g" for the metric
+                    # - suffix is something like DD
+                    # - gf will be an array of values
+                    #
+                    # These will be assembled into a latex expression
+                    # which will be passed off to parse_latex().
                     latex_def(basename, suffix, gf)
 
                 g[name] = gf
@@ -301,7 +307,7 @@ def gflatex(inp, globs = None):
             gfdecl(symbol, indexes, globs)
 
 def declIndexes():
-    g = inspect.stack()[1].frame.f_globals
+    g = currentframe().f_back.f_globals
     for c in range(ord('a'),ord('z')+1):
         letter = chr(c)
         dn, up = sp.symbols(f"l{letter} u{letter}", cls=sp.Idx)
