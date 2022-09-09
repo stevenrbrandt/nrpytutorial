@@ -98,9 +98,9 @@ def match_expr(expr):
         g = re.match(r'''(?x)
         \s+| # spaces
         %.*| # comments
-        \\text{([a-z_]+)}| # var name, group 1
-        \\(hat|tilde|bar){\\?([a-z_]+)}| # var name, group 2 and 3
-        \\?([a-z]+)| # var name, group 4
+        \\text{([A-Za-z_]+)}| # var name, group 1
+        \\(hat|tilde|bar){\\?([A-Za-z_]+)}| # var name, group 2 and 3
+        \\?([A-Za-z]+)| # var name, group 4
         ([\^_]){\ *((?:[a-z]\ )*[a-z])\ *}| # multi-index, group 5 and 6
         ([\^_])([a-z])| # single index, group 7 and 8
         =
@@ -297,7 +297,11 @@ def symlatex(inp, globs=None):
         estr = symbol
     else:
         estr = f"{symbol}{indexes}"
-    return eval(estr,globs)
+    try:
+        return eval(estr,globs)
+    except Exception as e:
+        here("Bad expression:",estr)
+        raise e
 
 def gflatex(inp, globs = None):
     if globs is None:
@@ -391,7 +395,7 @@ def incrindexes(indexes_input,dim,symmetries=[]):
                     return
                 indexes[i] = 0
             else:
-                result = [x for x in indexes[::-1]]
+                result = [x for x in indexes]
                 yield result
                 break
 
@@ -499,6 +503,7 @@ def geneqns3(eqn,globs=None):
     if globs is None:
         globs = currentframe().f_back.f_globals
     m = match_expr(eqn)
+    assert len(m) >= 2, f"match_expr failed for '{eqn}' -> {m}"
     if m[-2][0] == "equals":
         ltx = parse_latex(m[-1][1])
     sy = symlatex(eqn,globs)

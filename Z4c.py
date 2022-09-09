@@ -12,8 +12,8 @@ from cactusthorn import CactusThorn, loop
 from outputC import lhrh, outCparams
 
 import safewrite
-safewrite.nochange = True
-safewrite.verbose = False
+#safewrite.nochange = True
+#safewrite.verbose = True
 
 outCparams.CSE_enable = "True"
 
@@ -185,7 +185,8 @@ def Initial():
         geneqns3(r"\tilde{\gamma}_{i j} = \text{chi_val} g_{i j}"),
         [lhrh(lhs=Theta, rhs=Theta_val)],
         [lhrh(lhs=Khat, rhs=trK - 2 * Theta_val)],
-        [lhrh(lhs=AtildeDD[i][j], rhs=chi_val * (kDD[i][j] - trK / 3 * gDD[i][j])) for i in range(3) for j in range(i+1)],
+        #[lhrh(lhs=AtildeDD[i][j], rhs=chi_val * (kDD[i][j] - trK / 3 * gDD[i][j])) for i in range(3) for j in range(i+1)],
+        geneqns3(r'\tilde{A}_{i j} = \text{chi_val} ( k_{i j} - \text{trK}/3 g_{i j})'),
         #geneqns2(lhs=Atilde[li,lj], rhs=r"\text{chi_val} (k_{i j} - \text{trK} g_{i j} / 3)"),
         [lhrh(lhs=alphaG, rhs=alp)],
         #[lhrh(lhs=betaGU[i], rhs=betaU[i]) for i in range(3)],
@@ -201,10 +202,12 @@ def Initial():
         centering=centering)
     
     initial2_eqns = [
-        [[
-            [lhrh(lhs=dgammatildeDDD[i][j][k], rhs=gammatildeDD_dD[i][j][k]) for k in range(3)],
-            [loop],
-        ] for i in range(3) for j in range(i+1)],
+        #[[
+        #    [lhrh(lhs=dgammatildeDDD[i][j][k], rhs=gammatildeDD_dD[i][j][k]) for k in range(3)],
+        #    [loop],
+        #] for i in range(3) for j in range(i+1)],
+        geneqns(lhs=dgammatilde[li,lj,lk], values=gammatildeDD_dD),
+        loop,
         [lhrh(lhs=gammatildeUU[i][j],
               rhs=gammatildeUU_expr[i][j])
          for i in range(3) for j in range(i+1)],

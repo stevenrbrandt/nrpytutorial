@@ -27,26 +27,35 @@ def flatten(lists):
 
 msgs = {}
 def check_eqns(name, eqns):
-    scalar_reads = set()
     reads = set()
     writes = set()
+    tile_writes = set()
+    tmp_tile_writes = set()
     for lr in eqns:
         if lr.lhs is None:
-            for vr in scalar_reads:
-                v = str(vr)
-                reads.remove(v)
-            scalar_reads.clear()
+            for v in reads:
+                assert v in writes, f"Variable '{v}' was read without being written."
+            for v in tmp_tile_writes:
+                tile_writes.add(v)
+            tmp_tile_writes.clear()
+            reads.clear()
+            writes.clear()
             continue
         for vr in lr.rhs.free_symbols:
             v = str(vr)
-            if v not in writes:
-                gftype = gri.find_gftype(v, die=False)
-                assert gftype not in ["SCALAR_TMP","TILE_TMP"], \
-                    f"Read before write of variable '{v}' which is of type {gftype} in routine {name}"
+            gftype = gri.find_gftype(v, die=False)
+            if gftype == "SCALAR_TMP":
                 reads.add(v)
-                if gftype == "SCALAR_TMP":
-                    scalar_reads.add(v)
-        writes.add(str(lr.lhs))
+            elif gftype == "TILE_TMP":
+                assert v in tile_writes, f"Variable '{v}' was read before being written"
+        v = str(lr.lhs)
+        gftype = gri.find_gftype(v, die=False)
+        if gftype == "SCALAR_TMP":
+            writes.add(v)
+        elif gftype == "TILE_TMP":
+            tmp_tile_writes.add(v)
+    for v in reads:
+        assert v in writes, f"Variable '{v}' was read without being written."
 
 today = date.today().strftime("%B %d, %Y")
 
