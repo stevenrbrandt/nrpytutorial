@@ -97,7 +97,7 @@ eps_diss = thorn.declare_param('eps_diss', default=0.2, vmin=0.0, vmax=1.0, doc=
 import safewrite
 
 from sugar import *
-declIndexes()
+decl_indexes()
 set_coords("x","y","z")
 
 gfparams(gf_type="EXTERNAL",symmetries="sym01",centering=centering,external_module="ADMBase",namefun=name_xyz)
@@ -206,18 +206,21 @@ def Initial():
         #    [lhrh(lhs=dgammatildeDDD[i][j][k], rhs=gammatildeDD_dD[i][j][k]) for k in range(3)],
         #    [loop],
         #] for i in range(3) for j in range(i+1)],
+        # Note, not adding loop after every equation. Is this desired?
         geneqns(lhs=dgammatilde[li,lj,lk], values=gammatildeDD_dD),
         loop,
-        [lhrh(lhs=gammatildeUU[i][j],
-              rhs=gammatildeUU_expr[i][j])
-         for i in range(3) for j in range(i+1)],
-        #geneqns(lhs=gammatilde[ua][ub],values=gammatildeUU_expr),
-        [lhrh(lhs=dgammatildeUUD[i][j][k],
-              rhs=- sum2_symm(lambda x, y: gammatildeUU[i][x] * gammatildeUU[j][y] * dgammatildeDDD[x][y][k]))
-         for i in range(3) for j in range(i+1) for k in range(3)],
-        [[lhrh(lhs=GammatildeU[i],
-               rhs=- sum1(lambda x: dgammatildeUUD[i][x][x]))]
-         for i in range(3)],
+        #[lhrh(lhs=gammatildeUU[i][j],
+        #      rhs=gammatildeUU_expr[i][j])
+        # for i in range(3) for j in range(i+1)],
+        geneqns(lhs=gammatilde[ua,ub],values=gammatildeUU_expr),
+        #[lhrh(lhs=dgammatildeUUD[i][j][k],
+        #      rhs=- sum2_symm(lambda x, y: gammatildeUU[i][x] * gammatildeUU[j][y] * dgammatildeDDD[x][y][k]))
+        # for i in range(3) for j in range(i+1) for k in range(3)],
+        geneqns(lhs=dgammatilde[ui,uj,lk], rhs=gammatilde[ui,ux] * gammatilde[uj,uy] * dgammatilde[lx,ly,lk]),
+        #[[lhrh(lhs=GammatildeU[i],
+        #       rhs=- sum1(lambda x: dgammatildeUUD[i][x][x]))]
+        # for i in range(3)],
+        geneqns(lhs=Gammatilde[ui], rhs=dgammatilde[ui,ux,lx])
     ]
     
     thorn.add_func(

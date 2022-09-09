@@ -140,14 +140,14 @@ def match_expr(expr):
     return result
 ###
 
-def getTypes():
+def get_types():
     a,b = sp.symbols("a b")
     return type(a+b)
 
 # Need to get type type of two symbols added together
 # comparing with sp.core.add.Add seems to sometimes
 # not work.
-Add = getTypes()
+Add = get_types()
 
 properties = {}
 variants = {}
@@ -310,7 +310,7 @@ def gflatex(inp, globs = None):
         if symbol is not None:
             gfdecl(symbol, indexes, globs)
 
-def declIndexes():
+def decl_indexes():
     g = currentframe().f_back.f_globals
     for c in range(ord('a'),ord('z')+1):
         letter = chr(c)
@@ -427,8 +427,10 @@ def getsyms(syms):
 
 def getsuffix(expr):
     suffix = ""
-    for sym in expr.free_symbols:
-        g = matchindex(sym) #re.match(r'^([ul])([a-z])$', str(sym))
+    # Can't use free_symbols because the order varies.
+    # We need the order that the user supplied.
+    for sym in expr.args[1:]: #expr.free_symbols:
+        g = matchindex(sym)
         if g:
             if g.group(1) == "u":
                 suffix += "U"
@@ -449,15 +451,15 @@ def getname(expr):
             nm += "D"
     return nm
 
-def makesum(expr, dim=3):
+def make_sum(expr, dim=3):
     if type(expr) == Add:
         sume = sp.sympify(0)
         for a in expr.args:
-            sume += makesum(expr,dim)
+            sume += make_sum(expr,dim)
         return sume
     elif expr.is_Function:
         assert len(expr.args)==1
-        expr = expr.func(makesum(expr.args[0]))
+        expr = expr.func(make_sum(expr.args[0]))
         return expr
 
     indexes = {}
@@ -491,6 +493,9 @@ def makesum(expr, dim=3):
             for k in sym.args[1:]:
                 ks = str(k)
                 g = re.match(r'([ul])(\d)$', ks)
+                if not g:
+                    here(f"`{ks}'")
+                    continue
                 if g.group(1) == "u":
                     nm += "U"
                 else:
@@ -547,6 +552,12 @@ def geneqns2(lhs,rhs):
 def geneqns(lhs,rhs=None,values=None,DIM=3,globs = None):
     if globs is None:
         globs = currentframe().f_back.f_globals
+    if hasattr(lhs,"base"):
+        nm = str(lhs.base)+getsuffix(lhs)
+        props = properties.get(nm, {})
+        symmetries = getsyms(props.get("symmetry_option",""))
+    else:
+        assert lhs, f"{lhs}, {type(lhs)}"
     if values is None:
         assert rhs is not None, "Must supply either values or rhs to geneqns"
         lhs_indexes = getindexes(lhs)
@@ -559,19 +570,31 @@ def geneqns(lhs,rhs=None,values=None,DIM=3,globs = None):
                 continue
             assert lhs_indexes.get(k,-1) == rhs_indexes.get(k,-1), f"Free index '{k}' does not match on the rhs and lhs."
         if len(lhs_indexes)==0:
-            return [lhrh(lhs=lhs, rhs=makesum(rhs))]
+            return [lhrh(lhs=lhs, rhs=make_sum(rhs))]
         else:
-            assert False
+            result = []
+            indexes = lhs.args[1:] # These will be the indexes
+            for index in incrindexes(len(indexes), DIM, symmetries):
+                expr_lhs = lhs
+                expr_rhs = rhs
+                for i in range(len(indexes)):
+                    ix = indexes[i]
+                    letter = str(ix)[0]
+                    assert letter in "ul"
+                    rix = sp.symbols(letter+str(index[i]))
+                    expr_lhs = expr_lhs.subs(ix, rix)
+                    expr_rhs = expr_rhs.subs(ix, rix)
+                expr_lhs = make_sum(expr_lhs)
+                expr_rhs = make_sum(expr_rhs)
+                result += [lhrh(lhs=expr_lhs, rhs=expr_rhs)]
+            return result
     elif rhs is None:
         result = []
         assert values is not None, "Must supply either values or rhs to geneqns"
         indexes = getindexes(lhs)
         for index in indexes:
             assert indexes[index] != CONTRACTED_INDEX, f"Error, contracted index in lhs: '{index}'"
-        nm = str(lhs.base)+getsuffix(lhs)
-        props = properties[nm]
-        symmetries = props.get("symmetry_option","")
-        for index in incrindexes(len(indexes), DIM, getsyms(symmetries)):
+        for index in incrindexes(len(indexes), DIM, symmetries):
             result += [lhrh(lhs=lookup(definitions[nm],index),rhs=lookup(values, index))]
         for r in result:
             pass #here(r)
