@@ -39,6 +39,15 @@ def set_coords(*c):
     parse_latex(latex)
     coords = c
 
+def flatten(lists):
+    new_list = []
+    for item in lists:
+        if type(item) == list:
+            new_list += flatten(item)
+        else:
+            new_list += [item]
+    return new_list
+
 ###
 class Seq:
     """
@@ -168,18 +177,24 @@ def gfparams(**kw):
     if "DIM" not in sim_params:
         sim_params["DIM"] = 3
 
+def n(s):
+    if s is None:
+        return ""
+    assert type(s) == str
+    return s
+
 def gfdecl(*args):
     if len(args)>0 and type(args[-1]) == dict:
-        g = args[-1]
+        globs = args[-1]
         args = args[:-1]
     else:
-       g = currentframe().f_back.f_globals
+        globs = currentframe().f_back.f_globals
     namelist = []
     for arg in args:
         if type(arg) == str:
             namelist += [arg]
             #sim_params["gf_basename"] = name
-            #g[name] = ixp.register_gridfunctions_for_single_rankN(**sim_params)
+            #globs[name] = ixp.register_gridfunctions_for_single_rankN(**sim_params)
         elif type(arg) == list:
             #gfparams(rank=len(arg))
             rank = len(arg)
@@ -195,9 +210,9 @@ def gfdecl(*args):
             for basename in namelist:
                 assert not re.match(r'^.*[DU]$',basename), f"Bad declaration for '{basename}'. Basenames should not end in D or U."
                 fullname = basename + suffix
-                if basename not in g:
+                if basename not in globs:
                     if rank>0:
-                        g[basename] = sp.IndexedBase(basename,shape=tuple([sim_params["DIM"]]*len((arg))))
+                        globs[basename] = sp.IndexedBase(basename,shape=tuple([sim_params["DIM"]]*len((arg))))
                 name = basename + suffix
                 copy = {}
                 for k in sim_params:
@@ -215,8 +230,8 @@ def gfdecl(*args):
                 sym1 = copy.get("symmetry_option", "")
                 for k in base_variants:
                     variant_copy = properties.get(k)
-                    sym2 = variant_copy.get("symmetry_option", "")
-                    assert sym1 == sym2, \
+                    sym2 = variant_copy.get("symmetry_option", None)
+                    assert n(sym1) == n(sym2), \
                         f"Inconsistent declaration of {basename}. Variant {k} has {sym2}, and {fullname} has {sym1}"
 
                 if verbose:
@@ -236,7 +251,17 @@ def gfdecl(*args):
 
                 properties[fullname] = copy
 
-                gf = ixp.register_gridfunctions_for_single_rankN(**copy)
+                if copy["gf_type"] == "DERIV":
+                    s = []
+                    for i in range(0,copy["rank"]-1):
+                        assert i+1 <= 9
+                        s += ["sym"+str(i)+str(i+1)]
+                    gf = ixp.declare_indexedexp(rank=copy["rank"], \
+                        symbol=copy["gf_basename"], dimension=copy["DIM"], \
+                        symmetry="_".join(s), \
+                        namefun=copy.get("namefun",None))
+                else:
+                    gf = ixp.register_gridfunctions_for_single_rankN(**copy)
 
                 namefun = copy.get("namefun",None)
                 if namefun is not None:
@@ -248,7 +273,7 @@ def gfdecl(*args):
                     # which will be passed off to parse_latex().
                     latex_def(basename, suffix, gf)
 
-                g[name] = gf
+                globs[name] = gf
                 definitions[name] = gf
             namelist = []
     assert len(namelist)==0, "Missing final index args"
@@ -455,7 +480,7 @@ def make_sum(expr, dim=3):
     if type(expr) == Add:
         sume = sp.sympify(0)
         for a in expr.args:
-            sume += make_sum(expr,dim)
+            sume += make_sum(a,dim)
         return sume
     elif expr.is_Function:
         assert len(expr.args)==1

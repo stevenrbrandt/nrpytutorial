@@ -308,7 +308,8 @@ def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_inf
         print("    \"CORE\": for all quantities defined inside the CarpetX driver.")
         print("    \"TILE_TMP\": for all temporary quantities defined for CarpetX tiles.")
         print("    \"SCALAR_TMP\": for all temporary quantities defined for doubles.")
-        sys.exit(1)
+        #sys.exit(1)
+        raise Exception("unsupported type")
 
     if gf_type == "EXTERNAL":
         for gf_name in gf_names:

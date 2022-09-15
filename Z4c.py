@@ -115,11 +115,16 @@ gfdecl("rhs_chi",[],"rhs_gammatilde",[la,lb],"rhs_Khat",[],"rhs_Atilde",[la,lb],
     "rhs_Gammatilde",[ua],"rhs_Theta","rhs_alphaG",[], "rhs_betaG", [ua],"ZetatildeC",[ua],\
     "HC",[],"MtildeC",[ua],"allC",[])
 # Derivatives as calculated by NRPy
-chi_dD = ixp.declarerank1("chi_dD")
-chi_dDD = ixp.declarerank2("chi_dDD", "sym01")
-chi_dupD = ixp.declarerank1("chi_dupD")
-chi_ddnD = ixp.declarerank1("chi_ddnD")
+
+#chi_dD = ixp.declarerank1("chi_dD")
+gfparams(gf_type="DERIV")
+gfdecl("chi_d",[li],"chi_d",[li,lj],"chi_dup",[li],"chi_ddn",[li])
+
+#chi_dDD = ixp.declarerank2("chi_dDD", "sym01")
+#chi_dupD = ixp.declarerank1("chi_dupD")
+#chi_ddnD = ixp.declarerank1("chi_ddnD")
 chi_dKOD = ixp.declarerank1("chi_dKOD")
+
 gammatildeDD_dD = ixp.declarerank3("gammatildeDD_dD", "sym01")
 gammatildeDD_dDD = ixp.declarerank4("gammatildeDD_dDD", "sym01_sym23")
 gammatildeDD_dKOD = ixp.declarerank3("gammatildeDD_dKOD", "sym01")
@@ -243,14 +248,18 @@ gfdecl("detgammatilde","trAtilde",[])
 def Enforce():
     enforce_eqns = [
         # Enforce floors
-        [lhrh(lhs=gammatildeUU[i][j], rhs=gammatildeUU_expr[i][j]) for i in range(3) for j in range(i+1)],
+        #[lhrh(lhs=gammatildeUU[i][j], rhs=gammatildeUU_expr[i][j]) for i in range(3) for j in range(i+1)],
+        geneqns(lhs=gammatilde[ua,ub],values=gammatildeUU_expr),
         [lhrh(lhs=detgammatilde, rhs=detgammatilde_expr)],
-        [lhrh(lhs=trAtilde, rhs=sum2_symm(lambda x, y: gammatildeUU[x][y] * AtildeDD[x][y]))],
+        #[lhrh(lhs=trAtilde, rhs=sum2_symm(lambda x, y: gammatildeUU[x][y] * AtildeDD[x][y]))],
+        geneqns(lhs=trAtilde, rhs=gammatilde[ux,uy]*Atilde[lx,ly]),
         [lhrh(lhs=chi, rhs=Max(chi_floor, chi))],
         [lhrh(lhs=alphaG, rhs=Max(alphaG_floor, alphaG))],
         # Enforce algebraic constraints; see arXiv:1212.2901 [gr-qc]
-        [lhrh(lhs=gammatildeDD[i][j], rhs=(1 / cbrt(detgammatilde)) * gammatildeDD[i][j]) for i in range(3) for j in range(i+1)],
-        [lhrh(lhs=AtildeDD[i][j], rhs=(AtildeDD[i][j] - trAtilde / 3 * gammatildeDD[i][j])) for i in range(3) for j in range(i+1)],
+        #[lhrh(lhs=gammatildeDD[i][j], rhs=(1 / cbrt(detgammatilde)) * gammatildeDD[i][j]) for i in range(3) for j in range(i+1)],
+        geneqns(lhs=gammatilde[li,lj], rhs=(1 / cbrt(detgammatilde)) * gammatilde[li,lj]),
+        #[lhrh(lhs=AtildeDD[i][j], rhs=(AtildeDD[i][j] - trAtilde / 3 * gammatildeDD[i][j])) for i in range(3) for j in range(i+1)],
+        geneqns(lhs=Atilde[li,lj], rhs=(Atilde[li,lj] - trAtilde / 3 * gammatilde[li,lj]))
     ]
     
     thorn.add_func(
@@ -268,13 +277,17 @@ Enforce()
 # Calculate ADM variables
 def ADM():
     adm_eqns = [
-        [lhrh(lhs=gDD[i][j], rhs=1 / chi * gammatildeDD[i][j]) for i in range(3) for j in range(i+1)],
-        [lhrh(lhs=kDD[i][j], rhs=1 / chi * (AtildeDD[i][j] + (Khat + 2 * Theta) / 3 * gammatildeDD[i][j]))
-         for i in range(3) for j in range(i+1)],
+        #[lhrh(lhs=gDD[i][j], rhs=1 / chi * gammatildeDD[i][j]) for i in range(3) for j in range(i+1)],
+        geneqns3(r"g_{i j} = 1/\chi \tilde{\gamma}_{i j}"),
+        #[lhrh(lhs=kDD[i][j], rhs=1 / chi * (AtildeDD[i][j] + (Khat + 2 * Theta) / 3 * gammatildeDD[i][j]))
+        # for i in range(3) for j in range(i+1)],
+        geneqns3(r"k_{i j} = 1/\chi (\tilde{A}_{i j} + (\hat{K} + 2 \Theta) / 3 \tilde{\gamma}_{i j})"),
         [lhrh(lhs=alp, rhs=alphaG)],
         [lhrh(lhs=dtalp, rhs=-alphaG * f_mu_L * Khat)],
-        [lhrh(lhs=betaU[i], rhs=betaGU[i]) for i in range(3)],
-        [lhrh(lhs=dtbetaU[i], rhs=f_mu_S * GammatildeU[i] - eta * betaGU[i]) for i in range(3)],
+        #[lhrh(lhs=betaU[i], rhs=betaGU[i]) for i in range(3)],
+        geneqns3(r"\beta^i = \text{betaG}^i"),
+        #[lhrh(lhs=dtbetaU[i], rhs=f_mu_S * GammatildeU[i] - eta * betaGU[i]) for i in range(3)],
+        geneqns(lhs=dtbeta[ui], rhs=f_mu_S * Gammatilde[ui] - eta * betaG[ui])
     ]
     
     thorn.add_func(
@@ -326,8 +339,10 @@ def RHS():
     rhs_eqns = [
         # Derivatives
         [
-            [lhrh(lhs=dchiD[i], rhs=chi_dD[i]) for i in range(3)],
+            #[lhrh(lhs=dchiD[i], rhs=chi_dD[i]) for i in range(3)],
+            geneqns(lhs=dchi[li], rhs=chi_d[li]),
             [lhrh(lhs=ddchiDD[i][j], rhs=chi_dDD[i][j]) for i in range(3) for j in range(i+1)],
+            #geneqns(lhs=ddchi[li,lj], rhs=chi_d[li,lj]),
             # [lhrh(lhs=dbetaGchi, rhs=sum1(lambda x: (+ betaGU[x] * (chi_dupD[x] + chi_ddnD[x])
             #                                          + abs(betaGU[x]) * (chi_dupD[x] - chi_ddnD[x])) / 2))],
             # [lhrh(lhs=disschi, rhs=sum1(lambda x: chi_dKOD[x]))],
