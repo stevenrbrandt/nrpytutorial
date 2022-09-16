@@ -518,8 +518,9 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
     # Step 0: Set dimension DIM
     DIM = par.parval_from_str("grid::DIM")
 
-    global ReU, ReDD, ghatDD
+    global ReU, ReD, ReDD, ghatDD
     ReU    = ixp.zerorank1()
+    ReD    = ixp.zerorank1()
     ReDD   = ixp.zerorank2()
     ghatDD = ixp.zerorank2()
 
@@ -531,6 +532,7 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
             scalefactor_orthog[i] = sp.sympify(scalefactor_orthog[i])
             ghatDD[i][i] = scalefactor_orthog[i]**2
             ReU[i] = 1/scalefactor_orthog[i]
+            ReD[i] = scalefactor_orthog[i]
             for j in range(DIM):
                 ReDD[i][j] = scalefactor_orthog[i]*scalefactor_orthog[j]
     else:
@@ -538,6 +540,7 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
             scalefactor_orthog_funcform[i] = sp.sympify(scalefactor_orthog_funcform[i])
             ghatDD[i][i] = scalefactor_orthog_funcform[i]**2
             ReU[i] = 1/scalefactor_orthog_funcform[i]
+            ReD[i] = scalefactor_orthog_funcform[i]
             for j in range(DIM):
                 ReDD[i][j] = scalefactor_orthog_funcform[i]*scalefactor_orthog_funcform[j]
 
@@ -570,16 +573,20 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
         for j in range(DIM):
             detgammahatdDD[i][j] = sp.diff(detgammahatdD[i], xx[j])
 
-    # Step 3a: Compute 1st & 2nd derivatives of rescaling vector.
+    # Step 3a: Compute 1st & 2nd derivatives of rescaling vectors.
     #          (E.g., needed in BSSN for betaUdDD computation)
-    global ReUdD, ReUdDD
+    global ReUdD, ReUdDD, ReDdD, ReDdDD
     ReUdD  = ixp.zerorank2(DIM)
     ReUdDD = ixp.zerorank3(DIM)
+    ReDdD  = ixp.zerorank2(DIM)
+    ReDdDD = ixp.zerorank3(DIM)
     for i in range(DIM):
         for j in range(DIM):
             ReUdD[i][j] = sp.diff(ReU[i], xx[j])
+            ReDdD[i][j] = sp.diff(ReD[i], xx[j])
             for k in range(DIM):
                 ReUdDD[i][j][k] = sp.diff(ReUdD[i][j], xx[k])
+                ReDdDD[i][j][k] = sp.diff(ReDdD[i][j], xx[k])
 
     # Step 3b: Compute 1st & 2nd derivatives of rescaling matrix.
     global ReDDdD, ReDDdDD
@@ -697,16 +704,19 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
     detgammahat = make_replacements(detgammahat)
     for i in range(DIM):
         ReU[i] = make_replacements(ReU[i])
+        ReD[i] = make_replacements(ReD[i])
         detgammahatdD[i] = make_replacements(detgammahatdD[i])
         for j in range(DIM):
             ReDD[i][j] = make_replacements(ReDD[i][j])
             ReUdD[i][j] = make_replacements(ReUdD[i][j])
+            ReDdD[i][j] = make_replacements(ReDdD[i][j])
             ghatDD[i][j] = make_replacements(ghatDD[i][j])
             ghatUU[i][j] = make_replacements(ghatUU[i][j])
             detgammahatdDD[i][j] = make_replacements(detgammahatdDD[i][j])
             for k in range(DIM):
                 ReDDdD[i][j][k] = make_replacements(ReDDdD[i][j][k])
                 ReUdDD[i][j][k] = make_replacements(ReUdDD[i][j][k])
+                ReDdDD[i][j][k] = make_replacements(ReDdDD[i][j][k])
                 ghatDDdD[i][j][k] = make_replacements(ghatDDdD[i][j][k])
                 GammahatUDD[i][j][k] = make_replacements(GammahatUDD[i][j][k])
                 for l in range(DIM):
@@ -727,16 +737,19 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
     freevars.extend(detgammahat.free_symbols)
     for i in range(DIM):
         freevars.extend(ReU[i].free_symbols)
+        freevars.extend(ReD[i].free_symbols)
         freevars.extend(detgammahatdD[i].free_symbols)
         for j in range(DIM):
             freevars.extend(ReDD[i][j].free_symbols)
             freevars.extend(ReUdD[i][j].free_symbols)
+            freevars.extend(ReDdD[i][j].free_symbols)
             freevars.extend(ghatDD[i][j].free_symbols)
             freevars.extend(ghatUU[i][j].free_symbols)
             freevars.extend(detgammahatdDD[i][j].free_symbols)
             for k in range(DIM):
                 freevars.extend(ReDDdD[i][j][k].free_symbols)
                 freevars.extend(ReUdDD[i][j][k].free_symbols)
+                freevars.extend(ReDdDD[i][j][k].free_symbols)
                 freevars.extend(ghatDDdD[i][j][k].free_symbols)
                 freevars.extend(GammahatUDD[i][j][k].free_symbols)
                 for l in range(DIM):
@@ -797,10 +810,12 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
         detgammahat = detgammahat.subs(freevar, freevars_uniq_xx_indep[varidx])
         for i in range(DIM):
             ReU[i] = ReU[i].subs(freevar, freevars_uniq_xx_indep[varidx])
+            ReD[i] = ReD[i].subs(freevar, freevars_uniq_xx_indep[varidx])
             detgammahatdD[i] = detgammahatdD[i].subs(freevar, freevars_uniq_xx_indep[varidx])
             for j in range(DIM):
                 ReDD[i][j] = ReDD[i][j].subs(freevar, freevars_uniq_xx_indep[varidx])
                 ReUdD[i][j] = ReUdD[i][j].subs(freevar, freevars_uniq_xx_indep[varidx])
+                ReDdD[i][j] = ReDdD[i][j].subs(freevar, freevars_uniq_xx_indep[varidx])
                 ghatDD[i][j] = ghatDD[i][j].subs(freevar, freevars_uniq_xx_indep[varidx])
                 ghatUU[i][j] = ghatUU[i][j].subs(freevar, freevars_uniq_xx_indep[varidx])
                 detgammahatdDD[i][j] = detgammahatdDD[i][j].subs(freevar,
@@ -808,6 +823,7 @@ def ref_metric__hatted_quantities(SymPySimplifyExpressions=True):
                 for k in range(DIM):
                     ReDDdD[i][j][k] = ReDDdD[i][j][k].subs(freevar, freevars_uniq_xx_indep[varidx])
                     ReUdDD[i][j][k] = ReUdDD[i][j][k].subs(freevar, freevars_uniq_xx_indep[varidx])
+                    ReDdDD[i][j][k] = ReDdDD[i][j][k].subs(freevar, freevars_uniq_xx_indep[varidx])
                     ghatDDdD[i][j][k] = ghatDDdD[i][j][k].subs(freevar, freevars_uniq_xx_indep[varidx])
                     GammahatUDD[i][j][k] = GammahatUDD[i][j][k].subs(freevar,
                                                                      freevars_uniq_xx_indep[varidx])
