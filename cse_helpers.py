@@ -154,8 +154,10 @@ def cse_preprocess(expr_list, prefix='', declare=False, factor=True, negative=Fa
             if sp.simplify(expr_diff) != 0:
                 raise Warning('Expression Difference: ' + str(expr_diff))
         expr_list[i] = expr
-    if len(expr_list) == 1:
-        expr_list = expr_list[0]
+    # This conditional causing problems
+    # if len(expr_list) == 1:
+    #    expr_list = expr_list[0]
+    assert type(expr_list) == list
     return expr_list, map_sym_to_rat
 
 def cse_postprocess(cse_output):

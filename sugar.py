@@ -183,6 +183,77 @@ def n(s):
     assert type(s) == str
     return s
 
+def numstr(n):
+    assert n >= 0
+    if n == 0:
+        return ""
+    else:
+        return str(n)
+
+def _deriv_decl(globs, tens, base, suffix, rank, div, indexes, rstart, sym_start, DIM):
+    # base += div
+    suffix2 = ''
+    for k in indexes:
+        rank += 1
+        if str(k)[0] == 'u':
+            suffix2 += 'U'
+        else:
+            suffix2 += 'D'
+    s = [x for x in sym_start]
+    for i in range(rstart,rank-1):
+        s += [f"sym{i}{i+1}"]
+    fullname = base + suffix + div + suffix2
+    syms = "_".join(s)
+    result = ixp.declare_indexedexp(rank=rank, \
+        symbol=fullname, dimension=DIM, \
+        symmetry=syms)
+    globs[fullname] = result
+
+    nm = base + numstr(len(suffix)) + div + numstr(len(suffix2))
+    globs[nm] = sp.IndexedBase(nm)
+    definitions[nm + suffix + suffix2] = result
+
+def deriv_decl(tens, *args):
+    DIM = sim_params.get("DIM",3)
+    globs = currentframe().f_back.f_globals
+    rank = 0
+    suffix = ''
+    if type(tens) == sp.Symbol:
+        base = str(tens)
+    else:
+        base = str(tens.base)
+        for k in tens.args[1:]:
+            rank += 1
+            if str(k)[0] == 'u':
+                suffix += 'U'
+            else:
+                suffix += 'D'
+    rstart = rank
+    props = properties.get(base+suffix, {})
+    symmetries = getsyms(props.get("symmetry_option",None))
+    sym_start = []
+    for sym in symmetries:
+        if sym[2] == 1:
+            sym_start += [f"sym{sym[0]}{sym[1]}"]
+        else:
+            sym_start += [f"asym{sym[0]}{sym[1]}"]
+    div = None
+    indexes = None
+    for arg in args:
+        if type(arg) == str:
+            div = arg
+            if indexes is None:
+                continue
+        elif type(arg) == list:
+            indexes = arg
+            if div is None:
+                continue
+        elif type(arg) == tuple:
+            assert type(arg[0]) == str
+            assert type(arg[1]) == list
+            div, indexes = arg
+        _deriv_decl(globs, tens, base, suffix, rank, div, indexes, rstart, sym_start, DIM)
+
 def gfdecl(*args):
     if len(args)>0 and type(args[-1]) == dict:
         globs = args[-1]
@@ -231,8 +302,8 @@ def gfdecl(*args):
                 for k in base_variants:
                     variant_copy = properties.get(k)
                     sym2 = variant_copy.get("symmetry_option", None)
-                    assert n(sym1) == n(sym2), \
-                        f"Inconsistent declaration of {basename}. Variant {k} has {sym2}, and {fullname} has {sym1}"
+                    #assert n(sym1) == n(sym2), \
+                    #    f"Inconsistent declaration of {basename}. Variant {k} has {sym2}, and {fullname} has {sym1}"
 
                 if verbose:
                     print(colored("Adding Definition for:","cyan"),basename)
@@ -510,6 +581,9 @@ def make_sum(expr, dim=3):
                 u1, d1 = sp.symbols(f"u{d} l{d}", cls=sp.Idx)
                 new_expr += expr.subs(un,u1).subs(dn,d1)
             expr = new_expr
+    return expr
+
+def eval_expression(expr):
     subs = {}
     for sym in expr.free_symbols:
         if type(sym) == sp.tensor.indexed.Indexed:
@@ -529,7 +603,11 @@ def make_sum(expr, dim=3):
             subs[sym] = lookup(definitions[nm],indexes)
     return expr.subs(subs)
 
-def geneqns3(eqn,globs=None):
+def eval_sum(expr,dim=3):
+    expr = make_sum(expr, dim)
+    return eval_expression(expr)
+
+def geneqns3(eqn, globs=None, loop=False):
     if globs is None:
         globs = currentframe().f_back.f_globals
     m = match_expr(eqn)
@@ -537,9 +615,9 @@ def geneqns3(eqn,globs=None):
     if m[-2][0] == "equals":
         ltx = parse_latex(m[-1][1])
     sy = symlatex(eqn,globs)
-    return geneqns2(lhs=sy, rhs=m[-1][1])
+    return geneqns2(lhs=sy, rhs=m[-1][1], loop=loop)
 
-def geneqns2(lhs,rhs):
+def geneqns2(lhs, rhs, loop=False):
     lhs_str = r"\text{result}"
     last = ""
     suffix = ""
@@ -572,9 +650,9 @@ def geneqns2(lhs,rhs):
     # When evaluated, it will assign to the "result" global variable.
     parse_latex(latex,verbose=True)
 
-    return geneqns(lhs=lhs, values=globals()["result"+suffix])
+    return geneqns(lhs=lhs, values=globals()["result"+suffix], loop=loop)
 
-def geneqns(lhs,rhs=None,values=None,DIM=3,globs = None):
+def geneqns(lhs, rhs=None, values=None,DIM=3, globs=None, loop=False):
     if globs is None:
         globs = currentframe().f_back.f_globals
     if hasattr(lhs,"base"):
@@ -595,7 +673,7 @@ def geneqns(lhs,rhs=None,values=None,DIM=3,globs = None):
                 continue
             assert lhs_indexes.get(k,-1) == rhs_indexes.get(k,-1), f"Free index '{k}' does not match on the rhs and lhs."
         if len(lhs_indexes)==0:
-            return [lhrh(lhs=lhs, rhs=make_sum(rhs))]
+            return [lhrh(lhs=lhs, rhs=eval_sum(rhs))]
         else:
             result = []
             indexes = lhs.args[1:] # These will be the indexes
@@ -609,9 +687,11 @@ def geneqns(lhs,rhs=None,values=None,DIM=3,globs = None):
                     rix = sp.symbols(letter+str(index[i]))
                     expr_lhs = expr_lhs.subs(ix, rix)
                     expr_rhs = expr_rhs.subs(ix, rix)
-                expr_lhs = make_sum(expr_lhs)
-                expr_rhs = make_sum(expr_rhs)
+                expr_lhs = eval_sum(expr_lhs)
+                expr_rhs = eval_sum(expr_rhs)
                 result += [lhrh(lhs=expr_lhs, rhs=expr_rhs)]
+                if loop:
+                    result += [lhrh(lhs=None, rhs=None)]
             return result
     elif rhs is None:
         result = []
@@ -621,8 +701,8 @@ def geneqns(lhs,rhs=None,values=None,DIM=3,globs = None):
             assert indexes[index] != CONTRACTED_INDEX, f"Error, contracted index in lhs: '{index}'"
         for index in incrindexes(len(indexes), DIM, symmetries):
             result += [lhrh(lhs=lookup(definitions[nm],index),rhs=lookup(values, index))]
-        for r in result:
-            pass #here(r)
+            if loop:
+                loop += [lhrh(lhs=None, rhs=None)]
         return result #generatevalues(lhs,rhs,[0]*len(indexes),symmetries)
     else:
         assert False, "Must supply either values or rhs to geneqns"

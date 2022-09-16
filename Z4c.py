@@ -100,6 +100,11 @@ from sugar import *
 decl_indexes()
 set_coords("x","y","z")
 
+# Need to make a better way of setting
+# this kind of thing up
+one = sp.IndexedBase("one")
+definitions["oneU"] = [1]*3
+
 gfparams(gf_type="EXTERNAL",symmetries="sym01",centering=centering,external_module="ADMBase",namefun=name_xyz)
 #gfdecl("g","k",[la,lb],"alp","dtalp",[],"beta","dtbeta",[ua])
 
@@ -117,31 +122,42 @@ gfdecl("rhs_chi",[],"rhs_gammatilde",[la,lb],"rhs_Khat",[],"rhs_Atilde",[la,lb],
 # Derivatives as calculated by NRPy
 
 #chi_dD = ixp.declarerank1("chi_dD")
-gfparams(gf_type="DERIV")
-gfdecl("chi_d",[li],"chi_d",[li,lj],"chi_dup",[li],"chi_ddn",[li])
 
+deriv_decl(chi, ("_d",[li]), ("_dup",[li]), ("_ddn",[li]), ("_dKO",[li]), ("_d",[li,lj]))
 #chi_dDD = ixp.declarerank2("chi_dDD", "sym01")
 #chi_dupD = ixp.declarerank1("chi_dupD")
 #chi_ddnD = ixp.declarerank1("chi_ddnD")
-chi_dKOD = ixp.declarerank1("chi_dKOD")
+#chi_dKOD = ixp.declarerank1("chi_dKOD")
 
-gammatildeDD_dD = ixp.declarerank3("gammatildeDD_dD", "sym01")
-gammatildeDD_dDD = ixp.declarerank4("gammatildeDD_dDD", "sym01_sym23")
-gammatildeDD_dKOD = ixp.declarerank3("gammatildeDD_dKOD", "sym01")
-Khat_dD = ixp.declarerank1("Khat_dD")
-Khat_dKOD = ixp.declarerank1("Khat_dKOD")
-AtildeDD_dD = ixp.declarerank3("AtildeDD_dD", "sym01")
-AtildeDD_dKOD = ixp.declarerank3("AtildeDD_dKOD", "sym01")
-Theta_dD = ixp.declarerank1("Theta_dD")
-Theta_dKOD = ixp.declarerank1("Theta_dKOD")
-GammatildeU_dD = ixp.declarerank2("GammatildeU_dD", None)
-GammatildeU_dKOD = ixp.declarerank2("GammatildeU_dKOD", None)
-alphaG_dD = ixp.declarerank1("alphaG_dD")
-alphaG_dDD = ixp.declarerank2("alphaG_dDD", "sym01")
-alphaG_dKOD = ixp.declarerank1("alphaG_dKOD")
-betaGU_dD = ixp.declarerank2("betaGU_dD", None)
-betaGU_dDD = ixp.declarerank3("betaGU_dDD", "sym12")
-betaGU_dKOD = ixp.declarerank2("betaGU_dKOD", None)
+deriv_decl(gammatilde[la,lb], ("_d",[lc]), ("_d",[lc,ld]), ("_dKO",[lc]))
+#gammatildeDD_dD = ixp.declarerank3("gammatildeDD_dD", "sym01")
+#gammatildeDD_dDD = ixp.declarerank4("gammatildeDD_dDD", "sym01_sym23")
+#gammatildeDD_dKOD = ixp.declarerank3("gammatildeDD_dKOD", "sym01")
+
+deriv_decl(Khat, ("_d",[la]), ("_dKO",[la]))
+#Khat_dD = ixp.declarerank1("Khat_dD")
+#Khat_dKOD = ixp.declarerank1("Khat_dKOD")
+
+deriv_decl(Atilde[la,lb], ("_d",[la]), ("_dKO",[la]))
+#AtildeDD_dD = ixp.declarerank3("AtildeDD_dD", "sym01")
+#AtildeDD_dKOD = ixp.declarerank3("AtildeDD_dKOD", "sym01")
+
+deriv_decl(Theta, ("_d",[la]), ("_dKO",[la]))
+#Theta_dD = ixp.declarerank1("Theta_dD")
+#Theta_dKOD = ixp.declarerank1("Theta_dKOD")
+
+deriv_decl(Gammatilde[ua], ("_d",[lb]), ("_dKO",[lb]))
+#GammatildeU_dD = ixp.declarerank2("GammatildeU_dD", None)
+#GammatildeU_dKOD = ixp.declarerank2("GammatildeU_dKOD", None)
+
+deriv_decl(alphaG, ("_d",[la]), ("_d",[la,lb]), ("_dKO",[la]))
+#alphaG_dD = ixp.declarerank1("alphaG_dD")
+#alphaG_dDD = ixp.declarerank2("alphaG_dDD", "sym01")
+#alphaG_dKOD = ixp.declarerank1("alphaG_dKOD")
+deriv_decl(betaG[uc], ("_d",[la]), ("_d",[la,lb]), ("_dKO",[la]))
+#betaGU_dD = ixp.declarerank2("betaGU_dD", None)
+#betaGU_dDD = ixp.declarerank3("betaGU_dDD", "sym12")
+#betaGU_dKOD = ixp.declarerank2("betaGU_dKOD", None)
 
 # Our tile-local derivatives
 gfparams(gf_type="TILE_TMP",symmetries="sym01",centering=centering)
@@ -340,67 +356,88 @@ def RHS():
         # Derivatives
         [
             #[lhrh(lhs=dchiD[i], rhs=chi_dD[i]) for i in range(3)],
-            geneqns(lhs=dchi[li], rhs=chi_d[li]),
-            [lhrh(lhs=ddchiDD[i][j], rhs=chi_dDD[i][j]) for i in range(3) for j in range(i+1)],
-            #geneqns(lhs=ddchi[li,lj], rhs=chi_d[li,lj]),
+            geneqns(lhs=dchi[li], values=chi_dD),
+            #[lhrh(lhs=ddchiDD[i][j], rhs=chi_dDD[i][j]) for i in range(3) for j in range(i+1)],
+            geneqns(lhs=ddchi[li,lj], values=chi_dDD),
             # [lhrh(lhs=dbetaGchi, rhs=sum1(lambda x: (+ betaGU[x] * (chi_dupD[x] + chi_ddnD[x])
             #                                          + abs(betaGU[x]) * (chi_dupD[x] - chi_ddnD[x])) / 2))],
             # [lhrh(lhs=disschi, rhs=sum1(lambda x: chi_dKOD[x]))],
             [loop],
         ],
-        [[
-            [lhrh(lhs=dgammatildeDDD[i][j][k], rhs=gammatildeDD_dD[i][j][k]) for k in range(3)],
-            [lhrh(lhs=ddgammatildeDDDD[i][j][k][l], rhs=gammatildeDD_dDD[i][j][k][l]) for k in range(3) for l in range(k+1)],
+        geneqns(lhs=dgammatilde[li,lj,lk], values=gammatildeDD_dD),
+        loop,
+        geneqns(lhs=ddgammatilde[li,lj,lk,ll], values=gammatildeDD_dDD),
+        loop,
+        #[[
+            #[lhrh(lhs=dgammatildeDDD[i][j][k], rhs=gammatildeDD_dD[i][j][k]) for k in range(3)],
+            #[lhrh(lhs=ddgammatildeDDDD[i][j][k][l], rhs=gammatildeDD_dDD[i][j][k][l]) for k in range(3) for l in range(k+1)],
             # [lhrh(lhs=dissgammatildeDD[i][j], rhs=sum1(lambda x: gammatildeDD_dKOD[i][j][x]))],
-            [loop],
-        ] for i in range(3) for j in range(i+1)],
-        [[
-            [lhrh(lhs=dGammatildeUD[i][j], rhs=GammatildeU_dD[i][j]) for j in range(3)],
-            # [lhrh(lhs=dissGammatildeU[i], rhs=sum1(lambda x: GammatildeU_dKOD[i][x]))],
-            [loop],
-        ] for i in range(3)],
-        [
-            [lhrh(lhs=dKhatD[i], rhs=Khat_dD[i]) for i in range(3)],
-            # [lhrh(lhs=dissKhat, rhs=sum1(lambda x: Khat_dKOD[x]))],
-            [loop],
-        ],
-        [[
-            [lhrh(lhs=dAtildeDDD[i][j][k], rhs=AtildeDD_dD[i][j][k]) for k in range(3)],
-            # [lhrh(lhs=dissAtildeDD[i][j], rhs=sum1(lambda x: AtildeDD_dKOD[i][j][x]))],
-            [loop],
-        ] for i in range(3) for j in range(i+1)],
-        [
-            [lhrh(lhs=dThetaD[i], rhs=Theta_dD[i]) for i in range(3)],
-            # [lhrh(lhs=dissTheta, rhs=sum1(lambda x: Theta_dKOD[x]))],
-            [loop],
-        ],
-        [
-            [lhrh(lhs=dalphaGD[i], rhs=alphaG_dD[i]) for i in range(3)],
-            [lhrh(lhs=ddalphaGDD[i][j], rhs=alphaG_dDD[i][j]) for i in range(3) for j in range(i+1)],
-            # [lhrh(lhs=dissalphaG, rhs=sum1(lambda x: alphaG_dKOD[x]))],
-            [loop],
-        ],
-        [[
-            [lhrh(lhs=dbetaGUD[i][j], rhs=betaGU_dD[i][j]) for j in range(3)],
-            [lhrh(lhs=ddbetaGUDD[i][j][k], rhs=betaGU_dDD[i][j][k]) for j in range(3) for k in range(j+1)],
-            # [lhrh(lhs=dissbetaGU[i], rhs=sum1(lambda x: betaGU_dKOD[i][x]))],
-            [loop],
-        ] for i in range(3)],
+            #[loop],
+        #] for i in range(3) for j in range(i+1)],
+        geneqns(lhs=dGammatilde[ui,lj], values=GammatildeU_dD),
+        geneqns(lhs=dissGammatilde[ui], rhs=Gammatilde1_dKO1[ui,lx]*one[ux]),
+        #[[
+            # [lhrh(lhs=dGammatildeUD[i][j], rhs=GammatildeU_dD[i][j]) for j in range(3)],
+            #[lhrh(lhs=dissGammatildeU[i], rhs=sum1(lambda x: GammatildeU_dKOD[i][x]))],
+            #[loop],
+        #] for i in range(3)],
+        #geneqns(lhs=dKhat[li], values=Khat_dD),
+        geneqns(lhs=dKhat[li], rhs=Khat_d1[li]),
+        #[
+        #    [lhrh(lhs=dKhatD[i], rhs=Khat_dD[i]) for i in range(3)],
+        #    # [lhrh(lhs=dissKhat, rhs=sum1(lambda x: Khat_dKOD[x]))],
+        #    [loop],
+        #],
+        geneqns(lhs=dAtilde[li,lj,lk], rhs=Atilde2_d1[li,lj,lk],loop=True),
+        #[[
+        #    [lhrh(lhs=dAtildeDDD[i][j][k], rhs=AtildeDD_dD[i][j][k]) for k in range(3)],
+        #    # [lhrh(lhs=dissAtildeDD[i][j], rhs=sum1(lambda x: AtildeDD_dKOD[i][j][x]))],
+        #    [loop],
+        #] for i in range(3) for j in range(i+1)],
+        geneqns(lhs=dTheta[li], rhs=Theta_d1[li],loop=True),
+        #[
+        #    [lhrh(lhs=dThetaD[i], rhs=Theta_dD[i]) for i in range(3)],
+        #    # [lhrh(lhs=dissTheta, rhs=sum1(lambda x: Theta_dKOD[x]))],
+        #    [loop],
+        #],
+        geneqns(lhs=dalphaG[li], rhs=alphaG_d1[li],loop=True),
+        geneqns(lhs=ddalphaG[li,lj], rhs=alphaG_d2[li,lj],loop=True),
+        #[
+        #    [lhrh(lhs=dalphaGD[i], rhs=alphaG_dD[i]) for i in range(3)],
+        #    [lhrh(lhs=ddalphaGDD[i][j], rhs=alphaG_dDD[i][j]) for i in range(3) for j in range(i+1)],
+        #    # [lhrh(lhs=dissalphaG, rhs=sum1(lambda x: alphaG_dKOD[x]))],
+        #    [loop],
+        #],
+        geneqns(lhs=dbetaG[ui,lj], rhs=betaG1_d1[ui,lj],loop=True),
+        geneqns(lhs=ddbetaG[ui,lj,lk], rhs=betaG1_d2[ui,lj,lk],loop=True),
+        #[[
+        #    [lhrh(lhs=dbetaGUD[i][j], rhs=betaGU_dD[i][j]) for j in range(3)],
+        #    [lhrh(lhs=ddbetaGUDD[i][j][k], rhs=betaGU_dDD[i][j][k]) for j in range(3) for k in range(j+1)],
+        #    # [lhrh(lhs=dissbetaGU[i], rhs=sum1(lambda x: betaGU_dKOD[i][x]))],
+        #    [loop],
+        #] for i in range(3)],
 
         # RHS
-        [lhrh(lhs=gammatildeUU[i][j],
-              rhs=gammatildeUU_expr[i][j])
-         for i in range(3) for j in range(i+1)],
-        [lhrh(lhs=gUU[i][j],
-              rhs=chi * gammatildeUU[i][j])
-         for i in range(3) for j in range(i+1)],
-        [lhrh(lhs=dgDDD[i][j][k],
-              rhs=(- 1 / chi**2 * dchiD[k] * gammatildeDD[i][j]
-                   + 1 / chi * dgammatildeDDD[i][j][k]))
-         for i in range(3) for j in range(i+1) for k in range(3)],
-        [lhrh(lhs=GammaDDD[i][j][k],
-              rhs=Rational(1,2) * (dgDDD[i][j][k] + dgDDD[i][k][j] - dgDDD[j][k][i]))
-         for i in range(3) for j in range(3) for k in range(j+1)],
+        geneqns(lhs=gammatilde[ui,uj], values=gammatildeUU_expr),
+        #[lhrh(lhs=gammatildeUU[i][j],
+        #      rhs=gammatildeUU_expr[i][j])
+        # for i in range(3) for j in range(i+1)],
+        geneqns(lhs=g[ui,uj], rhs=chi*gammatilde[ui,uj]),
+        #[lhrh(lhs=gUU[i][j],
+        #      rhs=chi * gammatildeUU[i][j])
+        # for i in range(3) for j in range(i+1)],
+        geneqns(lhs=dg[li,lj,lk], 
+              rhs=(- 1 / chi**2 * dchi[lk] * gammatilde[li,lj]
+                   + 1 / chi * dgammatilde[li,lj,lk])),
+        #[lhrh(lhs=dgDDD[i][j][k],
+        #      rhs=(- 1 / chi**2 * dchiD[k] * gammatildeDD[i][j]
+        #           + 1 / chi * dgammatildeDDD[i][j][k]))
+        # for i in range(3) for j in range(i+1) for k in range(3)],
+        geneqns(lhs=Gamma[li,lj,lk],
+              rhs=Rational(1,2) * (dg[li,lj,lk] + dg[li,lk,lj] - dg[lj,lk,li])),
+        #[lhrh(lhs=GammaDDD[i][j][k],
+        #      rhs=Rational(1,2) * (dgDDD[i][j][k] + dgDDD[i][k][j] - dgDDD[j][k][i]))
+        # for i in range(3) for j in range(3) for k in range(j+1)],
         [lhrh(lhs=GammaUDD[i][j][k],
               rhs=sum1(lambda x: gUU[i][x] * GammaDDD[x][j][k]))
          for i in range(3) for j in range(3) for k in range(j+1)],
