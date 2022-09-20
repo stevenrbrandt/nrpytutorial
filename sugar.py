@@ -548,6 +548,7 @@ def getname(expr):
     return nm
 
 def make_sum(expr, dim=3):
+    expr = sp.expand(expr)
     if type(expr) == Add:
         sume = sp.sympify(0)
         for a in expr.args:
