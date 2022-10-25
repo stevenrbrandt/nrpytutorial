@@ -577,8 +577,8 @@ def make_sum(expr, dim=3):
     for index in indexes:
         if indexes[index] == 3:
             new_expr = sp.sympify(0)
+            un, dn = sp.symbols(f"u{index} l{index}", cls=sp.Idx)
             for d in range(dim):
-                un, dn = sp.symbols(f"u{index} l{index}", cls=sp.Idx)
                 u1, d1 = sp.symbols(f"u{d} l{d}", cls=sp.Idx)
                 new_expr += expr.subs(un,u1).subs(dn,d1)
             expr = new_expr
@@ -601,6 +601,7 @@ def eval_expression(expr):
                 else:
                     nm += "D"
                 indexes += [int(g.group(2))]
+            assert nm in definitions, f"Missing defenition for '{nm}'. Possible indexing error in expression '{expr}'?"
             subs[sym] = lookup(definitions[nm],indexes)
     return expr.subs(subs)
 

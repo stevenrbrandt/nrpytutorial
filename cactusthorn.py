@@ -26,36 +26,47 @@ def flatten(lists):
     return new_list
 
 msgs = {}
+
+def check_msg(vtype, v, scalar_writes, tile_writes, forgotten):
+    if v in forgotten:
+        msg = " Was forgotten because of loop break."
+    else:
+        msg = ""
+    assert v in scalar_writes or v in tile_writes, f"{vtype} variable '{v}' was read without being written.{msg}"
+
 def check_eqns(name, eqns):
-    reads = set()
-    writes = set()
+    forgotten = set()
+    scalar_reads = set()
+    scalar_writes = set()
     tile_writes = set()
     tmp_tile_writes = set()
     for lr in eqns:
         if lr.lhs is None:
-            for v in reads:
-                assert v in writes, f"Variable '{v}' was read without being written."
+            for v in scalar_reads:
+                check_msg("SCALAR_TMP",v,scalar_writes,tile_writes,forgotten)
             for v in tmp_tile_writes:
                 tile_writes.add(v)
             tmp_tile_writes.clear()
-            reads.clear()
-            writes.clear()
+            scalar_reads.clear()
+            for v in scalar_writes:
+                forgotten.add(v)
+            scalar_writes.clear()
             continue
         for vr in lr.rhs.free_symbols:
             v = str(vr)
             gftype = gri.find_gftype(v, die=False)
             if gftype == "SCALAR_TMP":
-                reads.add(v)
+                scalar_reads.add(v)
             elif gftype == "TILE_TMP":
-                assert v in tile_writes, f"Variable '{v}' was read before being written"
+                check_msg("TILE_TMP",v,scalar_writes,tile_writes,forgotten)
         v = str(lr.lhs)
         gftype = gri.find_gftype(v, die=False)
         if gftype == "SCALAR_TMP":
-            writes.add(v)
+            scalar_writes.add(v)
         elif gftype == "TILE_TMP":
             tmp_tile_writes.add(v)
-    for v in reads:
-        assert v in writes, f"Variable '{v}' was read without being written."
+    for v in scalar_reads:
+        check_msg("SCALAR_TMP",v,scalar_writes,tile_writes,forgotten)
 
 today = date.today().strftime("%B %d, %Y")
 
