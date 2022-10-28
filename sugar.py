@@ -549,13 +549,19 @@ def getname(expr):
 
 def make_sum(expr, dim=3):
     expr = sp.expand(expr)
-    if type(expr) == Add:
+    if type(expr) is Add:
         sume = sp.sympify(0)
         for a in expr.args:
             sume += make_sum(a,dim)
         return sume
+    elif type(expr) is sp.Piecewise:
+        nargs = []
+        for k in expr.args:
+            narg = make_sum(k[0]), k[1]
+            nargs += [narg]
+        return sp.Piecewise(*nargs)
     elif expr.is_Function:
-        assert len(expr.args)==1
+        assert len(expr.args)==1, type(expr)
         expr = expr.func(make_sum(expr.args[0]))
         return expr
 

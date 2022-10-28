@@ -329,10 +329,10 @@ gfparams(gf_type="SCALAR_TMP",symmetries="sym01",centering=centering)
 gfdecl("DDalphaG",[la,lb])
 
 gfparams(gf_type="SCALAR_TMP",symmetries="",centering=centering)
-gfdecl("DbetaG", [ua,lb], "rho", [], "Si",[la],"Sij",[la,lb],"trS",[],"Atilde",[ua,ld],"Rtilde",[la,lb]) 
+gfdecl("DbetaG", [ua,lb], "rho", [], "Si",[la],"Sij",[la,lb],"trS",[],"Atilde",[ua,ld])
 
 gfparams(gf_type="SCALAR_TMP",symmetries="sym01",centering=centering)
-gfdecl("Atilde",[ua,ub])
+gfdecl("Atilde",[ua,ub],"R",[la,lb],"Rchi",[la,lb],"Rtilde",[la,lb],"alphaRicciTmunu",[la,lb])
 gfparams(gf_type="SCALAR_TMP",symmetries="",centering=centering)
 gfdecl("Gammatildee",[ua,lb,uc],
        "Gammatildee",[la,lb,uc],
@@ -340,7 +340,8 @@ gfdecl("Gammatildee",[ua,lb,uc],
 gfdecl("DDchi",[la,lb],"ZetatildeCval",[ua])
 gfparams(gf_type="SCALAR_TMP",symmetries="sym12",centering=centering)
 gfdecl("Gammatildee",[la,lb,lc],
-       "Gammatildee",[ua,lb,lc])
+       "Gammatildee",[ua,lb,lc],
+       "Rsc",[])
 
 #DbetaGUD = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "DbetaGUD", None, centering=centering)
 #rho = thorn.register_gridfunctions("SCALAR_TMP", ["rho"], centering=centering)
@@ -356,11 +357,11 @@ dAtildeUUD = ixp.register_gridfunctions_for_single_rankN(3, "SCALAR_TMP", "dAtil
 #GammatildeUDU = ixp.register_gridfunctions_for_single_rankN(3, "SCALAR_TMP", "GammatildeUDU", None, centering=centering)
 #GammatildedirectU = ixp.register_gridfunctions_for_single_rankN(1, "SCALAR_TMP", "GammatildedirectU", None, centering=centering)
 #DDchiDD = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "DDchiDD", "sym01", centering=centering)
-RchiDD = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "RchiDD", "sym01", centering=centering)
+#RchiDD = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "RchiDD", "sym01", centering=centering)
 #RtildeDD = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "RtildeDD", "sym01", centering=centering)
-RDD = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "RDD", "sym01", centering=centering)
-Rsc = thorn.register_gridfunctions("SCALAR_TMP", ["Rsc"], centering=centering)
-alphaRicciTmunuDD = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "alphaRicciTmunuDD", "sym01", centering=centering)
+#RDD = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "RDD", "sym01", centering=centering)
+#Rsc = thorn.register_gridfunctions("SCALAR_TMP", ["Rsc"], centering=centering)
+#alphaRicciTmunuDD = ixp.register_gridfunctions_for_single_rankN(2, "SCALAR_TMP", "alphaRicciTmunuDD", "sym01", centering=centering)
 #ZetatildeCvalU = ixp.register_gridfunctions_for_single_rankN(1, "SCALAR_TMP", "ZetatildeCvalU", None, centering=centering)
 HCval = thorn.register_gridfunctions("SCALAR_TMP", ["HCval"], centering=centering)
 MtildeCvalU = ixp.register_gridfunctions_for_single_rankN(1, "SCALAR_TMP", "MtildeCvalU", None, centering=centering)
@@ -375,7 +376,7 @@ def RHS():
             geneqns(lhs=ddchi[li,lj], values=chi_dDD),
             # [lhrh(lhs=dbetaGchi, rhs=sum1(lambda x: (+ betaGU[x] * (chi_dupD[x] + chi_ddnD[x])
             #                                          + abs(betaGU[x]) * (chi_dupD[x] - chi_ddnD[x])) / 2))],
-            # [lhrh(lhs=disschi, rhs=sum1(lambda x: chi_dKOD[x]))],
+            # [lhrh(lhs=disschi, rhs=sum1(lambda x: chi_dKO1D[x]))],
             [loop],
         ],
         geneqns(lhs=dgammatilde[li,lj,lk], values=gammatildeDD_dD),
@@ -555,13 +556,19 @@ def RHS():
         #      rhs=ddchiDD[i][j] - sum1(lambda x: GammatildeUDD[x][i][j] * dchiD[x]))
         # for i in range(3) for j in range(i+1)],
         # arXiv:1212.2901 [gr-qc], (8)
-        [lhrh(lhs=RchiDD[i][j],
-              rhs=(+ Rational(1,2) / chi * DDchiDD[i][j]
-                   + Rational(1,2) / chi * gammatildeDD[i][j] * sum2_symm(lambda x, y: gammatildeUU[x][y] * DDchiDD[x][y])
-                   - Rational(1,4) / chi**2 * dchiD[i] * dchiD[j]
-                   - Rational(3,4) / chi**2 * (gammatildeDD[i][j] *
-                                               sum2_symm(lambda x, y: gammatildeUU[x][y] * dchiD[x] * dchiD[y]))))
-         for i in range(3) for j in range(i+1)],
+        geneqns(lhs=Rchi[li,lj],
+              rhs=(+ Rational(1,2) / chi * DDchi[li,lj]
+                   + Rational(1,2) / chi * gammatilde[li,lj] * gammatilde[ux,uy] * DDchi[lx,ly]
+                   - Rational(1,4) / chi**2 * dchi[li] * dchi[lj]
+                   - Rational(3,4) / chi**2 * (gammatilde[li,lj] *
+                                               gammatilde[ux,uy] * dchi[lx] * dchi[ly]))),
+        #[lhrh(lhs=RchiDD[i][j],
+        #      rhs=(+ Rational(1,2) / chi * DDchiDD[i][j]
+        #           + Rational(1,2) / chi * gammatildeDD[i][j] * sum2_symm(lambda x, y: gammatildeUU[x][y] * DDchiDD[x][y])
+        #           - Rational(1,4) / chi**2 * dchiD[i] * dchiD[j]
+        #           - Rational(3,4) / chi**2 * (gammatildeDD[i][j] *
+        #                                       sum2_symm(lambda x, y: gammatildeUU[x][y] * dchiD[x] * dchiD[y]))))
+        # for i in range(3) for j in range(i+1)],
         # arXiv:1212.2901 [gr-qc], (9)
         geneqns(lhs=Rtilde[li,lj],
               rhs=(- Rational(1,2) * gammatilde[ux,uy] * ddgammatilde[li,lj,lx,ly]
@@ -583,83 +590,129 @@ def RHS():
 #                                             + GammatildeUDD[x][i][y] * GammatildeUDU[x][j][y]))))
 #         for i in range(3) for j in range(i+1)],
         # arXiv:1212.2901 [gr-qc], (7)
-        [lhrh(lhs=RDD[i][j],
-              rhs=RchiDD[i][j] + RtildeDD[i][j])
-         for i in range(3) for j in range(i+1)],
-        [lhrh(lhs=Rsc,
-              rhs=sum2_symm(lambda x, y: gUU[x][y] * RDD[x][y]))],
-        [lhrh(lhs=alphaRicciTmunuDD[i][j],
-              rhs=- DDalphaGDD[i][j] + alphaG * (RDD[i][j] - 8 * pi * SijDD[i][j]))
-         for i in range(3) for j in range(i+1)],
+        geneqns(lhs=R[li,lj], rhs=Rchi[li,lj]+Rtilde[li,lj]),
+        #[lhrh(lhs=RDD[i][j],
+        #      rhs=RchiDD[i][j] + RtildeDD[i][j])
+        # for i in range(3) for j in range(i+1)],
+        geneqns(lhs=Rsc, rhs=g[ux,uy]*R[lx,ly]),
+        #[lhrh(lhs=Rsc,
+        #      rhs=sum2_symm(lambda x, y: gUU[x][y] * RDD[x][y]))],
+        geneqns(lhs=alphaRicciTmunu[li,lj],
+              rhs=- DDalphaG[li,lj] + alphaG * (R[li,lj] - 8 * pi * Sij[li,lj])),
+        #[lhrh(lhs=alphaRicciTmunuDD[i][j],
+        #      rhs=- DDalphaGDD[i][j] + alphaG * (RDD[i][j] - 8 * pi * SijDD[i][j]))
+        # for i in range(3) for j in range(i+1)],
         # arXiv:1212.2901 [gr-qc], (4)
-        [lhrh(lhs=rhs_AtildeDD[i][j],
-              rhs=(+ chi * (alphaRicciTmunuDD[i][j]
-                            - (Rational(1,3) * gammatildeDD[i][j] *
-                               sum2_symm(lambda x, y: gammatildeUU[x][y] * alphaRicciTmunuDD[x][y])))
-                   + alphaG * (+ (Khat + 2 * Theta) * AtildeDD[i][j]
-                               - 2 * sum1(lambda x: AtildeDD[x][i] * AtildeUD[x][j]))
-                   + sum1(lambda x: betaGU[x] * dAtildeDDD[i][j][x])
-                   + sum1(lambda x: AtildeDD[x][i] * dbetaGUD[x][j] + AtildeDD[x][j] * dbetaGUD[x][i])
-                   - Rational(2,3) * AtildeDD[i][j] * sum1(lambda x: dbetaGUD[x][x])
+        geneqns(lhs=rhs_Atilde[li,lj],
+              rhs=(+ chi * (alphaRicciTmunu[li,lj]
+                            - (Rational(1,3) * gammatilde[li,lj] *
+                               gammatilde[ux,uy] * alphaRicciTmunu[lx,ly]))
+                   + alphaG * (+ (Khat + 2 * Theta) * Atilde[li,lj]
+                               - 2 * Atilde[lx,li] * Atilde[ux,lj])
+                   + betaG[ux] * dAtilde[li,lj,lx]
+                   + Atilde[lx,li] * dbetaG[ux,lj] + Atilde[lx,lj] * dbetaG[ux,li]
+                   - Rational(2,3) * Atilde[li,lj] * dbetaG[ux,lx]
                    # + eps_diss * dissAtildeDD[i][j]
-                   ))
-         for i in range(3) for j in range(i+1)],
+                   )),
+        #[lhrh(lhs=rhs_AtildeDD[i][j],
+        #      rhs=(+ chi * (alphaRicciTmunuDD[i][j]
+        #                    - (Rational(1,3) * gammatildeDD[i][j] *
+        #                       sum2_symm(lambda x, y: gammatildeUU[x][y] * alphaRicciTmunuDD[x][y])))
+        #           + alphaG * (+ (Khat + 2 * Theta) * AtildeDD[i][j]
+        #                       - 2 * sum1(lambda x: AtildeDD[x][i] * AtildeUD[x][j]))
+        #           + sum1(lambda x: betaGU[x] * dAtildeDDD[i][j][x])
+        #           + sum1(lambda x: AtildeDD[x][i] * dbetaGUD[x][j] + AtildeDD[x][j] * dbetaGUD[x][i])
+        #           - Rational(2,3) * AtildeDD[i][j] * sum1(lambda x: dbetaGUD[x][x])
+        #           # + eps_diss * dissAtildeDD[i][j]
+        #           ))
+        # for i in range(3) for j in range(i+1)],
 
-        [lhrh(lhs=AtildeUU[i][j],
-              rhs=sum1(lambda x: gammatildeUU[i][x] * AtildeUD[j][x]))
-         for i in range(3) for j in range(i+1)],
+        geneqns(lhs=Atilde[ui,uj],
+              rhs=gammatilde[ui,ux] * Atilde[uj,lx]),
+        #[lhrh(lhs=AtildeUU[i][j],
+        #      rhs=sum1(lambda x: gammatildeUU[i][x] * AtildeUD[j][x]))
+        # for i in range(3) for j in range(i+1)],
         # arXiv:1212.2901 [gr-qc], (5)
-        [lhrh(lhs=rhs_GammatildeU[i],
-              rhs=(- 2 * sum1(lambda x: AtildeUU[i][x] * dalphaGD[x])
+        geneqns(lhs=rhs_Gammatilde[ui],
+              rhs=(- 2 * Atilde[ui,ux] * dalphaG[lx]
                    + 2 * alphaG *
-                         (+ sum2_symm(lambda x, y: GammatildeeUDD[i][x][y] * AtildeUU[x][y])
-                          - Rational(3,2) / chi * sum1(lambda x: AtildeUU[i][x] * dchiD[x])
-                          - Rational(1,3) * sum1(lambda x: gammatildeUU[i][x] * (2 * dKhatD[x] + dThetaD[x]))
-                          - 8 * pi * sum1(lambda x: gammatildeUU[i][x] * SiD[x]))
-                   + sum2_symm(lambda x, y: gammatildeUU[x][y] * ddbetaGUDD[i][x][y])
-                   + Rational(1,3) * sum2(lambda x, y: gammatildeUU[i][x] * ddbetaGUDD[y][x][y])
-                   + sum1(lambda x: betaGU[x] * dGammatildeUD[i][x])
-                   - sum1(lambda x: GammatildedirectU[x] * dbetaGUD[i][x])
-                   + Rational(2,3) * GammatildedirectU[i] * sum1(lambda x: dbetaGUD[x][x])
-                   - 2 * alphaG * kappa1 * (GammatildeU[i] - GammatildedirectU[i])
+                         (+ Gammatildee[ui,lx,ly] * Atilde[ux,uy]
+                          - Rational(3,2) / chi * Atilde[ui,ux] * dchi[lx]
+                          - Rational(1,3) * gammatilde[ui,ux] * (2 * dKhat[lx] + dTheta[lx])
+                          - 8 * pi * gammatilde[ui,ux] * Si[lx])
+                   + gammatilde[ux,uy] * ddbetaG[ui,lx,ly]
+                   + Rational(1,3) * gammatilde[ui,ux] * ddbetaG[uy,lx,ly]
+                   + betaG[ux] * dGammatilde[ui,lx]
+                   - Gammatildedirect[ux] * dbetaG[ui,lx]
+                   + Rational(2,3) * Gammatildedirect[ui] * dbetaG[ux,lx]
+                   - 2 * alphaG * kappa1 * Gammatilde[ui] - Gammatildedirect[ui]
                    # + eps_diss * dissGammatildeU[i]
-                   ))
-         for i in range(3)],
+                   )),
+        #[lhrh(lhs=rhs_GammatildeU[i],
+        #      rhs=(- 2 * sum1(lambda x: AtildeUU[i][x] * dalphaGD[x])
+        #           + 2 * alphaG *
+        #                 (+ sum2_symm(lambda x, y: GammatildeeUDD[i][x][y] * AtildeUU[x][y])
+        #                  - Rational(3,2) / chi * sum1(lambda x: AtildeUU[i][x] * dchiD[x])
+        #                  - Rational(1,3) * sum1(lambda x: gammatildeUU[i][x] * (2 * dKhatD[x] + dThetaD[x]))
+        #                  - 8 * pi * sum1(lambda x: gammatildeUU[i][x] * SiD[x]))
+        #           + sum2_symm(lambda x, y: gammatildeUU[x][y] * ddbetaGUDD[i][x][y])
+        #           + Rational(1,3) * sum2(lambda x, y: gammatildeUU[i][x] * ddbetaGUDD[y][x][y])
+        #           + sum1(lambda x: betaGU[x] * dGammatildeUD[i][x])
+        #           - sum1(lambda x: GammatildedirectU[x] * dbetaGUD[i][x])
+        #           + Rational(2,3) * GammatildedirectU[i] * sum1(lambda x: dbetaGUD[x][x])
+        #           - 2 * alphaG * kappa1 * (GammatildeU[i] - GammatildedirectU[i])
+        #           # + eps_diss * dissGammatildeU[i]
+        #           ))
+        # for i in range(3)],
 
         # arXiv:1212.2901 [gr-qc], (6)
-        [lhrh(lhs=rhs_Theta,
+        geneqns(lhs=rhs_Theta,
               rhs=Piecewise((0, set_Theta_zero),
                             ((+ Rational(1,2) * alphaG * (+ Rsc
-                                                          - sum2_symm(lambda x, y: AtildeUU[x][y] * AtildeDD[x][y])
+                                                          - Atilde[ux,uy] * Atilde[lx,ly]
                                                           + Rational(2,3) * (Khat + 2 * Theta)**2)
                               - alphaG * (+ 8 * pi * rho
                                           + kappa1 * (2 + kappa2) * Theta)
-                              + sum1(lambda x: betaGU[x] * dThetaD[x])
+                              + betaG[ux] * dTheta[lx]
                               # + eps_diss * dissTheta
-                              ), True)))],
+                              ), True))),
+        #[lhrh(lhs=rhs_Theta,
+        #      rhs=Piecewise((0, set_Theta_zero),
+        #                    ((+ Rational(1,2) * alphaG * (+ Rsc
+        #                                                  - sum2_symm(lambda x, y: AtildeUU[x][y] * AtildeDD[x][y])
+        #                                                  + Rational(2,3) * (Khat + 2 * Theta)**2)
+        #                      - alphaG * (+ 8 * pi * rho
+        #                                  + kappa1 * (2 + kappa2) * Theta)
+        #                      + sum1(lambda x: betaGU[x] * dThetaD[x])
+        #                      # + eps_diss * dissTheta
+        #                      ), True)))],
 
         [lhrh(lhs=rhs_alphaG,
               rhs=(- alphaG * f_mu_L * Khat
                    # + eps_diss * dissalphaG
                    ))],
 
-        [lhrh(lhs=rhs_betaGU[i],
-              rhs=(+ f_mu_S * GammatildeU[i] - eta * betaGU[i]
-                   # + eps_diss * dissbetaGU[i]
-                   ))
-         for i in range(3)],
+        geneqns(lhs=rhs_betaG[ui], rhs=(+ f_mu_S * Gammatilde[ui] - eta * betaG[ui])),
+        #[lhrh(lhs=rhs_betaGU[i],
+        #      rhs=(+ f_mu_S * GammatildeU[i] - eta * betaGU[i]
+        #           # + eps_diss * dissbetaGU[i]
+        #           ))
+        # for i in range(3)],
         [loop],
 
         [
-            [lhrh(lhs=rhs_chi, rhs=rhs_chi + eps_diss * sum1(lambda x: chi_dKOD[x]))],
+            #[lhrh(lhs=rhs_chi, rhs=rhs_chi + eps_diss * sum1(lambda x: chi_dKOD[x]))],
+            geneqns(lhs=rhs_chi, rhs=rhs_chi + eps_diss * chi_dKO1[lx] * one[ux]),
             [loop],
         ],
         [[
-            [lhrh(lhs=rhs_gammatildeDD[i][j], rhs=rhs_gammatildeDD[i][j] + eps_diss * sum1(lambda x: gammatildeDD_dKOD[i][j][x]))],
+            #[lhrh(lhs=rhs_gammatildeDD[i][j], rhs=rhs_gammatildeDD[i][j] + eps_diss * sum1(lambda x: gammatildeDD_dKOD[i][j][x]))],
+            geneqns(lhs=rhs_gammatilde[li,lj], rhs=rhs_gammatilde[li,lj] + eps_diss * gammatilde2_dKO1[li,lj,lx]*one[ux]),
             [loop],
         ] for i in range(3) for j in range(i+1)],
         [[
-            [lhrh(lhs=rhs_GammatildeU[i], rhs=rhs_GammatildeU[i] + eps_diss * sum1(lambda x: GammatildeU_dKOD[i][x]))],
+            #[lhrh(lhs=rhs_GammatildeU[i], rhs=rhs_GammatildeU[i] + eps_diss * sum1(lambda x: GammatildeU_dKOD[i][x]))],
+            geneqns(lhs=rhs_Gammatilde[ui], rhs=rhs_Gammatilde[ui] + eps_diss * Gammatilde1_dKO1[ui,lx]*one[ux]),
             [loop],
         ] for i in range(3)],
         [
