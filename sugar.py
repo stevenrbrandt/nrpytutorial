@@ -561,8 +561,12 @@ def make_sum(expr, dim=3):
             nargs += [narg]
         return sp.Piecewise(*nargs)
     elif expr.is_Function:
-        assert len(expr.args)==1, type(expr)
-        expr = expr.func(make_sum(expr.args[0]))
+        if len(expr.args)==1:
+            expr = expr.func(make_sum(expr.args[0]))
+        elif len(expr.args)==2:
+            expr = expr.func(make_sum(expr.args[0]),make_sum(expr.args[1]))
+        else:
+            raise Exception(f"len(expr.args)={len(expr.args)} not handled.")
         return expr
 
     indexes = {}
@@ -598,6 +602,7 @@ def eval_expression(expr):
             indexes = []
             for k in sym.args[1:]:
                 ks = str(k)
+                assert not re.match(r'([ul])([a-z])$', ks), f"Unevaluated index '{ks}' in expression '{expr}'"
                 g = re.match(r'([ul])(\d)$', ks)
                 if not g:
                     here(f"`{ks}'")
@@ -607,7 +612,7 @@ def eval_expression(expr):
                 else:
                     nm += "D"
                 indexes += [int(g.group(2))]
-            assert nm in definitions, f"Missing defenition for '{nm}'. Possible indexing error in expression '{expr}'?"
+            assert nm in definitions, f"Missing defenition for '{nm}'."
             subs[sym] = lookup(definitions[nm],indexes)
     return expr.subs(subs)
 
