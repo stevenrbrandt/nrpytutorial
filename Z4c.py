@@ -140,12 +140,12 @@ def Initial():
         [lhrh(lhs=Theta_val, rhs=sympify(0))],
         geneqns(lhs=trK, rhs=g[ua,ub]*k[la,lb]),
         [lhrh(lhs=chi, rhs=chi_val)],
-        geneqns3(r"\tilde{\gamma}_{i j} = \text{chi_val} g_{i j}"),
+        geneqns(r"\tilde{\gamma}_{i j} = \text{chi_val} g_{i j}"),
         [lhrh(lhs=Theta, rhs=Theta_val)],
         [lhrh(lhs=Khat, rhs=trK - 2 * Theta_val)],
-        geneqns3(r'\tilde{A}_{i j} = \text{chi_val} (k_{i j} - \text{trK}/3 g_{i j})'),
+        geneqns(r'\tilde{A}_{i j} = \text{chi_val} (k_{i j} - \text{trK}/3 g_{i j})'),
         [lhrh(lhs=alphaG, rhs=alp)],
-        geneqns2(lhs=betaG[ui], rhs=r"\beta^i"),
+        geneqns(lhs=betaG[ui], rhs=r"\beta^i"),
     ]
 
     thorn.add_func(
@@ -207,11 +207,11 @@ Enforce()
 # Calculate ADM variables
 def ADM():
     adm_eqns = [
-        geneqns3(r"g_{i j} = 1/\chi \tilde{\gamma}_{i j}"),
-        geneqns3(r"k_{i j} = 1/\chi (\tilde{A}_{i j} + (\hat{K} + 2 \Theta) / 3 \tilde{\gamma}_{i j})"),
+        geneqns(r"g_{i j} = 1/\chi \tilde{\gamma}_{i j}"),
+        geneqns(r"k_{i j} = 1/\chi (\tilde{A}_{i j} + (\hat{K} + 2 \Theta) / 3 \tilde{\gamma}_{i j})"),
         [lhrh(lhs=alp, rhs=alphaG)],
         [lhrh(lhs=dtalp, rhs=-alphaG * f_mu_L * Khat)],
-        geneqns3(r"\beta^i = \text{betaG}^i"),
+        geneqns(r"\beta^i = \text{betaG}^i"),
         geneqns(lhs=dtbeta[ui], rhs=f_mu_S * Gammatilde[ui] - eta * betaG[ui]),
 
         # Second time derivatives
