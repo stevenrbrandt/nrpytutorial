@@ -695,7 +695,8 @@ class CactusThorn:
                     elif rhs in all_group_names:
                         tag = f"TAGS='rhs=\"{self.thornname}::{rhs}GF\"'"
                     else:
-                        tag = ""
+                        # We assume that variables without RHS are not part of the state vector
+                        tag = f"TAGS='checkpoint=\"no\"'"
 
                     module = ixp.find_gfmodule_for_group(gf_group,die=False)
                     if module is None or module == self.thornname:
