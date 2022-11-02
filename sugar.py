@@ -620,7 +620,7 @@ def eval_sum(expr,dim=3):
     expr = make_sum(expr, dim)
     return eval_expression(expr)
 
-def geneqns3(eqn, globs=None, loop=False):
+def geneqns3(eqn, DIM=3, globs=None, loop=False):
     if globs is None:
         globs = currentframe().f_back.f_globals
     m = match_expr(eqn)
@@ -628,9 +628,11 @@ def geneqns3(eqn, globs=None, loop=False):
     if m[-2][0] == "equals":
         ltx = parse_latex(m[-1][1])
     sy = symlatex(eqn,globs)
-    return geneqns2(lhs=sy, rhs=m[-1][1], loop=loop)
+    return geneqns2(lhs=sy, rhs=m[-1][1], loop=loop, globs=globs, DIM=DIM)
 
-def geneqns2(lhs, rhs, loop=False):
+def geneqns2(lhs, rhs, DIM=3, globs=None, loop=False):
+    if globs is None:
+        globs = currentframe().f_back.f_globals
     lhs_str = r"\text{result}"
     last = ""
     suffix = ""
@@ -663,11 +665,15 @@ def geneqns2(lhs, rhs, loop=False):
     # When evaluated, it will assign to the "result" global variable.
     parse_latex(latex,verbose=True)
 
-    return geneqns(lhs=lhs, values=globals()["result"+suffix], loop=loop)
+    return geneqns(lhs=lhs, values=globals()["result"+suffix], globs=globs, loop=loop, DIM=DIM)
 
-def geneqns(lhs, rhs=None, values=None,DIM=3, globs=None, loop=False):
+def geneqns(lhs, rhs=None, values=None, DIM=3, globs=None, loop=False):
     if globs is None:
         globs = currentframe().f_back.f_globals
+    if rhs is None and values is None and type(lhs) is str:
+        return geneqns3(lhs, DIM=DIM, globs=globs, loop=loop)
+    if values is None and type(rhs) is str:
+        return geneqns2(lhs, rhs, DIM=DIM, globs=globs, loop=loop)
     if hasattr(lhs,"base"):
         nm = str(lhs.base)+getsuffix(lhs)
         props = properties.get(nm, {})
