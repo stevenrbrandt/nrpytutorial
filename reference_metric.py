@@ -1089,6 +1089,7 @@ def ds_dirn(delxx):
 
 
 # Find the appropriate timestep for the CFL condition.
+# Find the appropriate timestep for the CFL condition.
 def add_to_Cfunction_dict__find_timestep(rel_path_to_Cparams=os.path.join("./"),
                                          use_unit_wavespeed=False, set_dsmin_gridfunction=False):
     ##############################
@@ -1281,19 +1282,19 @@ def add_to_Cfunc_dict__Cart_to_xx_and_nearest_i0i1i2(rel_path_to_Cparams=os.path
     preloop = ""
     if relative_to == "local_grid_center":
         preloop = """
-  // First compute the closest (xx0,xx1,xx2) to the given Cartesian gridpoint (x,y,z),
-  //   *relative* to the center of the local grid.
-  //   So for example,
-  //   1) if global xCart[012] = (1,1,1), and the
-  //      origin of the grid is at global xCart (x,y,z) = (1,1,1), then
-  //      (Cartx,Carty,Cartz) = (0,0,0)
-  //   2) if global xCart[012] = (0,0,0), and the
-  //      origin of the grid is at global xCart (x,y,z) = (1,1,1), then
-  //      (Cartx,Carty,Cartz) = (-1,-1,-1)
-  // Therefore, (Cartx,Carty,Cartz) = (xCart[0]-originx, xCart[1]-originy, xCart[2]-originz)
-  const REAL Cartx = xCart[0] - Cart_originx;
-  const REAL Carty = xCart[1] - Cart_originy;
-  const REAL Cartz = xCart[2] - Cart_originz;
+    // First compute the closest (xx0,xx1,xx2) to the given Cartesian gridpoint (x,y,z),
+    //   *relative* to the center of the local grid.
+    //   So for example,
+    //   1) if global xCart[012] = (1,1,1), and the
+    //      origin of the grid is at global xCart (x,y,z) = (1,1,1), then
+    //      (Cartx,Carty,Cartz) = (0,0,0)
+    //   2) if global xCart[012] = (0,0,0), and the
+    //      origin of the grid is at global xCart (x,y,z) = (1,1,1), then
+    //      (Cartx,Carty,Cartz) = (-1,-1,-1)
+    // Therefore, (Cartx,Carty,Cartz) = (xCart[0]-originx, xCart[1]-originy, xCart[2]-originz)
+    const REAL Cartx = xCart[0] - Cart_originx;
+    const REAL Carty = xCart[1] - Cart_originy;
+    const REAL Cartz = xCart[2] - Cart_originz;
 """
     elif relative_to == "global_grid_center":
         preloop = """
@@ -1314,13 +1315,13 @@ def add_to_Cfunc_dict__Cart_to_xx_and_nearest_i0i1i2(rel_path_to_Cparams=os.path
                        ["xx[0]", "xx[1]", "xx[2]"], "returnstring", params="includebraces=False,preindent=1")
 
     body += """
-  // Then find the nearest index (i0,i1,i2) on underlying grid to (x,y,z)
-  // Recall that:
-  // xx[0][j] = xxmin[0] + ((REAL)(j-NGHOSTS) + (1.0/2.0))*params->dxx0; // Cell-centered grid.
-  //   --> j = (int) ( (xx[0][j] - xxmin[0]) / params->dxx0 + (1.0/2.0) + NGHOSTS )
-  Cart_to_i0i1i2[0] = (int)( ( xx[0] - ("""+str(xxmin[0])+""") ) / params->dxx0 + (1.0/2.0) + NGHOSTS - 0.5 ); // Account for (int) typecast rounding down
-  Cart_to_i0i1i2[1] = (int)( ( xx[1] - ("""+str(xxmin[1])+""") ) / params->dxx1 + (1.0/2.0) + NGHOSTS - 0.5 ); // Account for (int) typecast rounding down
-  Cart_to_i0i1i2[2] = (int)( ( xx[2] - ("""+str(xxmin[2])+""") ) / params->dxx2 + (1.0/2.0) + NGHOSTS - 0.5 ); // Account for (int) typecast rounding down
+    // Then find the nearest index (i0,i1,i2) on underlying grid to (x,y,z)
+    // Recall that:
+    // xx[0][j] = xxmin[0] + ((REAL)(j-NGHOSTS) + (1.0/2.0))*params->dxx0; // Cell-centered grid.
+    //   --> j = (int) ( (xx[0][j] - xxmin[0]) / params->dxx0 + (1.0/2.0) + NGHOSTS )
+    Cart_to_i0i1i2[0] = (int)( ( xx[0] - ("""+str(xxmin[0])+""") ) / params->dxx0 + (1.0/2.0) + NGHOSTS - 0.5 ); // Account for (int) typecast rounding down
+    Cart_to_i0i1i2[1] = (int)( ( xx[1] - ("""+str(xxmin[1])+""") ) / params->dxx1 + (1.0/2.0) + NGHOSTS - 0.5 ); // Account for (int) typecast rounding down
+    Cart_to_i0i1i2[2] = (int)( ( xx[2] - ("""+str(xxmin[2])+""") ) / params->dxx2 + (1.0/2.0) + NGHOSTS - 0.5 ); // Account for (int) typecast rounding down
 """
     add_to_Cfunction_dict(
         includes=[os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
@@ -1334,13 +1335,7 @@ def add_to_Cfunc_dict__Cart_to_xx_and_nearest_i0i1i2(rel_path_to_Cparams=os.path
         rel_path_to_Cparams=rel_path_to_Cparams)
 
 
-def add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=os.path.join("./")):
-    includes = [os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")]
-    desc = "Override default values for Nxx{0,1,2}, Nxx_plus_2NGHOSTS{0,1,2}, dxx{0,1,2}, and invdx{0,1,2}; and set xx[3][]"
-    c_type = "void"
-    name = "set_Nxx_dxx_invdx_params__and__xx"
-    params = "const int EigenCoord, const int Nxx[3],paramstruct *restrict params, REAL *restrict xx[3]"
-
+def add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=os.path.join("./"), NGHOSTS_is_a_param=False):
     def set_xxmin_xxmax():
         outstr = ""
         for dirn in range(3):
@@ -1348,18 +1343,19 @@ def add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=os.p
             outstr += "    xxmax[" + str(dirn) + "] = " + str(xxmax[dirn]) + ";\n"
         return outstr
     body = """
-  // Set CoordSystemName
-  snprintf(params->CoordSystemName, 100, \"""" + par.parval_from_str("CoordSystem") + """\");
-
-  // Override parameter defaults with values based on command line arguments and NGHOSTS.
-  params->Nxx0 = Nxx[0];
-  params->Nxx1 = Nxx[1];
-  params->Nxx2 = Nxx[2];
-
-  params->Nxx_plus_2NGHOSTS0 = Nxx[0] + 2*NGHOSTS;
-  params->Nxx_plus_2NGHOSTS1 = Nxx[1] + 2*NGHOSTS;
-  params->Nxx_plus_2NGHOSTS2 = Nxx[2] + 2*NGHOSTS;
-  // Now that params->Nxx_plus_2NGHOSTS* has been set, and below we need e.g., Nxx_plus_2NGHOSTS*, we include set_Cparameters.h here:
+    // Override parameter defaults with values based on command line arguments and NGHOSTS.
+    params->Nxx0 = Nxx[0];
+    params->Nxx1 = Nxx[1];
+    params->Nxx2 = Nxx[2];
+"""
+    NGHOSTS_prefix=""
+    if NGHOSTS_is_a_param:
+        NGHOSTS_prefix="params->"
+    body += """
+    params->Nxx_plus_2NGHOSTS0 = Nxx[0] + 2*"""+NGHOSTS_prefix+"""NGHOSTS;
+    params->Nxx_plus_2NGHOSTS1 = Nxx[1] + 2*"""+NGHOSTS_prefix+"""NGHOSTS;
+    params->Nxx_plus_2NGHOSTS2 = Nxx[2] + 2*"""+NGHOSTS_prefix+"""NGHOSTS;
+    // Now that params->Nxx_plus_2NGHOSTS* has been set, and below we need e.g., Nxx_plus_2NGHOSTS*, we include set_Cparameters.h here:
 #include \"""" + os.path.join(rel_path_to_Cparams, "set_Cparameters.h") + """\"
   // Step 0d: Set up space and time coordinates
   // Step 0d.i: Declare Delta x^i=dxx{0,1,2} and invdxx{0,1,2}, as well as xxmin[3] and xxmax[3]:
@@ -1384,18 +1380,20 @@ def add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=os.p
   // Step 0d.iii: Set params.dxx{0,1,2}, params.invdx{0,1,2}, and uniform coordinate grids xx[3][]
 """
     for dirn in ["0", "1", "2"]:
-        body += "  params->dxx"+dirn+" = (xxmax["+dirn+"] - xxmin["+dirn+"]) / ((REAL)Nxx["+dirn+"]);\n"
-        body += "  params->invdx"+dirn+" = 1.0/params->dxx"+dirn+";\n"
-        body += """  xx["""+dirn+"""] = (REAL *)malloc(sizeof(REAL)*Nxx_plus_2NGHOSTS"""+dirn+ """);
-#pragma omp parallel for
-  for(int j=0;j<Nxx_plus_2NGHOSTS"""+dirn+""";j++)
-    xx["""+dirn+"""][j] = xxmin["""+dirn+"""] + ((REAL)(j-NGHOSTS) + (1.0/2.0))*params->dxx"""+dirn+"""; // Cell-centered grid.\n\n"""
-    body = body[:-1]  # Remove last "\n" for consistent aesthetics
+        body += "    params->dxx"+dirn+" = (xxmax["+dirn+"] - xxmin["+dirn+"]) / ((REAL)Nxx["+dirn+"]);\n"
+        body += "    params->invdx"+dirn+" = 1.0/params->dxx"+dirn+";\n"
+        body += """    xx["""+dirn+"""] = (REAL *)malloc(sizeof(REAL)*Nxx_plus_2NGHOSTS"""+dirn + """);
+    for(int j=0;j<Nxx_plus_2NGHOSTS"""+dirn+""";j++)
+        xx["""+dirn+"""][j] = xxmin["""+dirn+"""] + ((REAL)(j-NGHOSTS) + (1.0/2.0))*params->dxx"""+dirn+"""; // Cell-centered grid.\n"""
+        if dirn != "2":
+            body += "\n"
 
     add_to_Cfunction_dict(
-        includes=includes,
-        desc  =desc,
-        c_type=c_type,  name  =name,  params=params,
+        includes=[os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
+        desc  ="Override default values for Nxx{0,1,2}, Nxx_plus_2NGHOSTS{0,1,2}, dxx{0,1,2}, and invdx{0,1,2}; and set xx[3][]",
+        c_type="void",
+        name  ="set_Nxx_dxx_invdx_params__and__xx",
+        params="const int EigenCoord, const int Nxx[3],paramstruct *restrict params, REAL *restrict xx[3]",
         body  =body,
         enableCparameters=False)  # Cparameters here must be #include'd in body, not at top of function as usual.
 
