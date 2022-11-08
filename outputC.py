@@ -25,7 +25,7 @@ from suffixes import dosubs
 from grid import find_gftype, var_from_access
 
 lhrh = namedtuple('lhrh', 'lhs rhs')
-outCparams = namedtuple('outCparams', 'preindent includebraces declareoutputvars outCfileaccess outCverbose CSE_enable CSE_varprefix CSE_sorting CSE_preprocess enable_SIMD SIMD_find_more_subs SIMD_find_more_FMAsFMSs SIMD_debug enable_TYPE gridsuffix')
+outCparams = namedtuple('outCparams', 'preindent includebraces declareoutputvars outCfileaccess outCverbose CSE_enable CSE_varprefix CSE_sorting CSE_preprocess enable_SIMD SIMD_find_more_subs SIMD_find_more_FMAsFMSs SIMD_debug enable_TYPE')
 
 # Sometimes SymPy has problems evaluating complicated expressions involving absolute
 #    values, resulting in hangs. So instead of using sp.Abs(), if we instead use
@@ -288,7 +288,6 @@ def parse_outCparams_string(params):
     SIMD_find_more_FMAsFMSs = "True" # Finding too many FMAs/FMSs can degrade performance; currently tuned to optimize BSSN
     SIMD_debug = "False"
     enable_TYPE = "True"
-    gridsuffix = ""
 
     if params != "":
         params2 = re.sub("^,","",params)
@@ -353,8 +352,6 @@ def parse_outCparams_string(params):
                 SIMD_find_more_FMAsFMSs = "True"
             elif parname == "GoldenKernelsEnable" and value[i] == "False":
                 pass # Do nothing; just allow user to set GoldenKernelsEnable="False".
-            elif parname == "gridsuffix":
-                gridsuffix = value[i]
             else:
                 print("Error: outputC parameter name \""+parname+"\" unrecognized.")
                 sys.exit(1)
@@ -372,7 +369,7 @@ def parse_outCparams_string(params):
     return outCparams(preindent,includebraces,declareoutputvars,outCfileaccess,outCverbose,
                       CSE_enable,CSE_varprefix,CSE_sorting,CSE_preprocess,
                       enable_SIMD,SIMD_find_more_subs,SIMD_find_more_FMAsFMSs,SIMD_debug,
-                      enable_TYPE,gridsuffix)
+                      enable_TYPE)
 
 # Input: sympyexpr = a single SymPy expression *or* a list of SymPy expressions
 #        output_varname_str = a single output variable name *or* a list of output
