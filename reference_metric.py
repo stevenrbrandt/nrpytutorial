@@ -1343,19 +1343,19 @@ def add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=os.p
             outstr += "    xxmax[" + str(dirn) + "] = " + str(xxmax[dirn]) + ";\n"
         return outstr
     body = """
-    // Override parameter defaults with values based on command line arguments and NGHOSTS.
-    params->Nxx0 = Nxx[0];
-    params->Nxx1 = Nxx[1];
-    params->Nxx2 = Nxx[2];
+  // Override parameter defaults with values based on command line arguments and NGHOSTS.
+  params->Nxx0 = Nxx[0];
+  params->Nxx1 = Nxx[1];
+  params->Nxx2 = Nxx[2];
 """
     NGHOSTS_prefix=""
     if NGHOSTS_is_a_param:
         NGHOSTS_prefix="params->"
     body += """
-    params->Nxx_plus_2NGHOSTS0 = Nxx[0] + 2*"""+NGHOSTS_prefix+"""NGHOSTS;
-    params->Nxx_plus_2NGHOSTS1 = Nxx[1] + 2*"""+NGHOSTS_prefix+"""NGHOSTS;
-    params->Nxx_plus_2NGHOSTS2 = Nxx[2] + 2*"""+NGHOSTS_prefix+"""NGHOSTS;
-    // Now that params->Nxx_plus_2NGHOSTS* has been set, and below we need e.g., Nxx_plus_2NGHOSTS*, we include set_Cparameters.h here:
+  params->Nxx_plus_2NGHOSTS0 = Nxx[0] + 2*"""+NGHOSTS_prefix+"""NGHOSTS;
+  params->Nxx_plus_2NGHOSTS1 = Nxx[1] + 2*"""+NGHOSTS_prefix+"""NGHOSTS;
+  params->Nxx_plus_2NGHOSTS2 = Nxx[2] + 2*"""+NGHOSTS_prefix+"""NGHOSTS;
+  // Now that params->Nxx_plus_2NGHOSTS* has been set, and below we need e.g., Nxx_plus_2NGHOSTS*, we include set_Cparameters.h here:
 #include \"""" + os.path.join(rel_path_to_Cparams, "set_Cparameters.h") + """\"
   // Step 0d: Set up space and time coordinates
   // Step 0d.i: Declare Delta x^i=dxx{0,1,2} and invdxx{0,1,2}, as well as xxmin[3] and xxmax[3]:
@@ -1380,11 +1380,11 @@ def add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=os.p
   // Step 0d.iii: Set params.dxx{0,1,2}, params.invdx{0,1,2}, and uniform coordinate grids xx[3][]
 """
     for dirn in ["0", "1", "2"]:
-        body += "    params->dxx"+dirn+" = (xxmax["+dirn+"] - xxmin["+dirn+"]) / ((REAL)Nxx["+dirn+"]);\n"
-        body += "    params->invdx"+dirn+" = 1.0/params->dxx"+dirn+";\n"
-        body += """    xx["""+dirn+"""] = (REAL *)malloc(sizeof(REAL)*Nxx_plus_2NGHOSTS"""+dirn + """);
-    for(int j=0;j<Nxx_plus_2NGHOSTS"""+dirn+""";j++)
-        xx["""+dirn+"""][j] = xxmin["""+dirn+"""] + ((REAL)(j-NGHOSTS) + (1.0/2.0))*params->dxx"""+dirn+"""; // Cell-centered grid.\n"""
+        body += "  params->dxx"+dirn+" = (xxmax["+dirn+"] - xxmin["+dirn+"]) / ((REAL)Nxx["+dirn+"]);\n"
+        body += "  params->invdx"+dirn+" = 1.0/params->dxx"+dirn+";\n"
+        body += """  xx["""+dirn+"""] = (REAL *)malloc(sizeof(REAL)*Nxx_plus_2NGHOSTS"""+dirn + """);
+  for(int j=0;j<Nxx_plus_2NGHOSTS"""+dirn+""";j++)
+    xx["""+dirn+"""][j] = xxmin["""+dirn+"""] + ((REAL)(j-NGHOSTS) + (1.0/2.0))*params->dxx"""+dirn+"""; // Cell-centered grid.\n"""
         if dirn != "2":
             body += "\n"
 
