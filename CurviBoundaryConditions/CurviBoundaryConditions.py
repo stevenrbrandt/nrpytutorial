@@ -16,55 +16,68 @@ import sympy as sp               # SymPy: The Python computer algebra package up
 import grid as gri               # NRPy+: Functions having to do with numerical grids
 import indexedexp as ixp         # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
 import reference_metric as rfm   # NRPy+: Reference metric support
-import finite_difference as fin  # NRPy+: Finite-difference module
-import os, sys           # Standard Python modules for multiplatform OS-level functions
-from UnitTesting.assert_equal import check_zero  # NRPy+: Checks whether an expression evaluates to zero.
+import cmdline_helper as cmd     # NRPy+: Multi-platform Python command-line interface
+import shutil, os, sys           # Standard Python modules for multiplatform OS-level functions
+import deprecated_reference_metric as evil_rfm  # NRPy+: PLEASE DON'T USE.
 
-_unused = par.Cparameters("int", __name__, "outer_bc_type", "EXTRAPOLATION_OUTER_BCS")
+def Set_up_CurviBoundaryConditions(Ccodesdir,verbose=True,Cparamspath=os.path.join("../"),
+                                   enable_copy_of_static_Ccodes=True, BoundaryCondition="QuadraticExtrapolation",
+                                   path_prefix=""):
+    # Step P0: Check that Ccodesdir is not the same as CurviBoundaryConditions/boundary_conditions,
+    #          to prevent trusted versions of these C codes from becoming contaminated.
+    if os.path.join(Ccodesdir) == os.path.join("CurviBoundaryConditions", "boundary_conditions"):
+        print("Error: Tried to output boundary conditions C code into CurviBoundaryConditions/boundary_conditions,"
+              "       which is not allowed, to prevent trusted versions of these C codes from becoming contaminated.")
+        sys.exit(1)
+
+    # Step P1: Create the C codes output directory & copy static CurviBC files
+    #          from CurviBoundaryConditions/boundary_conditions to Ccodesdir/
+    if enable_copy_of_static_Ccodes:
+        cmd.mkdir(os.path.join(Ccodesdir))
+
+        # Choosing boundary condition drivers with in NRPy+
+        #  - current options are Quadratic Polynomial Extrapolation for any coordinate system,
+        #    and the Sommerfeld boundary condition for only cartesian coordinates
+        if   str(BoundaryCondition) == "QuadraticExtrapolation":
+            for file in ["apply_bcs_curvilinear.h", "BCs_data_structs.h", "bcstruct_freemem.h", "CurviBC_include_Cfunctions.h",
+                         "driver_bcstruct.h", "set_bcstruct.h", "set_up__bc_gz_map_and_parity_condns.h"]:
+                shutil.copy(os.path.join(path_prefix,"CurviBoundaryConditions", "boundary_conditions", file),
+                            os.path.join(Ccodesdir))
+
+            with open(os.path.join(Ccodesdir,"CurviBC_include_Cfunctions.h"),"a") as file:
+                file.write("\n#include \"apply_bcs_curvilinear.h\"")
 
 
-# First register basic C data structures/macros inside NRPy_basic_defines.h
-def NRPy_basic_defines_CurviBC_data_structures():
-    return r"""
-// NRPy+ Curvilinear Boundary Conditions: Core data structures
-// Documented in: Tutorial-Start_to_Finish-Curvilinear_BCs.ipynb
+        elif str(BoundaryCondition) == "Sommerfeld":
+            for file in ["BCs_data_structs.h", "bcstruct_freemem.h", "CurviBC_include_Cfunctions.h",
+                         "driver_bcstruct.h", "set_bcstruct.h", "set_up__bc_gz_map_and_parity_condns.h"]:
+                shutil.copy(os.path.join(path_prefix,"CurviBoundaryConditions", "boundary_conditions", file),
+                            os.path.join(Ccodesdir))
 
-#define EXTRAPOLATION_OUTER_BCS 0  // used to identify/specify params.outer_bc_type
-#define RADIATION_OUTER_BCS     1  // used to identify/specify params.outer_bc_type
+            with open(os.path.join(Ccodesdir,"CurviBC_include_Cfunctions.h"),"a") as file:
+                file.write("\n#include \"apply_bcs_sommerfeld.h\"")
 
-typedef struct __innerpt_bc_struct__ {
-  int dstpt;  // dstpt is the 3D grid index IDX3S(i0,i1,i2) of the inner boundary point (i0,i1,i2)
-  int srcpt;  // srcpt is the 3D grid index (a la IDX3S) to which the inner boundary point maps
-  int8_t parity[10];  // parity[10] is a calculation of dot products for the 10 independent parity types
-} innerpt_bc_struct;
 
-typedef struct __outerpt_bc_struct__ {
-  short i0,i1,i2;  // the outer boundary point grid index (i0,i1,i2), on the 3D grid
-  int8_t FACEX0,FACEX1,FACEX2;  // 1-byte integers that store
-  //                               FACEX0,FACEX1,FACEX2 = +1, 0, 0 if on the i0=i0min face,
-  //                               FACEX0,FACEX1,FACEX2 = -1, 0, 0 if on the i0=i0max face,
-  //                               FACEX0,FACEX1,FACEX2 =  0,+1, 0 if on the i1=i2min face,
-  //                               FACEX0,FACEX1,FACEX2 =  0,-1, 0 if on the i1=i1max face,
-  //                               FACEX0,FACEX1,FACEX2 =  0, 0,+1 if on the i2=i2min face, or
-  //                               FACEX0,FACEX1,FACEX2 =  0, 0,-1 if on the i2=i2max face,
-} outerpt_bc_struct;
+        elif str(BoundaryCondition) == "QuadraticExtrapolation&Sommerfeld":
+            for file in ["apply_bcs_curvilinear.h", "BCs_data_structs.h", "bcstruct_freemem.h", "CurviBC_include_Cfunctions.h",
+                         "driver_bcstruct.h", "set_bcstruct.h", "set_up__bc_gz_map_and_parity_condns.h"]:
+                shutil.copy(os.path.join(path_prefix,"CurviBoundaryConditions", "boundary_conditions", file),
+                            os.path.join(Ccodesdir))
 
-typedef struct __bc_info_struct__ {
-  int num_inner_boundary_points;  // stores total number of inner boundary points
-  int num_pure_outer_boundary_points[NGHOSTS][3];  // stores number of outer boundary points on each
-  //                                                  ghostzone level and direction (update min and
-  //                                                  max faces simultaneously on multiple cores)
-  int bc_loop_bounds[NGHOSTS][6][6];  // stores outer boundary loop bounds. Unused after bcstruct_set_up()
-} bc_info_struct;
+            with open(os.path.join(Ccodesdir,"CurviBC_include_Cfunctions.h"),"a") as file:
+                file.write("\n#include \"apply_bcs_sommerfeld.h\"" +
+                           "\n#include \"apply_bcs_curvilinear.h\"")
 
-typedef struct __bc_struct__ {
-  innerpt_bc_struct *restrict inner_bc_array;  // information needed for updating each inner boundary point
-  outerpt_bc_struct *restrict pure_outer_bc_array[NGHOSTS*3]; // information needed for updating each outer
-  //                                                             boundary point
-  bc_info_struct bc_info;  // stores number of inner and outer boundary points, needed for setting loop
-  //                          bounds and parallelizing over as many boundary points as possible.
-} bc_struct;
-"""
+
+        else:
+            print("ERROR: Only Quadratic Polynomial Extrapolation (QuadraticExtrapolation) and Sommerfeld boundary conditions are currently supported\n")
+            sys.exit(1)
+
+
+    # Step P2: Output correct #include for set_Cparameters.h to
+    #          Ccodesdir/boundary_conditions/RELATIVE_PATH__set_Cparameters.h
+    with open(os.path.join(Ccodesdir, "RELATIVE_PATH__set_Cparameters.h"), "w") as file:
+        file.write("#include \"" + Cparamspath + "/set_Cparameters.h\"\n") # #include's may include forward slashes for paths, even in Windows.
 
 
 # Set unit-vector dot products (=parity) for each of the 10 parity condition types
@@ -289,35 +302,11 @@ def Cfunction__EigenCoord_set_x0x1x2_inbounds__i0i1i2_inbounds_single_pt():
     par.set_parval_from_str("reference_metric::CoordSystem",rfm.get_EigenCoord())
     rfm.reference_metric()
 
-    # Step 1: Output C code for the Eigen-Coordinate mapping from xx->Cartesian':
-    body += r"""
-  // Step 1: Convert the (curvilinear) coordinate (x0,x1,x2) to Cartesian coordinates
-  REAL xCart[3];  // where (x,y,z) is output
-  {
-    // xx_to_Cart for EigenCoordinate """+rfm.get_EigenCoord()+r""" (orig coord = """+CoordSystem_orig+r"""):
-    REAL xx0 = xx[0][i0];
-    REAL xx1 = xx[1][i1];
-    REAL xx2 = xx[2][i2];
-"""+ \
-    outputC([rfm.xx_to_Cart[0],rfm.xx_to_Cart[1],rfm.xx_to_Cart[2]],
-            ["xCart[0]","xCart[1]","xCart[2]"],
-            "returnstring", params="preindent=2")+"  }\n"
-    body += r"""
-  REAL Cartx = xCart[0];
-  REAL Carty = xCart[1];
-  REAL Cartz = xCart[2];"""
+    # Step 4: Output C code for the Eigen-Coordinate mapping from xx->Cartesian:
+    evil_rfm.xx_to_Cart_h("EigenCoord_xx_to_Cart", os.path.join(Cparamspath,"set_Cparameters.h"), os.path.join(Ccodesdir, "EigenCoord_xx_to_Cart.h"))
 
-    # Step 2: Output C code for the Eigen-Coordinate mapping from Cartesian->xx':
-    body += r"""
-  // Step 2: Find the (i0_inbounds,i1_inbounds,i2_inbounds) corresponding to the above Cartesian coordinate.
-  //   If (i0_inbounds,i1_inbounds,i2_inbounds) is in a ghost zone, then it must equal (i0,i1,i2), and
-  //      the point is an outer boundary point.
-  //   Otherwise (i0_inbounds,i1_inbounds,i2_inbounds) is in the grid interior, and data at (i0,i1,i2)
-  //      must be replaced with data at (i0_inbounds,i1_inbounds,i2_inbounds), but multiplied by the
-  //      appropriate parity condition (+/- 1).
-  REAL Cart_to_xx0_inbounds,Cart_to_xx1_inbounds,Cart_to_xx2_inbounds;
-"""
-    # Step 2.a: Sanity check: First make sure that rfm.Cart_to_xx has been set. Error out if not!
+    # Step 5: Output the Eigen-Coordinate mapping from Cartesian->xx:
+    # Step 5.a: Sanity check: First make sure that rfm.Cart_to_xx has been set. Error out if not!
     if rfm.Cart_to_xx[0] == 0 or rfm.Cart_to_xx[1] == 0 or rfm.Cart_to_xx[2] == 0:
         print("ERROR: rfm.Cart_to_xx[], which maps Cartesian -> xx, has not been set for")
         print("       reference_metric::CoordSystem = "+par.parval_from_str("reference_metric::CoordSystem"))
