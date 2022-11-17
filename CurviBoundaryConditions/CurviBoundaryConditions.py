@@ -14,6 +14,7 @@ import indexedexp as ixp         # NRPy+: Symbolic indexed expression (e.g., ten
 import reference_metric as rfm   # NRPy+: Reference metric support
 import cmdline_helper as cmd     # NRPy+: Multi-platform Python command-line interface
 import shutil, os, sys           # Standard Python modules for multiplatform OS-level functions
+import deprecated_reference_metric as evil_rfm  # NRPy+: PLEASE DON'T USE.
 
 def Set_up_CurviBoundaryConditions(Ccodesdir,verbose=True,Cparamspath=os.path.join("../"),
                                    enable_copy_of_static_Ccodes=True, BoundaryCondition="QuadraticExtrapolation",
@@ -236,7 +237,7 @@ def Set_up_CurviBoundaryConditions(Ccodesdir,verbose=True,Cparamspath=os.path.jo
     rfm.reference_metric()
 
     # Step 4: Output C code for the Eigen-Coordinate mapping from xx->Cartesian:
-    rfm.xx_to_Cart_h("EigenCoord_xx_to_Cart", os.path.join(Cparamspath,"set_Cparameters.h"), os.path.join(Ccodesdir, "EigenCoord_xx_to_Cart.h"))
+    evil_rfm.xx_to_Cart_h("EigenCoord_xx_to_Cart", os.path.join(Cparamspath,"set_Cparameters.h"), os.path.join(Ccodesdir, "EigenCoord_xx_to_Cart.h"))
 
     # Step 5: Output the Eigen-Coordinate mapping from Cartesian->xx:
     # Step 5.a: Sanity check: First make sure that rfm.Cart_to_xx has been set. Error out if not!
