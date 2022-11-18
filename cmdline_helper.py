@@ -242,18 +242,10 @@ def mkdir(newpath):
     if not os.path.exists(os.path.join(newpath)):
         os.makedirs(os.path.join(newpath))
 
-# TO BE RUN ONLY FROM nrpytutorial or nrpytutorial/subdir/
-def output_Jupyter_notebook_to_LaTeXed_PDF(notebookname, verbose=True):
-    in_nrpytutorial_rootdir = os.getcwd().split("/")[-1] == "nrpytutorial"
-    if sys.version_info[0] == 3:
-        location_of_template_file = "."
-        if not in_nrpytutorial_rootdir:
-            location_of_template_file = ".."
-        Execute_input_string(r"jupyter nbconvert --to latex --template="
-                             +os.path.join(location_of_template_file, "nbconvert_latex_settings")
-                             +r" --log-level='WARN' "+notebookname+".ipynb",verbose=False)
-    else:
-        Execute_input_string(r"jupyter nbconvert --to latex --log-level='WARN' "+notebookname+".ipynb",verbose=False)
+def output_Jupyter_notebook_to_LaTeXed_PDF(notebookname, location_of_template_file=os.path.join("."), verbose=True):
+    Execute_input_string(r"jupyter nbconvert --to latex --template="
+                         +os.path.join(location_of_template_file, "nbconvert_latex_settings")
+                         +r" --log-level='WARN' "+notebookname+".ipynb",verbose=False)
     for _i in range(3):  # _i is an unused variable.
         Execute_input_string(r"pdflatex -interaction=batchmode "+notebookname+".tex",verbose=False)
     delete_existing_files(notebookname+".out "+notebookname+".aux "+notebookname+".log")
