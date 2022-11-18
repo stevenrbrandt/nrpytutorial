@@ -5,7 +5,7 @@
 
 # Basic functions:
 # check_executable_exists(): Check to see whether an executable exists.
-#                            Error out or return False if not exists;
+#                            Error out or return False if it does not exist;
 #                            return True if executable exists in PATH.
 # C_compile(): Compile C code using gcc.
 # Execute(): Execute generated executable file, using taskset
@@ -26,7 +26,7 @@
 import io, os, shlex, subprocess, sys, time, multiprocessing, getpass, platform, glob
 
 # check_executable_exists(): Check to see whether an executable exists.
-#                            Error out or return False if not exists;
+#                            Error out or return False if it does not exist;
 #                            return True if executable exists in PATH.
 def check_executable_exists(exec_name, error_if_not_found=True):
     cmd = "where" if os.name == "nt" else "which"
@@ -242,8 +242,8 @@ def mkdir(newpath):
         os.makedirs(os.path.join(newpath))
 
 def output_Jupyter_notebook_to_LaTeXed_PDF(notebookname, location_of_template_file=os.path.join("."), verbose=True):
-    Execute_input_string(r"jupyter nbconvert --to latex --template-file "
-                         +os.path.join(location_of_template_file,"latex_nrpy_style.tplx")
+    Execute_input_string(r"jupyter nbconvert --to latex --template="
+                         +os.path.join(location_of_template_file, "nbconvert_latex_settings")
                          +r" --log-level='WARN' "+notebookname+".ipynb",verbose=False)
     for _i in range(3):  # _i is an unused variable.
         Execute_input_string(r"pdflatex -interaction=batchmode "+notebookname+".tex",verbose=False)
