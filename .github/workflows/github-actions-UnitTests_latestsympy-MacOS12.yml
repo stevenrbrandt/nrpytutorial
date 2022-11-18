@@ -22,7 +22,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Brew install needed TeX packages (for pdflatex)
-      run: brew cask install basictex
+      run: brew install --cask basictex
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip setuptools
