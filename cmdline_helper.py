@@ -243,9 +243,12 @@ def mkdir(newpath):
         os.makedirs(os.path.join(newpath))
 
 def output_Jupyter_notebook_to_LaTeXed_PDF(notebookname, location_of_template_file=os.path.join("."), verbose=True):
-    Execute_input_string(r"jupyter nbconvert --to latex --template="
-                         +os.path.join(location_of_template_file, "nbconvert_latex_settings")
-                         +r" --log-level='WARN' "+notebookname+".ipynb",verbose=False)
+    if sys.version_info[0] == 3:
+        Execute_input_string(r"jupyter nbconvert --to latex --template="
+                             +os.path.join(location_of_template_file, "nbconvert_latex_settings")
+                             +r" --log-level='WARN' "+notebookname+".ipynb",verbose=False)
+    else:
+        Execute_input_string(r"jupyter nbconvert --to latex --log-level='WARN' "+notebookname+".ipynb",verbose=False)
     for _i in range(3):  # _i is an unused variable.
         Execute_input_string(r"pdflatex -interaction=batchmode "+notebookname+".tex",verbose=False)
     delete_existing_files(notebookname+".out "+notebookname+".aux "+notebookname+".log")
