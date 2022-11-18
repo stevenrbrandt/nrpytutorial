@@ -1,4 +1,4 @@
-name: Python package
+name: Core Jupyter notebooks--Ubuntu 20.04, latest released SymPy
 
 on:
   push:
