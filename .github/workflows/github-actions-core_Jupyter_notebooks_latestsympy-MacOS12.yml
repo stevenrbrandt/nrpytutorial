@@ -23,7 +23,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Brew install needed TeX packages (for pdflatex)
       run: |
-        brew install mactex
+        brew install texlive
         brew install ffmpeg  colordiff pandoc
     - name: Install dependencies
       run: |
