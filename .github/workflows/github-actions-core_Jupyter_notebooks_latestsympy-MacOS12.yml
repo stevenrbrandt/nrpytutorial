@@ -24,7 +24,7 @@ jobs:
     - name: Brew install needed TeX packages (for pdflatex)
       run: |
         brew install --cask basictex
-        brew install ffmpeg  colordiff pandoc
+        brew install ffmpeg  colordiff pandoc pdflatex
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip setuptools
