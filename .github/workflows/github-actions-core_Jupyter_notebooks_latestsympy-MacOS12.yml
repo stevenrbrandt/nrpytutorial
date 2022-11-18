@@ -1,4 +1,4 @@
-name: NRPy+ UnitTests--MacOS 12, Latest SymPy
+name: Core Jupyter notebook testsuite--MacOS 12, Latest SymPy
 
 on:
   push:
