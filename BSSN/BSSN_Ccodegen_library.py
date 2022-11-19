@@ -415,7 +415,7 @@ def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.
     if enable_rfm_precompute:
         params += "const rfm_struct *restrict rfmstruct, "
     else:
-        params += "REAL *xx[3], "
+        params += "REAL *restrict xx[3], "
     params += "const REAL *restrict in_gfs, REAL *restrict auxevol_gfs"
 
     # Construct body:
@@ -579,7 +579,7 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
     if enable_rfm_precompute:
         params += "const rfm_struct *restrict rfmstruct, "
     else:
-        params += "REAL *xx[3], "
+        params += "REAL *restrict xx[3], "
     params += "REAL *restrict in_gfs"
 
     # Construct body:
