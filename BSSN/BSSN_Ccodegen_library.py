@@ -524,7 +524,7 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
     if enable_rfm_precompute:
         params += "const rfm_struct *restrict rfmstruct, "
     else:
-        params += "REAL *xx[3], "
+        params += "REAL *restrict xx[3], "
     params += """
                  const REAL *restrict in_gfs, const REAL *restrict auxevol_gfs, REAL *restrict aux_gfs"""
 
