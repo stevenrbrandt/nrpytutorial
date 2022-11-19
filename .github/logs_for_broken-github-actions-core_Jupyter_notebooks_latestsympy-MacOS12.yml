@@ -1,0 +1,13 @@
+(EXEC): Executing `gcc -std=gnu99 -Ofast -fopenmp -funroll-loops MaxwellEvolCart_Playground_Ccodes/Maxwell_Playground.c -o MaxwellEvolCart_Playground_Ccodes/output/Maxwell_Playground -lm`...
+clang: error: unsupported option '-fopenmp'
+clang: error: unsupported option '-fopenmp'
+(BENCH): Finished executing in 0.36935901641845703 seconds.
+Next-to-most optimized compilation failed. Moving to maximally-compatible gcc compile option:
+(EXEC): Executing `gcc -std=gnu99 -O2 MaxwellEvolCart_Playground_Ccodes/Maxwell_Playground.c -o MaxwellEvolCart_Playground_Ccodes/output/Maxwell_Playground -lm`...
+MaxwellEvolCart_Playground_Ccodes/Maxwell_Playground.c:200:9: error: called object type 'double' is not a function or function pointer
+    time(&start_timer); // Resolution of one second...
+    ~~~~^
+MaxwellEvolCart_Playground_Ccodes/Maxwell_Playground.c:278:13: error: called object type 'double' is not a function or function pointer
+        time(&end_timer); // Resolution of one second...
+        ~~~~^
+2 errors generated.
