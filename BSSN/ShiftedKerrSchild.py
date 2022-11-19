@@ -19,6 +19,7 @@
 import sympy as sp             # SymPy: The Python computer algebra package upon which NRPy+ depends
 import NRPy_param_funcs as par # NRPy+: Parameter interface
 import indexedexp as ixp       # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
+from pickling import pickle_NRPy_env  # NRPy+: Pickle/unpickle NRPy+ environment, for parallel codegen
 import BSSN.ADM_Exact_Spherical_or_Cartesian_to_BSSNCurvilinear as AtoB
 
 thismodule = __name__
@@ -30,7 +31,7 @@ M, a, r0 = par.Cparameters("REAL", thismodule,
 
 # ComputeADMGlobalsOnly == True will only set up the ADM global quantities.
 #                       == False will perform the full ADM SphorCart->BSSN Curvi conversion
-def ShiftedKerrSchild(ComputeADMGlobalsOnly = False):
+def ShiftedKerrSchild(ComputeADMGlobalsOnly = False, include_NRPy_basic_defines_and_pickle=False):
     global Sph_r_th_ph,r,th,ph, rho2, gammaSphDD, KSphDD, alphaSph, betaSphU, BSphU
 
     # All gridfunctions will be written in terms of spherical coordinates (r, th, ph):
@@ -132,4 +133,7 @@ def ShiftedKerrSchild(ComputeADMGlobalsOnly = False):
 
     import BSSN.BSSN_ID_function_string as bIDf
     # Generates initial_data() C function & stores to outC_function_dict["initial_data"]
-    bIDf.BSSN_ID_function_string(cf, hDD, lambdaU, aDD, trK, alpha, vetU, betU)
+    bIDf.BSSN_ID_function_string(cf, hDD, lambdaU, aDD, trK, alpha, vetU, betU,
+                                 include_NRPy_basic_defines=include_NRPy_basic_defines_and_pickle)
+    if include_NRPy_basic_defines_and_pickle:
+        return pickle_NRPy_env()
