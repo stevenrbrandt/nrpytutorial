@@ -19,6 +19,10 @@ glb_gridfc = namedtuple('gridfunction', 'gftype name rank DIM f_infinity wavespe
 # Grids may have centerings. These will be C=cell-centered or V=vertex centered, with either one C or V per dimension
 gf_centering = {}
 
+# griddata_struct contains data needed by each grid
+glb_griddata = namedtuple('griddata', 'module string')
+glb_griddata_struct_list = []
+
 thismodule = __name__
 par.initialize_param(par.glb_param("char", thismodule, "GridFuncMemAccess", "SENRlike"))
 par.initialize_param(par.glb_param("char", thismodule, "MemAllocStyle", "210"))
@@ -69,19 +73,11 @@ def find_gftype(varname,die=True):
     if die:
         raise Exception(f"grid.py: Could not find gftype for '{varname}'.")
     else:
-        return None
-
-def gfaccess(gfarrayname = "", varname = "", ijklstring = ""):
-    found_registered_gf = False
-    for gf in glb_gridfcs_list:
-        if gf.name == varname:
-            if found_registered_gf:
-                print("Error: found duplicate gridfunction name: "+gf.name)
-                sys.exit(1)
-            found_registered_gf = True
-
+        raise Exception(f"grid.py: Could not find variable_type for '{var}'.")
     if not found_registered_gf:
-        raise Exception(f"Error: gridfunction '{varname}' is not registered!")
+        print("Error: gridfunction \""+varname+"\" is not registered!")
+        print("Here's the list of registered gridfunctions:", grid.glb_gridfcs_list)
+        sys.exit(1)
 
 def find_gfnames():
     return sorted(list(glb_gridfcs_map().keys()))

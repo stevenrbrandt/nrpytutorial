@@ -1014,47 +1014,6 @@ def basis_transform_tensorDD_from_Cartesian_to_rfmbasis(Jac_dUCart_dDrfmUD, Cart
                     rfm_dst_tensorDD[i][j] += Jac_dUCart_dDrfmUD[l][i]*Jac_dUCart_dDrfmUD[m][j]*Cart_src_tensorDD[l][m]
     return rfm_dst_tensorDD
 
-
-# Useful for stress-energy tensor; assumes reference metric is time-independent.
-def basis_transform_4tensorUU_from_time_indep_rfmbasis_to_Cartesian(Jac_dUCart_dDrfmUD, T4UU):
-    # 4D Jacobians assume that reference metric is time-independent
-    Jac4_dUCart_dDrfmUD = ixp.zerorank2(DIM=4)
-    Jac4_dUCart_dDrfmUD[0][0] = sp.sympify(1)
-    for i in range(3):
-        for j in range(3):
-            Jac4_dUCart_dDrfmUD[i+1][j+1] = Jac_dUCart_dDrfmUD[i][j]
-
-    # Perform Jacobian operations on T^{mu nu}
-    Cart_dst_T4UU = ixp.zerorank2(DIM=4)
-    for mu in range(4):
-        for nu in range(4):
-            for delta in range(4):
-                for sigma in range(4):
-                    Cart_dst_T4UU[mu][nu] += \
-                         Jac4_dUCart_dDrfmUD[mu][delta]*Jac4_dUCart_dDrfmUD[nu][sigma]*T4UU[delta][sigma]
-    return Cart_dst_T4UU
-
-
-# Useful for stress-energy tensor; assumes reference metric is time-independent.
-def basis_transform_4tensorUU_from_Cartesian_to_time_indep_rfmbasis(Jac_dUrfm_dDCartUD, T4UU):
-    # 4D Jacobians assume that reference metric is time-independent
-    Jac4_dUrfm_dDCartUD = ixp.zerorank2(DIM=4)
-    Jac4_dUrfm_dDCartUD[0][0] = sp.sympify(1)
-    for i in range(3):
-        for j in range(3):
-            Jac4_dUrfm_dDCartUD[i+1][j+1] = Jac_dUrfm_dDCartUD[i][j]
-
-    # Perform Jacobian operations on T^{mu nu}
-    Cart_dst_T4UU = ixp.zerorank2(DIM=4)
-    for mu in range(4):
-        for nu in range(4):
-            for delta in range(4):
-                for sigma in range(4):
-                    Cart_dst_T4UU[mu][nu] += \
-                         Jac4_dUrfm_dDCartUD[mu][delta]*Jac4_dUrfm_dDCartUD[nu][sigma]*T4UU[delta][sigma]
-    return Cart_dst_T4UU
-
-
 # to/from spherical coordinates
 def compute_Jacobian_and_inverseJacobian_tofrom_Spherical():
     # Step 2.a: First construct Jacobian matrix:
@@ -1088,7 +1047,6 @@ def ds_dirn(delxx):
     return ds_dirn
 
 
-# Find the appropriate timestep for the CFL condition.
 # Find the appropriate timestep for the CFL condition.
 def add_to_Cfunction_dict__find_timestep(rel_path_to_Cparams=os.path.join("./"),
                                          use_unit_wavespeed=False, set_dsmin_gridfunction=False):
@@ -1282,19 +1240,19 @@ def add_to_Cfunc_dict__Cart_to_xx_and_nearest_i0i1i2(rel_path_to_Cparams=os.path
     preloop = ""
     if relative_to == "local_grid_center":
         preloop = """
-    // First compute the closest (xx0,xx1,xx2) to the given Cartesian gridpoint (x,y,z),
-    //   *relative* to the center of the local grid.
-    //   So for example,
-    //   1) if global xCart[012] = (1,1,1), and the
-    //      origin of the grid is at global xCart (x,y,z) = (1,1,1), then
-    //      (Cartx,Carty,Cartz) = (0,0,0)
-    //   2) if global xCart[012] = (0,0,0), and the
-    //      origin of the grid is at global xCart (x,y,z) = (1,1,1), then
-    //      (Cartx,Carty,Cartz) = (-1,-1,-1)
-    // Therefore, (Cartx,Carty,Cartz) = (xCart[0]-originx, xCart[1]-originy, xCart[2]-originz)
-    const REAL Cartx = xCart[0] - Cart_originx;
-    const REAL Carty = xCart[1] - Cart_originy;
-    const REAL Cartz = xCart[2] - Cart_originz;
+  // First compute the closest (xx0,xx1,xx2) to the given Cartesian gridpoint (x,y,z),
+  //   *relative* to the center of the local grid.
+  //   So for example,
+  //   1) if global xCart[012] = (1,1,1), and the
+  //      origin of the grid is at global xCart (x,y,z) = (1,1,1), then
+  //      (Cartx,Carty,Cartz) = (0,0,0)
+  //   2) if global xCart[012] = (0,0,0), and the
+  //      origin of the grid is at global xCart (x,y,z) = (1,1,1), then
+  //      (Cartx,Carty,Cartz) = (-1,-1,-1)
+  // Therefore, (Cartx,Carty,Cartz) = (xCart[0]-originx, xCart[1]-originy, xCart[2]-originz)
+  const REAL Cartx = xCart[0] - Cart_originx;
+  const REAL Carty = xCart[1] - Cart_originy;
+  const REAL Cartz = xCart[2] - Cart_originz;
 """
     elif relative_to == "global_grid_center":
         preloop = """
@@ -1335,7 +1293,13 @@ def add_to_Cfunc_dict__Cart_to_xx_and_nearest_i0i1i2(rel_path_to_Cparams=os.path
         rel_path_to_Cparams=rel_path_to_Cparams)
 
 
-def add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=os.path.join("./"), NGHOSTS_is_a_param=False):
+def add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=os.path.join("./")):
+    includes = [os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")]
+    desc = "Override default values for Nxx{0,1,2}, Nxx_plus_2NGHOSTS{0,1,2}, dxx{0,1,2}, and invdx{0,1,2}; and set xx[3][]"
+    c_type = "void"
+    name = "set_Nxx_dxx_invdx_params__and__xx"
+    params = "const int EigenCoord, const int Nxx[3],paramstruct *restrict params, REAL *restrict xx[3]"
+
     def set_xxmin_xxmax():
         outstr = ""
         for dirn in range(3):
@@ -1343,18 +1307,17 @@ def add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=os.p
             outstr += "    xxmax[" + str(dirn) + "] = " + str(xxmax[dirn]) + ";\n"
         return outstr
     body = """
+  // Set CoordSystemName
+  snprintf(params->CoordSystemName, 100, \"""" + par.parval_from_str("CoordSystem") + """\");
+
   // Override parameter defaults with values based on command line arguments and NGHOSTS.
   params->Nxx0 = Nxx[0];
   params->Nxx1 = Nxx[1];
   params->Nxx2 = Nxx[2];
-"""
-    NGHOSTS_prefix=""
-    if NGHOSTS_is_a_param:
-        NGHOSTS_prefix="params->"
-    body += """
-  params->Nxx_plus_2NGHOSTS0 = Nxx[0] + 2*"""+NGHOSTS_prefix+"""NGHOSTS;
-  params->Nxx_plus_2NGHOSTS1 = Nxx[1] + 2*"""+NGHOSTS_prefix+"""NGHOSTS;
-  params->Nxx_plus_2NGHOSTS2 = Nxx[2] + 2*"""+NGHOSTS_prefix+"""NGHOSTS;
+
+  params->Nxx_plus_2NGHOSTS0 = Nxx[0] + 2*NGHOSTS;
+  params->Nxx_plus_2NGHOSTS1 = Nxx[1] + 2*NGHOSTS;
+  params->Nxx_plus_2NGHOSTS2 = Nxx[2] + 2*NGHOSTS;
   // Now that params->Nxx_plus_2NGHOSTS* has been set, and below we need e.g., Nxx_plus_2NGHOSTS*, we include set_Cparameters.h here:
 #include \"""" + os.path.join(rel_path_to_Cparams, "set_Cparameters.h") + """\"
   // Step 0d: Set up space and time coordinates
@@ -1382,18 +1345,16 @@ def add_to_Cfunc_dict_set_Nxx_dxx_invdx_params__and__xx(rel_path_to_Cparams=os.p
     for dirn in ["0", "1", "2"]:
         body += "  params->dxx"+dirn+" = (xxmax["+dirn+"] - xxmin["+dirn+"]) / ((REAL)Nxx["+dirn+"]);\n"
         body += "  params->invdx"+dirn+" = 1.0/params->dxx"+dirn+";\n"
-        body += """  xx["""+dirn+"""] = (REAL *)malloc(sizeof(REAL)*Nxx_plus_2NGHOSTS"""+dirn + """);
+        body += """  xx["""+dirn+"""] = (REAL *)malloc(sizeof(REAL)*Nxx_plus_2NGHOSTS"""+dirn+ """);
+#pragma omp parallel for
   for(int j=0;j<Nxx_plus_2NGHOSTS"""+dirn+""";j++)
-    xx["""+dirn+"""][j] = xxmin["""+dirn+"""] + ((REAL)(j-NGHOSTS) + (1.0/2.0))*params->dxx"""+dirn+"""; // Cell-centered grid.\n"""
-        if dirn != "2":
-            body += "\n"
+    xx["""+dirn+"""][j] = xxmin["""+dirn+"""] + ((REAL)(j-NGHOSTS) + (1.0/2.0))*params->dxx"""+dirn+"""; // Cell-centered grid.\n\n"""
+    body = body[:-1]  # Remove last "\n" for consistent aesthetics
 
     add_to_Cfunction_dict(
-        includes=[os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
-        desc  ="Override default values for Nxx{0,1,2}, Nxx_plus_2NGHOSTS{0,1,2}, dxx{0,1,2}, and invdx{0,1,2}; and set xx[3][]",
-        c_type="void",
-        name  ="set_Nxx_dxx_invdx_params__and__xx",
-        params="const int EigenCoord, const int Nxx[3],paramstruct *restrict params, REAL *restrict xx[3]",
+        includes=includes,
+        desc  =desc,
+        c_type=c_type,  name  =name,  params=params,
         body  =body,
         enableCparameters=False)  # Cparameters here must be #include'd in body, not at top of function as usual.
 
@@ -1425,7 +1386,7 @@ def add_to_Cfunc_dict_xx_to_Cart(rel_path_to_Cparams=os.path.join("./")):
 
 def register_NRPy_basic_defines(enable_rfm_precompute=False):
     # TODO: Move the following to the top of this file when "old_way" is deprecated
-    par.initialize_Cparam(par.glb_Cparam("char [100]", thismodule, "CoordSystemName", "Nxx_dxx_invdx_params__and__xx_sets_this"))
+    _ignore = par.initialize_Cparam(par.glb_param("char [100]", thismodule, "CoordSystemName", "Call_set_Nxx_dxx_invdx_params__and__xx_to_set"))
 
     Nbd = ""
     if enable_rfm_precompute:
