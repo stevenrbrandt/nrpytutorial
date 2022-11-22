@@ -41,8 +41,8 @@ def generate_gridfunction_names(MoL_method = "RK4"):
     #              storage when gridfunctions needed for diagnostics are computed at the start of each timestep.
     #              These gridfunctions can also be freed during a regrid, to enable storage for the post-regrid
     #              destination y_n_gfs.
-    #           3) Diagnostic output gridfunctions diagnostic_output_gfs, which simply uses the memory from auxiliary
-    #              gridfunctions at one auxiliary time to compute diagnostics at t_n.
+    #           3) Diagnostic output gridfunctions diagnostic_output_gfs & diagnostic_output_gfs2, which simply use
+    #              the memory from auxiliary gridfunctions at one auxiliary time to compute diagnostics at t_n.
 
     # Here we specify which gridfunctions fall into each category, starting with the obvious: y_n_gridfunctions
     y_n_gridfunctions = "y_n_gfs"
@@ -51,10 +51,12 @@ def generate_gridfunction_names(MoL_method = "RK4"):
     non_y_n_gridfunctions_list = []
 
     # No matter the method we define gridfunctions "y_n_gfs" to store the initial data
+    diagnostic_gridfunctions2_point_to = ""
     if diagonal(MoL_method) and "RK3" in MoL_method:
         non_y_n_gridfunctions_list.append("k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs")
         non_y_n_gridfunctions_list.append("k2_or_y_nplus_a32_k2_gfs")
         diagnostic_gridfunctions_point_to = "k1_or_y_nplus_a21_k1_or_y_nplus1_running_total_gfs"
+        diagnostic_gridfunctions2_point_to = "k2_or_y_nplus_a32_k2_gfs"
     else:
         if not diagonal(MoL_method):  # Allocate memory for non-diagonal Butcher tables
             # Determine the number of k_i steps based on length of Butcher Table
@@ -64,16 +66,22 @@ def generate_gridfunction_names(MoL_method = "RK4"):
             for i in range(num_k): # Need to allocate all k_i steps for a given method
                 non_y_n_gridfunctions_list.append("k" + str(i + 1) + "_gfs")
             diagnostic_gridfunctions_point_to = "k1_gfs"
+            if "k2_gfs" in non_y_n_gridfunctions_list:
+                diagnostic_gridfunctions2_point_to = "k2_gfs"
+            else:
+                print("MoL WARNING: No gridfunction group available for diagnostic_output_gfs2")
         else:  # Allocate memory for diagonal Butcher tables, which use a "y_nplus1_running_total gridfunction"
             non_y_n_gridfunctions_list.append("y_nplus1_running_total_gfs")
             if MoL_method != 'Euler':  # Allocate memory for diagonal Butcher tables that aren't Euler
                 # Need k_odd for k_1,3,5... and k_even for k_2,4,6...
                 non_y_n_gridfunctions_list.append("k_odd_gfs")
                 non_y_n_gridfunctions_list.append("k_even_gfs")
-            diagnostic_gridfunctions_point_to = "y_nplus1_running_total_gfs"
+            diagnostic_gridfunctions_point_to  = "y_nplus1_running_total_gfs"
+            diagnostic_gridfunctions2_point_to = "k_odd_gfs"
     non_y_n_gridfunctions_list.append("auxevol_gfs")
 
-    return y_n_gridfunctions, non_y_n_gridfunctions_list, diagnostic_gridfunctions_point_to
+    return y_n_gridfunctions, non_y_n_gridfunctions_list,\
+           diagnostic_gridfunctions_point_to, diagnostic_gridfunctions2_point_to
 
 
 # add_to_Cfunction_dict_MoL_malloc() registers
@@ -87,10 +95,9 @@ def add_to_Cfunction_dict_MoL_malloc(MoL_method, which_gfs):
     desc += "   * non_y_n_gfs are needed for intermediate (e.g., k_i) storage in chosen MoL method\n"
     c_type = "void"
 
-    y_n_gridfunctions, non_y_n_gridfunctions_list, diagnostic_gridfunctions_point_to = \
+    y_n_gridfunctions, non_y_n_gridfunctions_list, diagnostic_gridfunctions_point_to, diagnostic_gridfunctions2_point_to = \
         generate_gridfunction_names(MoL_method = MoL_method)
 
-    gridfunctions_list = []
     if which_gfs == "y_n_gfs":
         gridfunctions_list = [y_n_gridfunctions]
     elif which_gfs == "non_y_n_gfs":
@@ -106,7 +113,8 @@ def add_to_Cfunction_dict_MoL_malloc(MoL_method, which_gfs):
         if gridfunctions == "auxevol_gfs":
             num_gfs = "NUM_AUXEVOL_GFS"
         body += "gridfuncs->" + gridfunctions + " = (REAL *restrict)malloc(sizeof(REAL) * " + num_gfs + " * Nxx_plus_2NGHOSTS_tot);\n"
-    body += "\ngridfuncs->diagnostic_output_gfs = gridfuncs->" + diagnostic_gridfunctions_point_to + ";\n"
+    body += "\ngridfuncs->diagnostic_output_gfs  = gridfuncs->" + diagnostic_gridfunctions_point_to + ";\n"
+    body += "\ngridfuncs->diagnostic_output_gfs2 = gridfuncs->" + diagnostic_gridfunctions2_point_to + ";\n"
     add_to_Cfunction_dict(
         includes=includes,
         desc=desc,
@@ -245,7 +253,7 @@ def add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method,
 
     body = indent + "// C code implementation of -={ " + MoL_method + " }=- Method of Lines timestepping.\n\n"
 
-    y_n_gridfunctions, non_y_n_gridfunctions_list, _throwaway = generate_gridfunction_names(MoL_method)
+    y_n_gridfunctions, non_y_n_gridfunctions_list, _throwaway, _throwaway2 = generate_gridfunction_names(MoL_method)
     if enable_griddata:
         gf_prefix = "griddata->gridfuncs."
     else:
@@ -261,7 +269,8 @@ REAL *restrict """ + y_n_gridfunctions + " = "+gf_prefix + y_n_gridfunctions + "
             gf_aliases += "const rfm_struct *restrict rfmstruct = &griddata->rfmstruct;\n"
         else:
             gf_aliases += "REAL * xx[3]; for(int ww=0;ww<3;ww++) xx[ww] = griddata->xx[ww];\n"
-        gf_aliases += "const bc_struct *restrict bcstruct = &griddata->bcstruct;\n"
+        if enable_curviBCs:
+            gf_aliases += "const bc_struct *restrict bcstruct = &griddata->bcstruct;\n"
         for i in ["0", "1", "2"]:
             gf_aliases += "const int Nxx_plus_2NGHOSTS" + i + " = griddata->params.Nxx_plus_2NGHOSTS" + i + ";\n"
 
@@ -466,10 +475,9 @@ def add_to_Cfunction_dict_MoL_free_memory(MoL_method, which_gfs):
         desc += "   - non_y_n_gfs are needed for intermediate (e.g., k_i) storage in chosen MoL method\n"
         c_type = "void"
 
-        y_n_gridfunctions, non_y_n_gridfunctions_list, diagnostic_gridfunctions_point_to = \
-            generate_gridfunction_names(MoL_method=MoL_method)
+        y_n_gridfunctions, non_y_n_gridfunctions_list, diagnostic_gridfunctions_point_to, \
+            diagnostic_gridfunctions2_point_to = generate_gridfunction_names(MoL_method=MoL_method)
 
-        gridfunctions_list = []
         if which_gfs == "y_n_gfs":
             gridfunctions_list = [y_n_gridfunctions]
         elif which_gfs == "non_y_n_gfs":
@@ -492,8 +500,8 @@ def add_to_Cfunction_dict_MoL_free_memory(MoL_method, which_gfs):
 
 # Register MoL_gridfunctions_struct in NRPy_basic_defines
 def NRPy_basic_defines_MoL_timestepping_struct(MoL_method="RK4"):
-    y_n_gridfunctions, non_y_n_gridfunctions_list, diagnostic_gridfunctions_point_to = \
-        generate_gridfunction_names(MoL_method=MoL_method)
+    y_n_gridfunctions, non_y_n_gridfunctions_list, diagnostic_gridfunctions_point_to, \
+        diagnostic_gridfunctions2_point_to = generate_gridfunction_names(MoL_method=MoL_method)
     # Step 3.b: Create MoL_timestepping struct:
     indent = "  "
     Nbd = "typedef struct __MoL_gridfunctions_struct__ {\n"
@@ -501,11 +509,18 @@ def NRPy_basic_defines_MoL_timestepping_struct(MoL_method="RK4"):
     for gfs in non_y_n_gridfunctions_list:
         Nbd += indent + "REAL *restrict " + gfs + ";\n"
     Nbd += indent + "REAL *restrict diagnostic_output_gfs;\n"
+    Nbd += indent + "REAL *restrict diagnostic_output_gfs2;\n"
     Nbd += "} MoL_gridfunctions_struct;\n"
     Nbd += """#define LOOP_ALL_GFS_GPS(ii) _Pragma("omp parallel for") \\
   for(int (ii)=0;(ii)<Nxx_plus_2NGHOSTS0*Nxx_plus_2NGHOSTS1*Nxx_plus_2NGHOSTS2*NUM_EVOL_GFS;(ii)++)\n"""
 
     outC_NRPy_basic_defines_h_dict["MoL"] = Nbd
+
+    # Finally, register per-grid (griddata) and all-grids
+    #   (commondata) data for this module. griddata and
+    #   and commondata are declared inside NRPy_basic_defines.h.
+    import grid as gri
+    gri.glb_griddata_struct_list += [gri.glb_griddata(__name__, "MoL_gridfunctions_struct gridfuncs;")]
 
 
 # Finally declare the master registration function
