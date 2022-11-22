@@ -723,6 +723,23 @@ def outputC_register_C_functions_and_NRPy_basic_defines():
     outC_NRPy_basic_defines_h_dict["outputC"] = Nbd_str
 
 
+def type_and_parname_from_Cparam(glb_Cparam):
+    c_type = glb_Cparam.type
+    if "char" in glb_Cparam.type:
+        c_type = "char"
+
+    parname = glb_Cparam.parname
+    if "char" in glb_Cparam.type:
+        if len(glb_Cparam.type.split(" ")) == 2:
+            parname += glb_Cparam.type.split()[1]
+        else:
+            print("NRPy_param_funcs error: char array must specify size in type field.")
+            print("                        E.g., char blah[100] -> type = \"char [100]\"")
+            print("                        Found this: ", glb_Cparam)
+            sys.exit(1)
+
+    return c_type, parname
+
 # Must be done here since outputC imports NRPy_param_funcs
 def NRPy_param_funcs_register_C_functions_and_NRPy_basic_defines(directory=os.path.join(".")):
     # Set up the C function for BSSN basis transformations
@@ -732,14 +749,21 @@ def NRPy_param_funcs_register_C_functions_and_NRPy_basic_defines(directory=os.pa
     name = "set_Cparameters_to_default"
     params = "paramstruct *restrict params"
     body = ""
+
     for i in range(len(par.glb_Cparams_list)):
-        if par.glb_Cparams_list[i].type != "#define":
-            c_output = "  params->" + par.glb_Cparams_list[i].parname
-            comment = "  // " + par.glb_Cparams_list[i].module + "::" + par.glb_Cparams_list[i].parname
-            if isinstance(par.glb_Cparams_list[i].defaultval, (bool, int, float)):
-                c_output += " = " + str(par.glb_Cparams_list[i].defaultval).lower() + ";" + comment + "\n"
-            elif par.glb_Cparams_list[i].type == "char" and isinstance(par.glb_Cparams_list[i].defaultval, (str)):
-                c_output += " = \"" + str(par.glb_Cparams_list[i].defaultval).lower() + "\";" + comment + "\n"
+        Cptype, parname = type_and_parname_from_Cparam(par.glb_Cparams_list[i])
+        if Cptype != "#define":
+            comment = "  // " + par.glb_Cparams_list[i].module + "::" + parname
+            c_output = "  params->" + parname
+            defaultval = par.glb_Cparams_list[i].defaultval
+            if Cptype == "char":
+                chararray_name = parname.split("[")[0]
+                chararray_size = parname.split("[")[1].replace("]", "")
+                c_output = "  snprintf(params->" + chararray_name + \
+                           ", " + chararray_size + ", " \
+                           "\"" + defaultval + "\");" + comment + "\n"
+            elif isinstance(par.glb_Cparams_list[i].defaultval, (bool, int, float)):
+                c_output += " = " + str(defaultval).lower() + ";" + comment + "\n"
             else:
                 c_output += " = " + str(par.glb_Cparams_list[i].defaultval) + ";" + comment + "\n"
             body += c_output
@@ -760,19 +784,19 @@ def NRPy_param_funcs_register_C_functions_and_NRPy_basic_defines(directory=os.pa
     def gen_set_Cparameters(pointerEnable=True):
         returnstring = ""
         for i in range(len(par.glb_Cparams_list)):
-            if par.glb_Cparams_list[i].type == "char":
-                c_type = "char *"
-            else:
-                c_type = par.glb_Cparams_list[i].type
+            # C parameter type, parameter name
+            Cptype, Cpparname = type_and_parname_from_Cparam(par.glb_Cparams_list[i])
+            # For efficiency reasons, set_Cparameters*.h does not set char arrays;
+            #   access those from the params struct directly.
+            if Cptype != "char":
+                pointer = "->"
+                if pointerEnable==False:
+                    pointer = "."
 
-            pointer = "->"
-            if pointerEnable==False:
-                pointer = "."
-
-            if not ((c_type == "REAL" and par.glb_Cparams_list[i].defaultval == 1e300) or c_type == "#define"):
-                comment = "  // " + par.glb_Cparams_list[i].module + "::" + par.glb_Cparams_list[i].parname
-                Coutput = "const "+c_type+" "+par.glb_Cparams_list[i].parname+" = "+"params"+pointer+par.glb_Cparams_list[i].parname + ";" + comment + "\n"
-                returnstring += Coutput
+                if not ((Cptype == "REAL" and par.glb_Cparams_list[i].defaultval == 1e300) or Cptype == "#define" or Cptype == "externally_defined"):
+                    comment = "  // " + par.glb_Cparams_list[i].module + "::" + Cpparname
+                    Coutput = "const " + Cptype + " " + Cpparname + " = " + "params" + pointer + Cpparname + ";" + comment + "\n"
+                    returnstring += Coutput
         return returnstring
 
     # Next output header files for setting C parameters to current values within functions.
@@ -784,21 +808,17 @@ def NRPy_param_funcs_register_C_functions_and_NRPy_basic_defines(directory=os.pa
     # Step 4.b: Output SIMD version, set_Cparameters-SIMD.h
     with open(os.path.join(directory, "set_Cparameters-SIMD.h"), "w") as file:
         for i in range(len(par.glb_Cparams_list)):
-            if par.glb_Cparams_list[i].type == "char":
-                c_type = "char *"
-            else:
-                c_type = par.glb_Cparams_list[i].type
-
-            comment = "  // " + par.glb_Cparams_list[i].module + "::" + par.glb_Cparams_list[i].parname
-            parname = par.glb_Cparams_list[i].parname
-            if c_type == "REAL" and par.glb_Cparams_list[i].defaultval != 1e300:
-                c_output =  "const REAL            NOSIMD" + parname + " = " + "params->" + par.glb_Cparams_list[i].parname + ";"+comment+"\n"
-                c_output += "const REAL_SIMD_ARRAY " + parname + " = ConstSIMD(NOSIMD" + parname + ");"+comment+"\n"
-                file.write(c_output)
-            elif par.glb_Cparams_list[i].defaultval != 1e300 and c_type != "#define":
-                c_output = "const "+c_type+" "+parname + " = " + "params->" + par.glb_Cparams_list[i].parname + ";"+comment+"\n"
-                file.write(c_output)
-
+            # SIMD does not support char arrays.
+            if "char" not in par.glb_Cparams_list[i].type:
+                Cptype, Cpparname = type_and_parname_from_Cparam(par.glb_Cparams_list[i])
+                comment = "  // " + par.glb_Cparams_list[i].module + "::" + Cpparname
+                if Cptype == "REAL" and par.glb_Cparams_list[i].defaultval != 1e300:
+                    c_output =  "const REAL            NOSIMD" + Cpparname + " = " + "params->" + Cpparname + ";"+comment+"\n"
+                    c_output += "const REAL_SIMD_ARRAY " + Cpparname + " = ConstSIMD(NOSIMD" + Cpparname + ");"+comment+"\n"
+                    file.write(c_output)
+                elif par.glb_Cparams_list[i].defaultval != 1e300 and Cptype != "#define":
+                    c_output = "const "+Cptype+" "+Cpparname + " = " + "params->" + Cpparname + ";"+comment+"\n"
+                    file.write(c_output)
 
     # Set up the dictionary entry for grid in NRPy_basic_defines
     # Generate C code to declare C paramstruct;
@@ -810,12 +830,9 @@ def NRPy_param_funcs_register_C_functions_and_NRPy_basic_defines(directory=os.pa
     CCodelines = []
     for i in range(len(par.glb_Cparams_list)):
         if par.glb_Cparams_list[i].type != "#define":
-            if par.glb_Cparams_list[i].type == "char":
-                c_type = "char *"
-            else:
-                c_type = par.glb_Cparams_list[i].type
-            comment = "  // " + par.glb_Cparams_list[i].module + "::" + par.glb_Cparams_list[i].parname
-            CCodelines.append("  " + c_type + " " + par.glb_Cparams_list[i].parname + ";" + comment + "\n")
+            Cptype, Cpparname = type_and_parname_from_Cparam(par.glb_Cparams_list[i])
+            comment = "  // " + par.glb_Cparams_list[i].module + "::" + Cpparname
+            CCodelines.append("  " + Cptype + " " + Cpparname + ";" + comment + "\n")
     for line in sorted(CCodelines):
         Nbd_str += line
     Nbd_str += "} paramstruct;\n"

@@ -235,7 +235,7 @@ def generate_Cparameters_Ccodes(directory=os.path.join(".")):
     for i in range(len(glb_Cparams_list)):
         if glb_Cparams_list[i].type != "#define":
             if glb_Cparams_list[i].type == "char":
-                c_type = "char *"
+                c_type = "char"
             else:
                 c_type = glb_Cparams_list[i].type
             comment = "  // " + glb_Cparams_list[i].module + "::" + glb_Cparams_list[i].parname
@@ -308,3 +308,10 @@ def generate_Cparameters_Ccodes(directory=os.path.join(".")):
                 c_output = "const "+c_type+" "+parname + " = " + "params->" + glb_Cparams_list[i].parname + ";"+comment+"\n"
                 file.write(c_output)
 ############################
+
+
+def register_NRPy_basic_defines():
+    import grid as gri
+    # Register griddata_struct variables for this module,
+    #   where griddata_struct is declared in NRPy_basic_defines.h
+    gri.glb_griddata_struct_list += [gri.glb_griddata(__name__, "paramstruct params;")]
