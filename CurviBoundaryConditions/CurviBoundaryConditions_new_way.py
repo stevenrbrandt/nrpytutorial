@@ -1162,6 +1162,10 @@ def CurviBoundaryConditions_register_NRPy_basic_defines(verbose=True):
     Nbd_str += NRPy_basic_defines_set_gridfunction_defines_with_parity_types(verbose=verbose)
     outC_NRPy_basic_defines_h_dict["CurviBoundaryConditions"] = Nbd_str
 
+    # Register griddata_struct variables for this module,
+    #   where griddata_struct is declared in NRPy_basic_defines.h
+    gri.glb_griddata_struct_list += [gri.glb_griddata(__name__, "bc_struct bcstruct;")]
+
 
 def CurviBoundaryConditions_register_C_functions(rel_path_to_Cparams=os.path.join("./"),
                                                  radiation_BC_FD_order=4):
