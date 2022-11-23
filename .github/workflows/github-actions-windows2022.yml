@@ -21,15 +21,15 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Brew install needed TeX packages (for pdflatex)
-      run: |
-        choco install texlive
-        choco install ffmpeg pandoc
+    # - name: Brew install needed TeX packages (for pdflatex)
+    #   run: |
+    #     choco install texlive
+    #     choco install ffmpeg pandoc
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip setuptools
         python -m pip install --upgrade nbconvert
         python -m pip install testfixtures sympy mpmath jupyter matplotlib scipy nrpylatex
-    - name: BSSNTwoBHsCollide
+    - name: Core Jupyter notebook testsuite
       run: |
-        jupyter nbconvert --to notebook --inplace --execute --ExecutePreprocessor.timeout=-1 Tutorial-Start_to_Finish-BSSNCurvilinear-Two_BHs_Collide_new_way.ipynb
+        ./UnitTesting/core_Jupyter_notebook_testsuite.sh
