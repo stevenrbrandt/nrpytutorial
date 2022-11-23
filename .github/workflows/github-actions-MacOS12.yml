@@ -1,4 +1,4 @@
-name: NRPy+ UnitTests--MacOS 12, Latest SymPy
+name: MacOS 12
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: master
 
 jobs:
-  build:
+  UnitTestlatestSymPy:
 
     runs-on: macos-12
     strategy:
