@@ -80,7 +80,6 @@ disable=too-many-arguments,redefined-outer-name,wrong-import-position,too-many-l
         missing-docstring,          # ADDED
         unspecified-encoding,       # ADDED
         use-maxsplit-arg,           # ADDED
-        consider-using-f-string,    # ADDED
         raw-checker-failed,
         bad-inline-option,
         locally-disabled,
