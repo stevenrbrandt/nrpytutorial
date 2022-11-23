@@ -60,9 +60,10 @@ def C_compile(main_C_output_path, main_C_output_file, compile_mode="optimized", 
         Execute_input_string(compile_string, os.devnull)
         # Check if executable exists (i.e., compile was successful), if not, try with more conservative compile flags.
         if not os.path.isfile(main_C_output_file):
-            # Step 3.A: Revert to more compatible gcc compile option
-            print("Most safe failed. Removing -fopenmp:")
-            compile_string = "gcc -std=gnu99 -O2 "+str(main_C_output_path)+" -o "+str(main_C_output_file)+" -lm"+additional_libraries
+            # Step 3.A: Maybe gcc is actually clang in disguise (as in MacOS)?!
+            #           https://stackoverflow.com/questions/33357029/using-openmp-with-clang
+            print("Most safe failed. Probably on MacOS. Replacing -fopenmp with -fopenmp=libomp:")
+            compile_string = "gcc -std=gnu99 -O2 -fopenmp=libomp "+str(main_C_output_path)+" -o "+str(main_C_output_file)+" -lm"+additional_libraries
             Execute_input_string(compile_string, os.devnull)
         if not os.path.isfile(main_C_output_file):
             print("Sorry, compilation failed")
