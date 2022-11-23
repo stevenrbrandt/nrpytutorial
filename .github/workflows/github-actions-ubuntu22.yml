@@ -1,4 +1,4 @@
-name: Core Jupyter notebooks--Ubuntu 22.04
+name: Ubuntu 22.04
 
 on:
   push:
