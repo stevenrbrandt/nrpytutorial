@@ -469,39 +469,39 @@ REAL *restrict """ + y_n_gridfunctions + " = "+gf_prefix + y_n_gridfunctions + "
 #           MoL_free_memory_non_y_n_gfs(), which free memory for
 #           the indicated sets of gridfunctions
 def add_to_Cfunction_dict_MoL_free_memory(MoL_method, which_gfs):
-        includes = ["NRPy_basic_defines.h", "NRPy_function_prototypes.h"]
-        desc = "Method of Lines (MoL) for \"" + MoL_method + "\" method: Free memory for \"" + which_gfs + "\" gridfunctions\n"
-        desc += "   - y_n_gfs are used to store data for the vector of gridfunctions y_i at t_n, at the start of each MoL timestep\n"
-        desc += "   - non_y_n_gfs are needed for intermediate (e.g., k_i) storage in chosen MoL method\n"
-        c_type = "void"
+    includes = ["NRPy_basic_defines.h", "NRPy_function_prototypes.h"]
+    desc = "Method of Lines (MoL) for \"" + MoL_method + "\" method: Free memory for \"" + which_gfs + "\" gridfunctions\n"
+    desc += "   - y_n_gfs are used to store data for the vector of gridfunctions y_i at t_n, at the start of each MoL timestep\n"
+    desc += "   - non_y_n_gfs are needed for intermediate (e.g., k_i) storage in chosen MoL method\n"
+    c_type = "void"
 
-        y_n_gridfunctions, non_y_n_gridfunctions_list, diagnostic_gridfunctions_point_to, \
-            diagnostic_gridfunctions2_point_to = generate_gridfunction_names(MoL_method=MoL_method)
+    y_n_gridfunctions, non_y_n_gridfunctions_list, _diagnostic_gridfunctions_point_to, \
+        _diagnostic_gridfunctions2_point_to = generate_gridfunction_names(MoL_method=MoL_method)
 
-        if which_gfs == "y_n_gfs":
-            gridfunctions_list = [y_n_gridfunctions]
-        elif which_gfs == "non_y_n_gfs":
-            gridfunctions_list = non_y_n_gridfunctions_list
-        else:
-            print("ERROR: which_gfs = \"" + which_gfs + "\" unrecognized.")
-            sys.exit(1)
-        name = "MoL_free_memory_" + which_gfs
-        params = "const paramstruct *restrict params, MoL_gridfunctions_struct *restrict gridfuncs"
-        body = ""
-        for gridfunctions in gridfunctions_list:
-            body += "    free(gridfuncs->" + gridfunctions + ");\n"
-        add_to_Cfunction_dict(
-            includes=includes,
-            desc=desc,
-            c_type=c_type, name=name, params=params,
-            body=indent_Ccode(body, "  "),
-            rel_path_to_Cparams=os.path.join("."))
+    if which_gfs == "y_n_gfs":
+        gridfunctions_list = [y_n_gridfunctions]
+    elif which_gfs == "non_y_n_gfs":
+        gridfunctions_list = non_y_n_gridfunctions_list
+    else:
+        print("ERROR: which_gfs = \"" + which_gfs + "\" unrecognized.")
+        sys.exit(1)
+    name = "MoL_free_memory_" + which_gfs
+    params = "const paramstruct *restrict params, MoL_gridfunctions_struct *restrict gridfuncs"
+    body = ""
+    for gridfunctions in gridfunctions_list:
+        body += "    free(gridfuncs->" + gridfunctions + ");\n"
+    add_to_Cfunction_dict(
+        includes=includes,
+        desc=desc,
+        c_type=c_type, name=name, params=params,
+        body=indent_Ccode(body, "  "),
+        rel_path_to_Cparams=os.path.join("."))
 
 
 # Register MoL_gridfunctions_struct in NRPy_basic_defines
 def NRPy_basic_defines_MoL_timestepping_struct(MoL_method="RK4"):
-    y_n_gridfunctions, non_y_n_gridfunctions_list, diagnostic_gridfunctions_point_to, \
-        diagnostic_gridfunctions2_point_to = generate_gridfunction_names(MoL_method=MoL_method)
+    y_n_gridfunctions, non_y_n_gridfunctions_list, _diagnostic_gridfunctions_point_to, \
+        _diagnostic_gridfunctions2_point_to = generate_gridfunction_names(MoL_method=MoL_method)
     # Step 3.b: Create MoL_timestepping struct:
     indent = "  "
     Nbd = "typedef struct __MoL_gridfunctions_struct__ {\n"
