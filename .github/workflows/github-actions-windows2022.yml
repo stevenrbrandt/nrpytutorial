@@ -32,4 +32,4 @@ jobs:
         python -m pip install testfixtures sympy mpmath jupyter matplotlib scipy nrpylatex
     - name: BSSNTwoBHsCollide
       run: |
-        ./run_Jupyter_notebook.sh Tutorial-Start_to_Finish-BSSNCurvilinear-Two_BHs_Collide_new_way.ipynb
+        jupyter nbconvert --to notebook --inplace --execute --ExecutePreprocessor.timeout=-1 Tutorial-Start_to_Finish-BSSNCurvilinear-Two_BHs_Collide_new_way.ipynb
