@@ -684,12 +684,12 @@ def construct_Ccode(sympyexpr_list, list_of_deriv_vars,
         Ccodesplit = Ccode.splitlines()
         outstring = ""
         for i in range(len(Ccodesplit)):
-         if Ccodesplit[i] != "":
-            if Ccodesplit[i].lstrip().startswith("#"):
-                # Remove all indentation from preprocessor statements (lines that start with "#")
-                outstring += Ccodesplit[i].lstrip() + '\n'
-            else:
-                outstring += FDparams.fullindent + Ccodesplit[i] + '\n'
+            if Ccodesplit[i] != "":
+                if Ccodesplit[i].lstrip().startswith("#"):
+                    # Remove all indentation from preprocessor statements (lines that start with "#")
+                    outstring += Ccodesplit[i].lstrip() + '\n'
+                else:
+                    outstring += FDparams.fullindent + Ccodesplit[i] + '\n'
         return outstring.rstrip(" ")  # make sure to remove trailing whitespace!
 
     # Step 5.a.i: Read gridfunctions from memory at needed pts.
