@@ -45,17 +45,17 @@ def print_msg_with_timing(desc, msg="Symbolic", startstop="start", starttime=0.0
     elapsed = time.time()-starttime
     if msg == "Symbolic":
         if startstop == "start":
-            print("Generating symbolic expressions for " + desc + " (%s coords)..." % CoordSystem)
+            print("Generating symbolic expressions for " + desc + " (" + CoordSystem + " coords)...")
             return time.time()
-        else:
-            print("Finished generating symbolic expressions for "+desc+
-                  " (%s coords) in %.1f seconds. Next up: C codegen..." % (CoordSystem, elapsed))
+        # else:
+        print("Finished generating symbolic expressions for "+desc+
+              " (" + CoordSystem + " coords) in "+str(round(elapsed,1))+" seconds. Next up: C codegen...")
     elif msg == "Ccodegen":
         if startstop == "start":
-            print("Generating C code for "+desc+" (%s coords)..." % CoordSystem)
+            print("Generating C code for "+desc+" (" + CoordSystem + " coords)...")
             return time.time()
-        else:
-            print("Finished generating C code for "+desc+" (%s coords) in %.1f seconds." % (CoordSystem, elapsed))
+        # else:
+        print("Finished generating C code for "+desc+" (" + CoordSystem + " coords) in "+str(round(elapsed,1))+" seconds.")
 
 
 # get_loopopts() sets up options for NRPy+'s loop module
@@ -84,8 +84,8 @@ def register_stress_energy_source_terms_return_T4UU(enable_stress_energy_source_
                 registered_already = True
         if not registered_already:
             return ixp.register_gridfunctions_for_single_rank2("AUXEVOL", "T4UU", "sym01", DIM=4)
-        else:
-            return ixp.declarerank2("T4UU", "sym01", DIM=4)
+        # else:
+        return ixp.declarerank2("T4UU", "sym01", DIM=4)
     return None
 
 def EinsteinToolkit_keep_param__return_type(paramtuple):
