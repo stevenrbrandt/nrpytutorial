@@ -32,4 +32,4 @@ jobs:
         python -m pip install testfixtures sympy mpmath jupyter matplotlib scipy nrpylatex
     - name: Core Jupyter notebook testsuite
       run: |
-        ./UnitTesting/core_Jupyter_notebook_testsuite.sh
+        bash ./UnitTesting/run_NRPy_UnitTests.sh python3
