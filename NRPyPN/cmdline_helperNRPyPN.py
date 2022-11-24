@@ -59,10 +59,14 @@ def delete_existing_files(file_or_wildcard):
         delete_string += "rm -f " + file_or_wildcard
     os.system(delete_string)
 
-def output_Jupyter_notebook_to_LaTeXed_PDF(notebookname,location_of_template_file=os.path.join("."),verbose=True):
-    Execute_input_string(r"jupyter nbconvert --to latex --template "
-                         +os.path.join(location_of_template_file,"latex_nrpy_style.tplx")
-                         +r" --log-level='WARN' "+notebookname+".ipynb",verbose=False)
+# TO BE RUN ONLY FROM nrpytutorial/NRPyPN
+def output_Jupyter_notebook_to_LaTeXed_PDF(notebookname, verbose=True):
+    if sys.version_info[0] == 3:
+        Execute_input_string(r"jupyter nbconvert --to latex --template="
+                             +os.path.join("nbconvert_latex_settings")
+                             +r" --log-level='WARN' "+notebookname+".ipynb",verbose=False)
+    else:
+        Execute_input_string(r"jupyter nbconvert --to latex --log-level='WARN' "+notebookname+".ipynb",verbose=False)
     for _i in range(3):  # _i is an unused variable.
         Execute_input_string(r"pdflatex -interaction=batchmode "+notebookname+".tex",verbose=False)
     delete_existing_files(notebookname+".out "+notebookname+".aux "+notebookname+".log")
