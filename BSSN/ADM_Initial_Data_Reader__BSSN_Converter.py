@@ -254,8 +254,7 @@ def add_to_Cfunction_dict_initial_data_BSSN_basis_transform_Cartesian_to_rfm_and
             list_of_output_varnames += [gfaccess("aDD" + str(i) + str(j))]
     # Sort the outputs before calling outputC()
     # https://stackoverflow.com/questions/9764298/is-it-possible-to-sort-two-listswhich-reference-each-other-in-the-exact-same-w
-    list_of_output_varnames, list_of_output_exprs = \
-        (list(t) for t in zip(*sorted(zip(list_of_output_varnames, list_of_output_exprs))))
+    list_of_output_varnames, list_of_output_exprs = (list(t) for t in zip(*sorted(zip(list_of_output_varnames, list_of_output_exprs))))
 
     body = outputC(list_of_output_exprs, list_of_output_varnames,
                     filename="returnstring", params="outCverbose=False,includebraces=False,preindent=1")
