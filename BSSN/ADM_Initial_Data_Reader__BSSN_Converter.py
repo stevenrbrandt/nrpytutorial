@@ -112,8 +112,7 @@ def add_to_Cfunction_dict_initial_data_reader__convert_to_BSSN_from_ADM_sph_or_C
 
     # Sort the outputs before calling outputC()
     # https://stackoverflow.com/questions/9764298/is-it-possible-to-sort-two-listswhich-reference-each-other-in-the-exact-same-w
-    list_of_output_varnames, list_of_output_exprs = \
-        (list(t) for t in zip(*sorted(zip(list_of_output_varnames, list_of_output_exprs))))
+    list_of_output_varnames, list_of_output_exprs = (list(t) for t in zip(*sorted(zip(list_of_output_varnames, list_of_output_exprs))))
 
     body += outputC(list_of_output_exprs, list_of_output_varnames,
                     filename="returnstring", params="outCverbose=False,includebraces=False,preindent=3")
@@ -151,8 +150,7 @@ def add_to_Cfunction_dict_initial_data_reader__convert_to_BSSN_from_ADM_sph_or_C
             list_of_output_varnames += ["AbarCartDD" + str(i) + str(j)]
     # Sort the outputs before calling outputC()
     # https://stackoverflow.com/questions/9764298/is-it-possible-to-sort-two-listswhich-reference-each-other-in-the-exact-same-w
-    list_of_output_varnames, list_of_output_exprs = \
-        (list(t) for t in zip(*sorted(zip(list_of_output_varnames, list_of_output_exprs))))
+    list_of_output_varnames, list_of_output_exprs = (list(t) for t in zip(*sorted(zip(list_of_output_varnames, list_of_output_exprs))))
     body += outputC(list_of_output_exprs, list_of_output_varnames,
                     filename="returnstring", params="outCverbose=False,includebraces=False,preindent=3")
     body += r"""
