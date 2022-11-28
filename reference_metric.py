@@ -1014,6 +1014,44 @@ def basis_transform_tensorDD_from_Cartesian_to_rfmbasis(Jac_dUCart_dDrfmUD, Cart
                     rfm_dst_tensorDD[i][j] += Jac_dUCart_dDrfmUD[l][i]*Jac_dUCart_dDrfmUD[m][j]*Cart_src_tensorDD[l][m]
     return rfm_dst_tensorDD
 
+
+# Useful for stress-energy tensor; assumes rfm is time-independent.
+def basis_transform_4tensorUU_from_CartorSph_to_rfm(T4UU, CoordType_in="Spherical"):
+    # First generate expressions
+    r_th_ph_or_Cart_xyz_oID_xx = []
+    if CoordType_in == "Spherical":
+        r_th_ph_or_Cart_xyz_oID_xx = xxSph
+    elif CoordType_in == "Cartesian":
+        r_th_ph_or_Cart_xyz_oID_xx = xx_to_Cart
+    else:
+        print("Error: Can only convert ADM Cartesian or Spherical initial data to BSSN Curvilinear coords.")
+        exit(1)
+
+    # Next apply Jacobian transformations to convert into the (xx0,xx1,xx2) basis
+
+    # rho and S are scalar, so no Jacobian transformations are necessary.
+
+    Jac4_dUSphorCart_dDrfmUD = ixp.zerorank2(DIM=4)
+    Jac4_dUSphorCart_dDrfmUD[0][0] = sp.sympify(1)
+    for i in range(3):
+        for j in range(3):
+            Jac4_dUSphorCart_dDrfmUD[i+1][j+1] = sp.diff(r_th_ph_or_Cart_xyz_oID_xx[i], xx[j])
+
+    Jac4_dUrfm_dDSphorCartUD, dummyDET = ixp.generic_matrix_inverter4x4(Jac4_dUSphorCart_dDrfmUD)
+
+    # Perform Jacobian operations on T^{mu nu} and gamma_{ij}
+    #T4UU = ixp.register_gridfunctions_for_single_rank2("AUXEVOL","T4UU","sym01",DIM=4)
+
+    rfm_basis_T4UU = ixp.zerorank2(DIM=4)
+    for mu in range(4):
+        for nu in range(4):
+            for delta in range(4):
+                for sigma in range(4):
+                    rfm_basis_T4UU[mu][nu] += \
+                         Jac4_dUrfm_dDSphorCartUD[mu][delta]*Jac4_dUrfm_dDSphorCartUD[nu][sigma]*T4UU[delta][sigma]
+    return rfm_basis_T4UU
+
+
 # to/from spherical coordinates
 def compute_Jacobian_and_inverseJacobian_tofrom_Spherical():
     # Step 2.a: First construct Jacobian matrix:
