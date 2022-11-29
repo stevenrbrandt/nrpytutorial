@@ -49,13 +49,13 @@ def print_msg_with_timing(desc, msg="Symbolic", startstop="start", starttime=0.0
             return time.time()
         # else:
         print("Finished generating symbolic expressions for "+desc+
-              " (" + CoordSystem + " coords) in "+str(round(elapsed,1))+" seconds. Next up: C codegen...")
+              " (" + CoordSystem + " coords) in "+str(round(elapsed, 1))+" seconds. Next up: C codegen...")
     elif msg == "Ccodegen":
         if startstop == "start":
             print("Generating C code for "+desc+" (" + CoordSystem + " coords)...")
             return time.time()
         # else:
-        print("Finished generating C code for "+desc+" (" + CoordSystem + " coords) in "+str(round(elapsed,1))+" seconds.")
+        print("Finished generating C code for "+desc+" (" + CoordSystem + " coords) in "+str(round(elapsed, 1))+" seconds.")
 
 
 # get_loopopts() sets up options for NRPy+'s loop module
