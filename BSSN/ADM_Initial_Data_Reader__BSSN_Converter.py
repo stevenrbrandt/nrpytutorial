@@ -375,12 +375,17 @@ def add_to_Cfunction_dict_exact_ADM_ID_function(IDtype, IDCoordSystem, alpha, be
 
 
 # Other than its core use as a means to store ADM input quantities,
-# `ID_output_struct` is designed to be extensible. For example, it may be
+# `initial_data_struct` is designed to be extensible. For example, it may be
 # used to store e.g., pseudospectral coefficients for TwoPunctures,
 # initial data gridfunctions from NRPyElliptic, pointers to TOV 1D data
 # from the TOV solver, etc.
-def register_NRPy_basic_defines(ID_persist_struct_contents_str=""):
-    Nbd = r"""typedef struct __ID_output_struct__ {
+def register_register_C_functions_and_NRPy_basic_defines(input_Coord="Spherical", ID_persist_struct_contents_str="",
+                                                         include_T4UU=False):
+    add_to_Cfunction_dict_initial_data_reader__convert_to_BSSN_from_ADM_sph_or_Cart(input_Coord=input_Coord)
+    add_to_Cfunction_dict_initial_data_BSSN_basis_transform_Cartesian_to_rfm_and_rescale()
+    add_to_Cfunction_dict_initial_data_lambdaU_grid_interior()
+
+    Nbd = r"""typedef struct __initial_data_struct__ {
   REAL alpha;
 
   REAL betaSphorCartU0, betaSphorCartU1, betaSphorCartU2;
@@ -391,11 +396,19 @@ def register_NRPy_basic_defines(ID_persist_struct_contents_str=""):
 
   REAL KSphorCartDD00, KSphorCartDD01, KSphorCartDD02;
   REAL KSphorCartDD11, KSphorCartDD12, KSphorCartDD22;
-} ID_output_struct;
 """
-    if ID_persist_struct_contents_str == "":
-        Nbd += "typedef struct __ID_persist_struct__ {\n"
-        Nbd += "} ID_persist_struct;\n"
-    else:
-        Nbd += ID_persist_struct_contents_str + "\n"
+    if include_T4UU:
+        Nbd += """
+  REAL T4SphorCartUU00,T4SphorCartUU01,T4SphorCartUU02,T4SphorCartUU03;
+  REAL                 T4SphorCartUU11,T4SphorCartUU12,T4SphorCartUU13;
+  REAL                                 T4SphorCartUU22,T4SphorCartUU23;
+  REAL                                                 T4SphorCartUU33;
+"""
+    Nbd += """
+} initial_data_struct;
+"""
+
+    Nbd += "typedef struct __ID_persist_struct__ {\n"
+    Nbd += ID_persist_struct_contents_str + "\n"
+    Nbd += "} ID_persist_struct;\n"
     outC_NRPy_basic_defines_h_dict["BSSN_initial_data"] = Nbd
