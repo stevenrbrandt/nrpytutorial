@@ -1,9 +1,11 @@
 #
 # Author: Zachariah B. Etienne
 #         zachetie **at** gmail **dot* com
+import outputC as outC
+import os
 
-# Output data on the plane closest to xy or xz
-def output_plane_xz_or_xy_body(plane="xz", include_ghosts=True):
+# Output data on the plane closest to xy or yz
+def output_plane_yz_or_xy_body(plane="yz", include_ghosts=True):
     out_str = r"""  // First unpack:
   const paramstruct params = griddata->params;
   REAL *restrict xx[3] = { griddata->xx[0],griddata->xx[1],griddata->xx[2] };
@@ -38,20 +40,20 @@ def output_plane_xz_or_xy_body(plane="xz", include_ghosts=True):
 #pragma omp parallel for
   for(int i2=NGHOSTS; i2<Nx2 + NGHOSTS; i2++) i2_pts[i2-NGHOSTS] = i2;
 """
-    if plane == "xz":
+    if plane == "yz":
         out_str += r"""
   if(strstr(params.CoordSystemName, "Cartesian") != NULL) {
-    // xz-plane == { y_mid }, where y index is i1
+    // yz-plane == { y_mid }, where y index is i1
     numpts_i1 = 1;
     i1_pts[0] = (Nx1 + 2*NGHOSTS) / 2;
   } else if(strstr(params.CoordSystemName, "Cylindrical") != NULL) {
-    // xz-plane == { phi_min or phi_mid }, where phi index is i1; note that phi_min=-PI and phi_max=+PI, modulo ghostzones
+    // yz-plane == { phi_min or phi_mid }, where phi index is i1; note that phi_min=-PI and phi_max=+PI, modulo ghostzones
     numpts_i1 = 2;
     i1_pts[0] = NGHOSTS;
     i1_pts[1] = (Nx1 + 2*NGHOSTS) / 2;
   } else if(strstr(params.CoordSystemName, "Spherical") != NULL ||
             strstr(params.CoordSystemName, "SymTP")     != NULL) {
-    // xz-plane == { phi_min or phi_mid }, where phi index is i2; note that phi_min=-PI and phi_max=+PI, modulo ghostzones
+    // yz-plane == { phi_min or phi_mid }, where phi index is i2; note that phi_min=-PI and phi_max=+PI, modulo ghostzones
     numpts_i2 = 2;
     i2_pts[0] = NGHOSTS;
     i2_pts[1] = (Nx2 + 2*NGHOSTS) / 2;
@@ -81,3 +83,38 @@ def output_plane_xz_or_xy_body(plane="xz", include_ghosts=True):
   }
 """
     return out_str
+
+
+def add_to_Cfunction_dict__plane_diagnostics(plane="xy", include_ghosts=False,
+                                               list_of_outputs=None, num_sig_figs=8):
+    includes = ["NRPy_basic_defines.h", "NRPy_function_prototypes.h"]
+    desc = """Output various quantities at points closest to
+the given coordinate system's """+plane+""" plane.
+"""
+    c_type = "void"
+    name = plane + "_plane_diagnostics"
+    params = """const griddata_struct *restrict griddata,
+    const REAL *restrict y_n_gfs, const REAL *restrict diagnostic_output_gfs"""
+    body  = output_plane_yz_or_xy_body(plane=plane, include_ghosts=include_ghosts)
+    printf_char_string = "\"%e %e %e"
+    output_quantities = ",xCart[0],xCart[1],xCart[2]"
+    for output in list_of_outputs:
+        printf_char_string += " %e"
+        output_quantities += ",\n           " + output
+    printf_char_string += "\\n\""
+    printf_char_string.replace("%e", "%."+str(num_sig_figs)+"e")
+    body += r"""
+  LOOP_NOOMP(i0_pt,0,numpts_i0, i1_pt,0,numpts_i1, i2_pt,0,numpts_i2) {
+    const int i0 = i0_pts[i0_pt], i1 = i1_pts[i1_pt], i2 = i2_pts[i2_pt];
+    REAL xCart[3];
+    xx_to_Cart(&params, xx, i0,i1,i2, xCart);
+    int idx = IDX3S(i0,i1,i2);
+    printf("""+printf_char_string+output_quantities+r""");
+  }
+"""
+    outC.add_to_Cfunction_dict(
+        includes=includes,
+        desc=desc,
+        c_type=c_type, name=name, params=params,
+        body=body,
+        rel_path_to_Cparams=os.path.join("."), enableCparameters=False)
