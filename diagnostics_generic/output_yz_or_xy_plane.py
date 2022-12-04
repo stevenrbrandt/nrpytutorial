@@ -43,9 +43,9 @@ def output_plane_yz_or_xy_body(plane="yz", include_ghosts=True):
     if plane == "yz":
         out_str += r"""
   if(strstr(params.CoordSystemName, "Cartesian") != NULL) {
-    // yz-plane == { y_mid }, where y index is i1
-    numpts_i1 = 1;
-    i1_pts[0] = (Nx1 + 2*NGHOSTS) / 2;
+    // yz-plane == { x_mid }, where x index is i0
+    numpts_i0 = 1;
+    i0_pts[0] = (Nx0 + 2*NGHOSTS) / 2;
   } else if(strstr(params.CoordSystemName, "Cylindrical") != NULL) {
     // yz-plane == { phi_min or phi_mid }, where phi index is i1; note that phi_min=-PI and phi_max=+PI, modulo ghostzones
     numpts_i1 = 2;
