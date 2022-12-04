@@ -43,41 +43,20 @@ def output_plane_yz_or_xy_body(plane="yz", include_ghosts=True):
     if plane == "yz":
         out_str += r"""
   if(strstr(params.CoordSystemName, "Cartesian") != NULL) {
-    // yz-plane == { x_mid }, where x index is i0
-    numpts_i0 = 1;
-    i0_pts[0] = (Nx0 + 2*NGHOSTS) / 2;
+    // yz-plane == { y_mid }, where y index is i1
+    numpts_i1 = 1;
+    i1_pts[0] = (Nx1 + 2*NGHOSTS) / 2;
   } else if(strstr(params.CoordSystemName, "Cylindrical") != NULL) {
     // yz-plane == { phi_min or phi_mid }, where phi index is i1; note that phi_min=-PI and phi_max=+PI, modulo ghostzones
     numpts_i1 = 2;
-    // See documentation below.
-    i1_pts[0] = (int)(NGHOSTS + 0.25*params.Nxx1 - 0.5);
-    i2_pts[1] = (int)(NGHOSTS + 0.75*params.Nxx1 - 0.5);
+    i1_pts[0] = NGHOSTS;
+    i1_pts[1] = (Nx1 + 2*NGHOSTS) / 2;
   } else if(strstr(params.CoordSystemName, "Spherical") != NULL ||
             strstr(params.CoordSystemName, "SymTP")     != NULL) {
-    // In Spherical/SymTP coordinates, phi_min=-PI and phi_max=+PI
-    //   The yz plane is at -PI/2 and +PI/2.
-    //   When Nphi=2, NGHOSTS and NGHOSTS+1 correspond to -PI/2 and +PI/2 *exactly*
-    //   WARNING:
-    //   When Nphi=4, we don't sample -PI/2 and +PI/2 exactly. Instead we sample:
-    //              {-3/4, -1/4, +1/4, +3/4}*PI
-    //                      ^           ^  <--- closest planes; at 1 and 3
-    //                ^           ^        <--- closest planes; at 0 and 2
-    //    The same applies for Nphi=4, 8, 12, etc. Best to choose Nphi a multiple of 2 but not 4
-    // General pattern:
-    // phi_i = -PI + [(i-NGHOSTS) + (0.5)]*(2PI)/Nphi; // Cell-centered grid.
-    /* In isympy:
-     i_PIo2, PI, Nphi, NGHOSTS = symbols('i_PIo2 PI Nphi NGHOSTS', real=True)
-     expr = -PI + ( (i_PIo2-NGHOSTS) + Rational(1,2) )*(2*PI)/Nphi
-     print(solve(expr - PI/2, i_PIo2))
-     # Output:
-     # [NGHOSTS + 3*Nphi/4 - 1/2]
-     print(solve(expr - (-PI/2), i_PIo2))
-     # Output:
-     # [NGHOSTS + Nphi/4 - 1/2]
-     */
+    // yz-plane == { phi_min or phi_mid }, where phi index is i2; note that phi_min=-PI and phi_max=+PI, modulo ghostzones
     numpts_i2 = 2;
-    i2_pts[0] = (int)(NGHOSTS + 0.25*params.Nxx2 - 0.5);
-    i2_pts[1] = (int)(NGHOSTS + 0.75*params.Nxx2 - 0.5);
+    i2_pts[0] = NGHOSTS;
+    i2_pts[1] = (Nx2 + 2*NGHOSTS) / 2;
   } else {
     fprintf(stderr, "output_"""+plane+r"""...() ERROR: params.CoordSystemName == %s unsupported.\n", params.CoordSystemName);
     exit(1);
@@ -123,7 +102,7 @@ the given coordinate system's """+plane+""" plane.
         printf_char_string += " %e"
         output_quantities += ",\n           " + output
     printf_char_string += "\\n\""
-    printf_char_string = printf_char_string.replace("%e", "%."+str(num_sig_figs)+"e")
+    printf_char_string.replace("%e", "%."+str(num_sig_figs)+"e")
     body += r"""
   LOOP_NOOMP(i0_pt,0,numpts_i0, i1_pt,0,numpts_i1, i2_pt,0,numpts_i2) {
     const int i0 = i0_pts[i0_pt], i1 = i1_pts[i1_pt], i2 = i2_pts[i2_pt];
