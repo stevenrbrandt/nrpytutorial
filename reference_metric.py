@@ -1424,7 +1424,7 @@ def add_to_Cfunc_dict_xx_to_Cart(rel_path_to_Cparams=os.path.join("./")):
 
 def register_NRPy_basic_defines(enable_rfm_precompute=False):
     # TODO: Move the following to the top of this file when "old_way" is deprecated
-    _ignore = par.initialize_Cparam(par.glb_param("char [100]", thismodule, "CoordSystemName", "Call_set_Nxx_dxx_invdx_params__and__xx_to_set"))
+    par.initialize_Cparam(par.glb_param("char [100]", thismodule, "CoordSystemName", "Call_set_Nxx_dxx_invdx_params__and__xx_to_set"))
 
     Nbd = ""
     if enable_rfm_precompute:
