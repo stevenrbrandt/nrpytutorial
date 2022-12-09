@@ -108,6 +108,9 @@ def var_from_access(access):
         return v
     if re.match(r'^\w+$', access):
         return access
+    g = re.match(r'in_gfs\[IDX4S\((\w+),i0,i1,i2\)\]', access)
+    if g:
+        return g.group(1)
     g = re.match(r'^const\s+(\w+)\s+(\w+)', access)
     if g:
         return g.group(2)
