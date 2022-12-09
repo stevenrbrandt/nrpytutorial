@@ -22,7 +22,6 @@ import sympy as sp                            # SymPy: The Python computer algeb
 import re, sys, os, stat                      # Standard Python: regular expressions, system, and multiplatform OS funcs
 from collections import namedtuple            # Standard Python: Enable namedtuple data type
 from suffixes import dosubs
-from grid import find_gftype, var_from_access
 
 lhrh = namedtuple('lhrh', 'lhs rhs')
 outCparams = namedtuple('outCparams', 'preindent includebraces declareoutputvars outCfileaccess outCverbose CSE_enable CSE_varprefix CSE_sorting CSE_preprocess enable_SIMD SIMD_find_more_subs SIMD_find_more_FMAsFMSs SIMD_debug enable_TYPE')
@@ -520,6 +519,7 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
 
         # Synthesizing `muladd` calls seems to slow down the code
         # sympyexpr = list(map(map_synthesize_muladd, sympyexpr))
+        from grid import find_gftype, var_from_access
         for ii in range(len(sympyexpr)):
             nm = output_varname_str[ii]
             var = var_from_access(nm)
