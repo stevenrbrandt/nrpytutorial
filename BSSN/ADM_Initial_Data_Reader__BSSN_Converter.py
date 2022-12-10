@@ -6,74 +6,62 @@
 #         zachetie **at** gmail **dot* com
 
 # Initialize core Python/NRPy+ modules
-from outputC import outputC, lhrh, add_to_Cfunction_dict # NRPy+: Core C code output module
+# Step 1: Initialize core Python/NRPy+ modules
+from outputC import outputC,lhrh,add_to_Cfunction_dict, Cfunction # NRPy+: Core C code output module
 from outputC import outC_NRPy_basic_defines_h_dict
-import NRPy_param_funcs as par     # NRPy+: Parameter interface
-import finite_difference as fin    # NRPy+: Finite difference C code generation module
-import grid as gri                 # NRPy+: Functions having to do with numerical grids
-import indexedexp as ixp           # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
-import reference_metric as rfm     # NRPy+: Reference metric support
-import BSSN.BSSN_quantities as Bq  # NRPy+: Computes useful BSSN quantities; e.g., gammabarUU & GammabarUDD needed below
-from pickling import pickle_NRPy_env  # NRPy+: Pickle/unpickle NRPy+ environment, for parallel codegen
-import sys                         # Standard Python module for multiplatform OS-level functions
+import NRPy_param_funcs as par    # NRPy+: Parameter interface
+import finite_difference as fin   # NRPy+: Finite difference C code generation module
+import grid as gri                # NRPy+: Functions having to do with numerical grids
+import indexedexp as ixp          # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
+import reference_metric as rfm    # NRPy+: Reference metric support
+import BSSN.BSSN_quantities as Bq # NRPy+: Computes useful BSSN quantities; e.g., gammabarUU & GammabarUDD needed below
+from pickling import pickle_NRPy_env # NRPy+: Pickle/unpickle NRPy+ environment, for parallel codegen
+import sympy as sp                # SymPy: The Python computer algebra package upon which NRPy+ depends
+import sys                        # Standard Python modules for multiplatform OS-level functions
 
 
-def add_to_Cfunction_dict_initial_data_reader__convert_to_BSSN_from_ADM_sph_or_Cart(input_Coord="Spherical"):
-    includes = ["NRPy_basic_defines.h", "NRPy_function_prototypes.h"]
-    c_type = "void"
+def Cfunction_ADM_SphorCart_to_Cart(input_Coord="Spherical", include_T4UU=False):
+    includes = []
 
-    output_Coord = par.parval_from_str("reference_metric::CoordSystem")
-    desc = "Read in ADM initial data in the " + input_Coord + " basis, and convert to BSSN data in " + output_Coord + " coordinates"
-    name = "initial_data_reader__convert_to_BSSN_from_ADM_" + input_Coord
-    params = """griddata_struct *restrict griddata, ID_persist_struct *restrict ID_persist,
-                                                             void ID_function(const paramstruct *params, const REAL xCart[3],
-                                                                              const ID_persist_struct *restrict ID_persist,
-                                                                              ID_output_struct *restrict ID_output)"""
+    desired_rfm_basis = par.parval_from_str("reference_metric::CoordSystem")
+
+    desc = "Convert ADM variables from the spherical or Cartesian basis to the Cartesian basis"
+    c_type = "static void"
+    name = "ADM_SphorCart_to_Cart"
+    params = """paramstruct *restrict params, const REAL xCart[3], const initial_data_struct *restrict initial_data,
+                                  ADM_Cart_basis_struct *restrict ADM_Cart_basis"""
 
     body = r"""
-  const int Nxx_plus_2NGHOSTS0 = griddata->params.Nxx_plus_2NGHOSTS0;
-  const int Nxx_plus_2NGHOSTS1 = griddata->params.Nxx_plus_2NGHOSTS1;
-  const int Nxx_plus_2NGHOSTS2 = griddata->params.Nxx_plus_2NGHOSTS2;
-
-  LOOP_OMP("omp parallel for", i0,0,Nxx_plus_2NGHOSTS0, i1,0,Nxx_plus_2NGHOSTS1, i2,0,Nxx_plus_2NGHOSTS2) {
-    // xCart is the global Cartesian coordinate, which accounts for any grid offsets from the origin.
-    REAL xCart[3];  xx_to_Cart(&griddata->params, griddata->xx, i0,i1,i2, xCart);
-
-    // Read or compute initial data at destination point xCart
-    ID_output_struct ID_output;
-    ID_function(&griddata->params, xCart, ID_persist, &ID_output);
-
-    // Unpack ID_output for scalar alpha
-    const REAL alpha = ID_output.alpha;
-
-    // Unpack ID_output for ADM vectors/tensors
+  // Unpack initial_data for ADM vectors/tensors
 """
     for i in ["betaSphorCartU", "BSphorCartU"]:
         for j in range(3):
             varname = i + str(j)
-            body += "    const REAL " + varname + " = ID_output." + varname + ";\n"
+            body += "  const REAL " + varname + " = initial_data->" + varname + ";\n"
         body += "\n"
     for i in ["gammaSphorCartDD", "KSphorCartDD"]:
         for j in range(3):
             for k in range(j, 3):
                 varname = i + str(j) + str(k)
-                body += "    const REAL " + varname + " = ID_output." + varname + ";\n"
+                body += "  const REAL " + varname + " = initial_data->" + varname + ";\n"
+        body += "\n"
+    # Read stress-energy tensor in spherical or Cartesian basis if desired.
+    if include_T4UU:
+        for mu in range(4):
+            for nu in range(mu, 4):
+                varname = "T4SphorCartUU" + str(mu) + str(nu)
+                body += "  const REAL " + varname + " = initial_data->" + varname + ";\n"
         body += "\n"
 
     body += r"""
-    // Perform the basis transform on ADM vectors/tensors from """+input_Coord+""" to Cartesian:
-    //   (Don't be surprised if it's trivial when ADM quantities are already in the Cartesian basis.)
-    REAL betaCartU0,betaCartU1,betaCartU2;
-    REAL BCartU0,BCartU1,BCartU2;
-    REAL gammaCartDD00,gammaCartDD01,gammaCartDD02,gammaCartDD11,gammaCartDD12,gammaCartDD22;
-    REAL KCartDD00,KCartDD01,KCartDD02,KCartDD11,KCartDD12,KCartDD22;
-    {
-      // Set destination point
-      const REAL Cartx = xCart[0];
-      const REAL Carty = xCart[1];
-      const REAL Cartz = xCart[2];
+  // Perform the basis transform on ADM vectors/tensors from """+input_Coord+""" to Cartesian:
+  {
+    // Set destination point
+    const REAL Cartx = xCart[0];
+    const REAL Carty = xCart[1];
+    const REAL Cartz = xCart[2];
 
-      // Set destination xx[3]
+    // Set destination xx[3]
 """
     # Set reference_metric to the input_Coord
     par.set_parval_from_str("reference_metric::CoordSystem", input_Coord)
@@ -81,13 +69,14 @@ def add_to_Cfunction_dict_initial_data_reader__convert_to_BSSN_from_ADM_sph_or_C
 
     body += outputC(rfm.Cart_to_xx[:3], ["const REAL xx0", "const REAL xx1", "const REAL xx2"],
                     filename="returnstring",
-                    params="outCverbose=False,includebraces=False,preindent=3,CSE_varprefix=tmp_xx")
+                    params="outCverbose=False,includebraces=False,preindent=2,CSE_varprefix=tmp_xx")
 
     # Define the input variables:
     gammaSphorCartDD = ixp.declarerank2("gammaSphorCartDD", "sym01")
     KSphorCartDD     = ixp.declarerank2("KSphorCartDD", "sym01")
     betaSphorCartU = ixp.declarerank1("betaSphorCartU")
     BSphorCartU    = ixp.declarerank1("BSphorCartU")
+    T4SphorCartUU = ixp.declarerank2("T4SphorCartUU", "sym01", DIM=4)
 
     # Compute Jacobian to convert to Cartesian coordinates
     Jac_dUCart_dDrfmUD, Jac_dUrfm_dDCartUD = rfm.compute_Jacobian_and_inverseJacobian_tofrom_Cartesian()
@@ -96,128 +85,145 @@ def add_to_Cfunction_dict_initial_data_reader__convert_to_BSSN_from_ADM_sph_or_C
     KCartDD = rfm.basis_transform_tensorDD_from_rfmbasis_to_Cartesian(Jac_dUrfm_dDCartUD, KSphorCartDD)
     betaCartU = rfm.basis_transform_vectorU_from_rfmbasis_to_Cartesian(Jac_dUCart_dDrfmUD, betaSphorCartU)
     BCartU = rfm.basis_transform_vectorU_from_rfmbasis_to_Cartesian(Jac_dUCart_dDrfmUD, BSphorCartU)
+    T4CartUU = ixp.zerorank2(DIM=4)
+    if include_T4UU:
+        T4CartUU = rfm.basis_transform_4tensorUU_from_CartorSph_to_rfm(T4SphorCartUU, CoordType_in=input_Coord)
 
-    list_of_output_exprs    = []
-    list_of_output_varnames = []
+    alpha = sp.symbols("initial_data->alpha", real=True)
+    list_of_output_exprs    = [alpha]
+    list_of_output_varnames = ["ADM_Cart_basis->alpha"]
     for i in range(3):
         list_of_output_exprs += [betaCartU[i]]
-        list_of_output_varnames += ["betaCartU" + str(i)]
+        list_of_output_varnames += ["ADM_Cart_basis->betaU" + str(i)]
         list_of_output_exprs += [BCartU[i]]
-        list_of_output_varnames += ["BCartU" + str(i)]
+        list_of_output_varnames += ["ADM_Cart_basis->BU" + str(i)]
         for j in range(i, 3):
             list_of_output_exprs += [gammaCartDD[i][j]]
-            list_of_output_varnames += ["gammaCartDD" + str(i) + str(j)]
+            list_of_output_varnames += ["ADM_Cart_basis->gammaDD" + str(i) + str(j)]
             list_of_output_exprs += [KCartDD[i][j]]
-            list_of_output_varnames += ["KCartDD" + str(i) + str(j)]
+            list_of_output_varnames += ["ADM_Cart_basis->KDD" + str(i) + str(j)]
+    if include_T4UU:
+        for mu in range(4):
+            for nu in range(mu, 4):
+                list_of_output_exprs += [T4CartUU[mu][nu]]
+                list_of_output_varnames += ["ADM_Cart_basis->T4UU" + str(mu) + str(nu)]
 
     # Sort the outputs before calling outputC()
     # https://stackoverflow.com/questions/9764298/is-it-possible-to-sort-two-listswhich-reference-each-other-in-the-exact-same-w
     list_of_output_varnames, list_of_output_exprs = (list(t) for t in zip(*sorted(zip(list_of_output_varnames, list_of_output_exprs))))
 
     body += outputC(list_of_output_exprs, list_of_output_varnames,
-                    filename="returnstring", params="outCverbose=False,includebraces=False,preindent=3")
+                    filename="returnstring", params="outCverbose=False,includebraces=False,preindent=2")
     body += r"""
-    }
+  }
 """
-    # Set reference_metric to Cartesian
+    # Restore reference metric globals to coordsystem on grid.
+    par.set_parval_from_str("reference_metric::CoordSystem", desired_rfm_basis)
+    rfm.reference_metric()
+
+    _func_prototype, func = Cfunction(
+        includes=includes,
+        desc=desc,
+        c_type=c_type, name=name, params=params,
+        body=body,
+        enableCparameters=False)
+    return func
+
+
+def Cfunction_ADM_Cart_to_BSSN_Cart(include_T4UU=False):
+    includes = []
+
+    desired_rfm_basis = par.parval_from_str("reference_metric::CoordSystem")
+
+    desc = "Convert ADM variables in the Cartesian basis to BSSN variables in the Cartesian basis"
+    c_type = "static void"
+    name = "ADM_Cart_to_BSSN_Cart"
+    params = """paramstruct *restrict params, const REAL xCart[3], const ADM_Cart_basis_struct *restrict ADM_Cart_basis,
+                                  BSSN_Cart_basis_struct *restrict BSSN_Cart_basis"""
+
+    # Extract desired rfm basis from reference_metric::CoordSystem
+    desired_rfm_basis = par.parval_from_str("reference_metric::CoordSystem")
+
+    # Set CoordSystem to Cartesian
     par.set_parval_from_str("reference_metric::CoordSystem", "Cartesian")
     rfm.reference_metric()
 
-    # Reset these variables, as they have been defined above in the C code.
-    gammaCartDD = ixp.declarerank2("gammaCartDD", "sym01")
-    KCartDD     = ixp.declarerank2("KCartDD", "sym01")
+    gammaCartDD = ixp.declarerank2("ADM_Cart_basis->gammaDD", "sym01")
+    KCartDD     = ixp.declarerank2("ADM_Cart_basis->KDD", "sym01")
 
     import BSSN.BSSN_in_terms_of_ADM as BitoA
     BitoA.trK_AbarDD_aDD(gammaCartDD, KCartDD)
     BitoA.gammabarDD_hDD(gammaCartDD)
     BitoA.cf_from_gammaDD(gammaCartDD)
 
-    body += r"""
-    // Next convert ADM quantities gammaDD & KDD
-    //   into BSSN gammabarDD, AbarDD, cf, and trK, in the Cartesian basis.
-    REAL gammabarCartDD00,gammabarCartDD01,gammabarCartDD02,gammabarCartDD11,gammabarCartDD12,gammabarCartDD22;
-    REAL AbarCartDD00,AbarCartDD01,AbarCartDD02,AbarCartDD11,AbarCartDD12,AbarCartDD22;
-    REAL cf, trK;
-    {
+    body = r"""
+  // *In the Cartesian basis*, convert ADM quantities gammaDD & KDD
+  //   into BSSN gammabarDD, AbarDD, cf, and trK.
+  BSSN_Cart_basis->alpha = ADM_Cart_basis->alpha;
+  BSSN_Cart_basis->betaU0 = ADM_Cart_basis->betaU0;
+  BSSN_Cart_basis->betaU1 = ADM_Cart_basis->betaU1;
+  BSSN_Cart_basis->betaU2 = ADM_Cart_basis->betaU2;
+  BSSN_Cart_basis->BU0 = ADM_Cart_basis->BU0;
+  BSSN_Cart_basis->BU1 = ADM_Cart_basis->BU1;
+  BSSN_Cart_basis->BU2 = ADM_Cart_basis->BU2;
 """
     list_of_output_exprs    = [BitoA.cf, BitoA.trK]
-    list_of_output_varnames = ["cf", "trK"]
+    list_of_output_varnames = ["BSSN_Cart_basis->cf", "BSSN_Cart_basis->trK"]
     for i in range(3):
         for j in range(i, 3):
             list_of_output_exprs += [BitoA.gammabarDD[i][j]]
-            list_of_output_varnames += ["gammabarCartDD" + str(i) + str(j)]
+            list_of_output_varnames += ["BSSN_Cart_basis->gammabarDD" + str(i) + str(j)]
             list_of_output_exprs += [BitoA.AbarDD[i][j]]
-            list_of_output_varnames += ["AbarCartDD" + str(i) + str(j)]
+            list_of_output_varnames += ["BSSN_Cart_basis->AbarDD" + str(i) + str(j)]
+    if include_T4UU:
+        T4CartUU = ixp.declarerank2("ADM_Cart_basis->T4UU", "sym01", DIM=4)
+        for mu in range(4):
+            for nu in range(mu, 4):
+                list_of_output_exprs += [T4CartUU[mu][nu]]
+                list_of_output_varnames += ["BSSN_Cart_basis->T4UU" + str(mu) + str(nu)]
+
     # Sort the outputs before calling outputC()
     # https://stackoverflow.com/questions/9764298/is-it-possible-to-sort-two-listswhich-reference-each-other-in-the-exact-same-w
     list_of_output_varnames, list_of_output_exprs = (list(t) for t in zip(*sorted(zip(list_of_output_varnames, list_of_output_exprs))))
     body += outputC(list_of_output_exprs, list_of_output_varnames,
-                    filename="returnstring", params="outCverbose=False,includebraces=False,preindent=3")
-    body += r"""
-    }
+                    filename="returnstring", params="outCverbose=False,includebraces=False,preindent=1")
 
-    const int idx3 = IDX3S(i0,i1,i2);
-
-    // First set the BSSN scalars, as these don't need a basis transform:
-    griddata->gridfuncs.y_n_gfs[IDX4ptS(ALPHAGF, idx3)] = alpha;
-    griddata->gridfuncs.y_n_gfs[IDX4ptS(TRKGF, idx3)] = trK;
-    griddata->gridfuncs.y_n_gfs[IDX4ptS(CFGF, idx3)] = cf;
-
-    // Then set the BSSN vectors/tensors, which require we perform basis transform & rescaling:
-    initial_data_BSSN_basis_transform_Cartesian_to_rfm_and_rescale
-      (&griddata->params, griddata->xx[0][i0],griddata->xx[1][i1],griddata->xx[2][i2],
-       betaCartU0,betaCartU1,betaCartU2, BCartU0,BCartU1,BCartU2,
-       gammabarCartDD00,gammabarCartDD01,gammabarCartDD02,gammabarCartDD11,gammabarCartDD12,gammabarCartDD22,
-       AbarCartDD00,AbarCartDD01,AbarCartDD02,AbarCartDD11,AbarCartDD12,AbarCartDD22,
-       idx3, griddata->gridfuncs.y_n_gfs);
-  } // END LOOP over all gridpoints on given grid
-
-  initial_data_lambdaU_grid_interior(&griddata->params, griddata->xx,
-                                     griddata->gridfuncs.y_n_gfs);
-"""
-
-    # Restore reference_metric to output_Coord
-    par.set_parval_from_str("reference_metric::CoordSystem", output_Coord)
+    # Restore reference metric globals to desired reference metric.
+    par.set_parval_from_str("reference_metric::CoordSystem", desired_rfm_basis)
     rfm.reference_metric()
 
-    add_to_Cfunction_dict(
+    _func_prototype, func = Cfunction(
         includes=includes,
         desc=desc,
         c_type=c_type, name=name, params=params,
         body=body,
         enableCparameters=False)
-    return pickle_NRPy_env()
+    return func
 
 
-# By the time this function is called, all BSSN tensors and vectors are in the Cartesian
-# coordinate basis $x^i_{\rm Cart} = (x,y,z)$, but we need them in the curvilinear
-# coordinate basis $x^i_{\rm rfm}=$`(xx0,xx1,xx2)` set by the
-#  `"reference_metric::CoordSystem"` variable.
-def add_to_Cfunction_dict_initial_data_BSSN_basis_transform_Cartesian_to_rfm_and_rescale():
-    includes = ["NRPy_basic_defines.h"]
-    c_type = "void"
+def Cfunction_BSSN_Cart_to_rescaled_BSSN_rfm(include_T4UU=False):
+    includes = []
 
-    output_Coord = par.parval_from_str("reference_metric::CoordSystem")
-    desc = "Basis transform AbarDD and gammabarDD from Cartesian to " + output_Coord + " coordinates"
-    name = "initial_data_BSSN_basis_transform_Cartesian_to_rfm_and_rescale"
-    params = """const paramstruct *restrict params, const REAL xx0,const REAL xx1,const REAL xx2,
-                                                                    const REAL betaCartU0,const REAL betaCartU1,const REAL betaCartU2,
-                                                                    const REAL BCartU0,const REAL BCartU1,const REAL BCartU2,
-                                                                    const REAL gammabarCartDD00,const REAL gammabarCartDD01,const REAL gammabarCartDD02,
-                                                                    const REAL gammabarCartDD11,const REAL gammabarCartDD12,const REAL gammabarCartDD22,
-                                                                    const REAL AbarCartDD00,const REAL AbarCartDD01,const REAL AbarCartDD02,
-                                                                    const REAL AbarCartDD11,const REAL AbarCartDD12,const REAL AbarCartDD22,
-                                                                    const int idx3, REAL *restrict y_n_gfs"""
+    desc = r"""Convert Cartesian-basis BSSN vectors/tensors *except* lambda^i,
+to the basis specified by `reference_metric::CoordSystem`, then rescale these BSSN quantities"""
+    c_type = "static void"
+    name = "BSSN_Cart_to_rescaled_BSSN_rfm"
+    params = """paramstruct *restrict params, const REAL xCart[3],
+                                           const BSSN_Cart_basis_struct *restrict BSSN_Cart_basis,
+                                           rescaled_BSSN_rfm_basis_struct *restrict rescaled_BSSN_rfm_basis"""
+
+    body = "  const REAL Cartx=xCart[0], Carty=xCart[1], Cartz=xCart[2];\n"
+    # We're in the rfm coordinate basis now.
+    body += outputC(rfm.Cart_to_xx[:3], ["const REAL xx0", "const REAL xx1", "const REAL xx2"],
+                   filename="returnstring",
+                   params="outCverbose=False,includebraces=False,preindent=1,CSE_varprefix=tmp_xx")
 
     # Define the input variables:
-    gammabarCartDD = ixp.declarerank2("gammabarCartDD", "sym01")
-    AbarCartDD     = ixp.declarerank2("AbarCartDD", "sym01")
-    betaCartU = ixp.declarerank1("betaCartU")
-    BCartU    = ixp.declarerank1("BCartU")
+    gammabarCartDD = ixp.declarerank2("BSSN_Cart_basis->gammabarDD", "sym01")
+    AbarCartDD     = ixp.declarerank2("BSSN_Cart_basis->AbarDD", "sym01")
+    betaCartU = ixp.declarerank1("BSSN_Cart_basis->betaU")
+    BCartU    = ixp.declarerank1("BSSN_Cart_basis->BU")
 
-    # Set reference_metric to the output_Coord
-    par.set_parval_from_str("reference_metric::CoordSystem", output_Coord)
-    rfm.reference_metric()
     # Compute Jacobian to convert to Cartesian coordinates
     Jac_dUCart_dDrfmUD, Jac_dUrfm_dDCartUD = rfm.compute_Jacobian_and_inverseJacobian_tofrom_Cartesian()
 
@@ -238,41 +244,61 @@ def add_to_Cfunction_dict_initial_data_BSSN_basis_transform_Cartesian_to_rfm_and
             hDD[i][j] = (gammabarDD[i][j] - rfm.ghatDD[i][j]) / rfm.ReDD[i][j]
             aDD[i][j] = AbarDD[i][j] / rfm.ReDD[i][j]
 
-    def gfaccess(gfname):
-        return "y_n_gfs[IDX4ptS("+gfname.upper()+"GF, idx3)]"
-    list_of_output_exprs    = []
-    list_of_output_varnames = []
+    rescaled_T4UU = ixp.zerorank2(DIM=4)
+    if include_T4UU:
+        T4CartUU = ixp.declarerank2("BSSN_Cart_basis->T4UU", "sym01", DIM=4)
+        T4UU = rfm.basis_transform_4tensorUU_from_CartorSph_to_rfm(T4CartUU, CoordType_in="Cartesian")
+        rescaled_T4UU = ixp.zerorank2(DIM=4)
+        for mu in range(4):
+            for nu in range(mu, 4):
+                rescaled_T4UU[mu][nu] = T4UU[mu][nu]
+        for mu in range(1, 4):
+            for nu in range(mu, 4):
+                rescaled_T4UU[mu][nu] = T4UU[mu][nu] * rfm.ReDD[(mu-1)][(nu-1)]
+
+    alpha, cf, trK = sp.symbols('BSSN_Cart_basis->alpha BSSN_Cart_basis->cf BSSN_Cart_basis->trK', real=True)
+
+    list_of_output_exprs    = [alpha, cf, trK]
+    list_of_output_varnames = ["rescaled_BSSN_rfm_basis->alpha",
+                               "rescaled_BSSN_rfm_basis->cf",
+                               "rescaled_BSSN_rfm_basis->trK"]
     for i in range(3):
         list_of_output_exprs += [vetU[i]]
-        list_of_output_varnames += [gfaccess("vetU" + str(i))]
+        list_of_output_varnames += ["rescaled_BSSN_rfm_basis->vetU" + str(i)]
         list_of_output_exprs += [betU[i]]
-        list_of_output_varnames += [gfaccess("betU" + str(i))]
+        list_of_output_varnames += ["rescaled_BSSN_rfm_basis->betU" + str(i)]
         for j in range(i, 3):
             list_of_output_exprs += [hDD[i][j]]
-            list_of_output_varnames += [gfaccess("hDD" + str(i) + str(j))]
+            list_of_output_varnames += ["rescaled_BSSN_rfm_basis->hDD" + str(i) + str(j)]
             list_of_output_exprs += [aDD[i][j]]
-            list_of_output_varnames += [gfaccess("aDD" + str(i) + str(j))]
+            list_of_output_varnames += ["rescaled_BSSN_rfm_basis->aDD" + str(i) + str(j)]
+    if include_T4UU:
+        for mu in range(4):
+            for nu in range(mu, 4):
+                list_of_output_exprs += [rescaled_T4UU[mu][nu]]
+                list_of_output_varnames += ["rescaled_BSSN_rfm_basis->T4UU" + str(mu) + str(nu)]
+
     # Sort the outputs before calling outputC()
     # https://stackoverflow.com/questions/9764298/is-it-possible-to-sort-two-listswhich-reference-each-other-in-the-exact-same-w
     list_of_output_varnames, list_of_output_exprs = (list(t) for t in zip(*sorted(zip(list_of_output_varnames, list_of_output_exprs))))
 
-    body = outputC(list_of_output_exprs, list_of_output_varnames,
+    body += outputC(list_of_output_exprs, list_of_output_varnames,
                     filename="returnstring", params="outCverbose=False,includebraces=False,preindent=1")
 
-    add_to_Cfunction_dict(
+    _func_prototype, func = Cfunction(
         includes=includes,
         desc=desc,
         c_type=c_type, name=name, params=params,
         body=body,
-        enableCparameters=True)
-    return pickle_NRPy_env()
+        enableCparameters=False)
+    return func
 
 
 # initial_data_lambdaU_grid_interior() computes lambdaU from
 #  finite-difference derivatives of rescaled metric quantities
-def add_to_Cfunction_dict_initial_data_lambdaU_grid_interior():
-    includes = ["NRPy_basic_defines.h"]
-    c_type = "void"
+def Cfunction_initial_data_lambdaU_grid_interior():
+    includes = []
+    c_type = "static void"
 
     output_Coord = par.parval_from_str("reference_metric::CoordSystem")
     desc = "Compute lambdaU in " + output_Coord + " coordinates"
@@ -308,13 +334,127 @@ def add_to_Cfunction_dict_initial_data_lambdaU_grid_interior():
                            lhrh(lhs=gri.gfaccess("in_gfs", "lambdaU2"), rhs=lambdaU[2])]
     body = fin.FD_outputC("returnstring", lambdaU_expressions,
                            params="outCverbose=False,includebraces=False,preindent=0")
-    add_to_Cfunction_dict(
+    _func_prototype, func = Cfunction(
         includes=includes,
         desc=desc,
         c_type=c_type, name=name, params=params,
         body=body,
         loopopts="InteriorPoints,Read_xxs",
         enableCparameters=True)
+    return func
+
+
+def add_to_Cfunction_dict_initial_data_reader__convert_ADM_Sph_or_Cart_to_BSSN_rfm(input_Coord="Spherical",
+                                                                                   include_T4UU=False):
+    def T4UU_prettyprint():
+        return r"""
+  REAL T4UU00,T4UU01,T4UU02,T4UU03;
+  REAL        T4UU11,T4UU12,T4UU13;
+  REAL               T4UU22,T4UU23;
+  REAL                      T4UU33;
+"""
+    prefunc = """
+// ADM variables in the Cartesian basis:
+typedef struct __ADM_Cart_basis_struct__ {
+  REAL alpha, betaU0,betaU1,betaU2, BU0,BU1,BU2;
+  REAL gammaDD00,gammaDD01,gammaDD02,gammaDD11,gammaDD12,gammaDD22;
+  REAL KDD00,KDD01,KDD02,KDD11,KDD12,KDD22;
+"""
+    if include_T4UU:
+        prefunc += T4UU_prettyprint()
+    prefunc += "} ADM_Cart_basis_struct;\n"
+    ##############
+    prefunc += """
+// BSSN variables in the Cartesian basis:
+typedef struct __BSSN_Cart_basis_struct__ {
+  REAL alpha, betaU0,betaU1,betaU2, BU0,BU1,BU2;
+  REAL cf, trK;
+  REAL gammabarDD00,gammabarDD01,gammabarDD02,gammabarDD11,gammabarDD12,gammabarDD22;
+  REAL AbarDD00,AbarDD01,AbarDD02,AbarDD11,AbarDD12,AbarDD22;
+"""
+    if include_T4UU:
+        prefunc += T4UU_prettyprint()
+    prefunc += "} BSSN_Cart_basis_struct;\n"
+    ##############
+    prefunc += """
+// Rescaled BSSN variables in the rfm basis:
+typedef struct __rescaled_BSSN_rfm_basis_struct__ {
+  REAL alpha, vetU0,vetU1,vetU2, betU0,betU1,betU2;
+  REAL cf, trK;
+  REAL hDD00,hDD01,hDD02,hDD11,hDD12,hDD22;
+  REAL aDD00,aDD01,aDD02,aDD11,aDD12,aDD22;
+"""
+    if include_T4UU:
+        prefunc += T4UU_prettyprint()
+    prefunc += "} rescaled_BSSN_rfm_basis_struct;\n"
+    ##############
+    ##############
+    prefunc += Cfunction_ADM_SphorCart_to_Cart(input_Coord=input_Coord, include_T4UU=include_T4UU)
+    prefunc += Cfunction_ADM_Cart_to_BSSN_Cart(                         include_T4UU=include_T4UU)
+    prefunc += Cfunction_BSSN_Cart_to_rescaled_BSSN_rfm(include_T4UU=include_T4UU)
+    prefunc += Cfunction_initial_data_lambdaU_grid_interior()
+    includes = ["NRPy_basic_defines.h", "NRPy_function_prototypes.h"]
+
+    output_Coord = par.parval_from_str("reference_metric::CoordSystem")
+    desc = "Read in ADM initial data in the " + input_Coord + " basis, and convert to BSSN data in " + output_Coord + " coordinates"
+    c_type = "void"
+    name = "initial_data_reader__convert_to_BSSN_from_ADM_" + input_Coord
+    params = """griddata_struct *restrict griddata, ID_persist_struct *restrict ID_persist,
+                                                             void ID_function(const paramstruct *params, const REAL xCart[3],
+                                                                              const ID_persist_struct *restrict ID_persist,
+                                                                              initial_data_struct *restrict initial_data)"""
+
+    body = r"""
+  const int Nxx_plus_2NGHOSTS0 = griddata->params.Nxx_plus_2NGHOSTS0;
+  const int Nxx_plus_2NGHOSTS1 = griddata->params.Nxx_plus_2NGHOSTS1;
+  const int Nxx_plus_2NGHOSTS2 = griddata->params.Nxx_plus_2NGHOSTS2;
+
+  LOOP_OMP("omp parallel for", i0,0,Nxx_plus_2NGHOSTS0, i1,0,Nxx_plus_2NGHOSTS1, i2,0,Nxx_plus_2NGHOSTS2) {
+    // xCart is the global Cartesian coordinate, which accounts for any grid offsets from the origin.
+    REAL xCart[3];  xx_to_Cart(&griddata->params, griddata->xx, i0,i1,i2, xCart);
+
+    // Read or compute initial data at destination point xCart
+    initial_data_struct initial_data;
+    ID_function(&griddata->params, xCart, ID_persist, &initial_data);
+
+    ADM_Cart_basis_struct ADM_Cart_basis;
+    ADM_SphorCart_to_Cart(&griddata->params, xCart, &initial_data, &ADM_Cart_basis);
+
+    BSSN_Cart_basis_struct BSSN_Cart_basis;
+    ADM_Cart_to_BSSN_Cart(&griddata->params, xCart, &ADM_Cart_basis, &BSSN_Cart_basis);
+
+    rescaled_BSSN_rfm_basis_struct rescaled_BSSN_rfm_basis;
+    BSSN_Cart_to_rescaled_BSSN_rfm(&griddata->params, xCart, &BSSN_Cart_basis, &rescaled_BSSN_rfm_basis);
+
+    const int idx3 = IDX3S(i0,i1,i2);
+
+    // Output data to gridfunctions
+"""
+    gf_list = ["alpha", "trK", "cf"]
+    for i in range(3):
+        gf_list += ["vetU"+str(i), "betU"+str(i)]
+        for j in range(i, 3):
+            gf_list += ["hDD"+str(i)+str(j), "aDD"+str(i)+str(j)]
+    for gf in sorted(gf_list):
+        body += "    griddata->gridfuncs.y_n_gfs[IDX4ptS("+gf.upper()+"GF, idx3)] = rescaled_BSSN_rfm_basis."+gf+";\n"
+    if include_T4UU:
+        for mu in range(4):
+            for nu in range(mu, 4):
+                gf = "T4UU" + str(mu) + str(nu)
+                body += "    griddata->gridfuncs.auxevol_gfs[IDX4ptS("+gf.upper()+"GF, idx3)] = rescaled_BSSN_rfm_basis."+gf+";\n"
+    body += """
+  } // END LOOP over all gridpoints on given grid
+
+  initial_data_lambdaU_grid_interior(&griddata->params, griddata->xx, griddata->gridfuncs.y_n_gfs);
+"""
+
+    add_to_Cfunction_dict(
+        includes=includes,
+        prefunc=prefunc,
+        desc=desc,
+        c_type=c_type, name=name, params=params,
+        body=body,
+        enableCparameters=False)
     return pickle_NRPy_env()
 
 
@@ -323,8 +463,8 @@ def add_to_Cfunction_dict_exact_ADM_ID_function(IDtype, IDCoordSystem, alpha, be
     desc = IDtype + " initial data"
     c_type = "void"
     name = IDtype
-    params = "const paramstruct *params, const REAL xCart[3], const ID_persist_struct *restrict ID_persist, ID_output_struct *restrict ID_output"
-    orig_Coord = par.parval_from_str("reference_metric::CoordSystem")
+    params = "const paramstruct *params, const REAL xCart[3], const ID_persist_struct *restrict ID_persist, initial_data_struct *restrict initial_data"
+    desired_rfm_coord = par.parval_from_str("reference_metric::CoordSystem")
     par.set_parval_from_str("reference_metric::CoordSystem", IDCoordSystem)
     rfm.reference_metric()
     body = ""
@@ -346,17 +486,17 @@ def add_to_Cfunction_dict_exact_ADM_ID_function(IDtype, IDCoordSystem, alpha, be
         print("add_to_Cfunction_dict_exact_ADM_ID_function() Error: IDCoordSystem == " + IDCoordSystem + " unsupported")
         sys.exit(1)
     list_of_output_exprs = [alpha]
-    list_of_output_varnames = ["ID_output->alpha"]
+    list_of_output_varnames = ["initial_data->alpha"]
     for i in range(3):
         list_of_output_exprs += [betaU[i]]
-        list_of_output_varnames += ["ID_output->betaSphorCartU" + str(i)]
+        list_of_output_varnames += ["initial_data->betaSphorCartU" + str(i)]
         list_of_output_exprs += [BU[i]]
-        list_of_output_varnames += ["ID_output->BSphorCartU" + str(i)]
+        list_of_output_varnames += ["initial_data->BSphorCartU" + str(i)]
         for j in range(i, 3):
             list_of_output_exprs += [gammaDD[i][j]]
-            list_of_output_varnames += ["ID_output->gammaSphorCartDD" + str(i) + str(j)]
+            list_of_output_varnames += ["initial_data->gammaSphorCartDD" + str(i) + str(j)]
             list_of_output_exprs += [KDD[i][j]]
-            list_of_output_varnames += ["ID_output->KSphorCartDD" + str(i) + str(j)]
+            list_of_output_varnames += ["initial_data->KSphorCartDD" + str(i) + str(j)]
     # Sort the outputs before calling outputC()
     # https://stackoverflow.com/questions/9764298/is-it-possible-to-sort-two-listswhich-reference-each-other-in-the-exact-same-w
     list_of_output_varnames, list_of_output_exprs = (list(t) for t in zip(*sorted(zip(list_of_output_varnames, list_of_output_exprs))))
@@ -365,7 +505,8 @@ def add_to_Cfunction_dict_exact_ADM_ID_function(IDtype, IDCoordSystem, alpha, be
                     filename="returnstring", params="outCverbose=False,includebraces=False,preindent=1")
 
     # Restore CoordSystem:
-    par.set_parval_from_str("reference_metric::CoordSystem", orig_Coord)
+    par.set_parval_from_str("reference_metric::CoordSystem", desired_rfm_coord)
+    rfm.reference_metric()
     add_to_Cfunction_dict(
         includes=includes,
         desc=desc, c_type=c_type, name=name, params=params,
@@ -379,11 +520,10 @@ def add_to_Cfunction_dict_exact_ADM_ID_function(IDtype, IDCoordSystem, alpha, be
 # used to store e.g., pseudospectral coefficients for TwoPunctures,
 # initial data gridfunctions from NRPyElliptic, pointers to TOV 1D data
 # from the TOV solver, etc.
-def register_register_C_functions_and_NRPy_basic_defines(input_Coord="Spherical", ID_persist_struct_contents_str="",
-                                                         include_T4UU=False):
-    add_to_Cfunction_dict_initial_data_reader__convert_to_BSSN_from_ADM_sph_or_Cart(input_Coord=input_Coord)
-    add_to_Cfunction_dict_initial_data_BSSN_basis_transform_Cartesian_to_rfm_and_rescale()
-    add_to_Cfunction_dict_initial_data_lambdaU_grid_interior()
+def register_C_functions_and_NRPy_basic_defines(input_Coord="Spherical", ID_persist_struct_contents_str="",
+                                                include_T4UU=False):
+    add_to_Cfunction_dict_initial_data_reader__convert_ADM_Sph_or_Cart_to_BSSN_rfm(input_Coord=input_Coord,
+                                                                                   include_T4UU=include_T4UU)
 
     Nbd = r"""typedef struct __initial_data_struct__ {
   REAL alpha;
