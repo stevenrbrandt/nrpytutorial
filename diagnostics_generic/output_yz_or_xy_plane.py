@@ -68,16 +68,12 @@ def output_plane_yz_or_xy_body(plane="yz", include_ghosts=True):
     /* In isympy:
      i_PIo2, PI, Nphi, NGHOSTS = symbols('i_PIo2 PI Nphi NGHOSTS', real=True)
      expr = -PI + ( (i_PIo2-NGHOSTS) + Rational(1,2) )*(2*PI)/Nphi
-     solve(expr - PI/2, i_PIo2)
+     print(solve(expr - PI/2, i_PIo2))
      # Output:
-     # ⎡          3⋅Nphi   1⎤
-     # ⎢NGHOSTS + ────── - ─⎥
-     # ⎣            4      2⎦
-     solve(expr - (-PI/2), i_PIo2)
+     # [NGHOSTS + 3*Nphi/4 - 1/2]
+     print(solve(expr - (-PI/2), i_PIo2))
      # Output:
-     # ⎡          Nphi   1⎤
-     # ⎢NGHOSTS + ──── - ─⎥
-     # ⎣           4     2⎦
+     # [NGHOSTS + Nphi/4 - 1/2]
      */
     numpts_i2 = 2;
     i2_pts[0] = (int)(NGHOSTS + 0.25*params.Nxx2 - 0.5);
