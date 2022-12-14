@@ -84,7 +84,7 @@ def find_gftype(varname,die=True):
     var_data = glb_gridfcs_map.get(varname, None)
     if var_data is None:
         if die:
-            raise Exception(f"grid.py: Could not find gftype for '{varname}'.")
+            raise Exception("grid.py: Could not find gftype for '"+varname+"'.")
         else:
             return None
     else:
@@ -94,7 +94,7 @@ def find_gfmodule(varname,die=True):
     var_data = glb_gridfcs_map.get(varname, None)
     if var_data is None:
         if die:
-            raise Exception(f"grid.py: Could not find module for '{varname}'.")
+            raise Exception("grid.py: Could not find module for '"+varname+"'.")
         else:
             return None
     else:
@@ -114,7 +114,7 @@ def var_from_access(access):
     g = re.match(r'^const\s+(\w+)\s+(\w+)', access)
     if g:
         return g.group(2)
-    raise Exception(f"Could not identify a variable name from the access string '{access}'")
+    raise Exception("Could not identify a variable name from the access string '"+access+"'")
 
 def gfaccess(gfarrayname = "", varname = "", ijklstring = "", context = "DECL"):
     ret = _gfaccess(gfarrayname, varname, ijklstring, context)
@@ -124,10 +124,10 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = "", context = "DECL"):
 def _gfaccess(gfarrayname, varname, ijklstring, context):
     var_data = glb_gridfcs_map.get(varname, None)
 
-    assert context in ["DECL","USE"], f"The context must be either DECL or USE, not '{context}'"
+    assert context in ["DECL","USE"], "The context must be either DECL or USE, not '"+context+"'"
 
     if var_data is None:
-        raise Exception(f"Error: gridfunction '{varname}' is not registered!")
+        raise Exception("Error: gridfunction '"+varname+"' is not registered!")
 
     gftype = var_data.gftype
 
