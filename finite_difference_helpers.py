@@ -495,7 +495,7 @@ def read_gfs_from_memory(list_of_base_gridfunction_names_in_derivs, fdstencl, sy
     count = 0
     if idxs is None:
         idxs = set()
-    for gfidx in range(len(gri.glb_gridfcs_map)):
+    for gfidx in range(len(sorted_list_of_points_read_from_memory)):
         for pt in range(len(sorted_list_of_points_read_from_memory[gfidx])):
             read_from_memory_Ccode += read_from_memory_Ccode_onept(read_from_memory_gf[count].name,
                                                                    sorted_list_of_points_read_from_memory[gfidx][pt],

@@ -91,9 +91,8 @@ def FD_outputC(filename, sympyexpr_list, params="", upwindcontrolvec="",idxs=Non
             if basegf == str(gf.name):
                 is_gf = True
         if not is_gf:
-            print(f"Error: Attempting to take the derivative of {basegf}, which is not a registered gridfunction.")
-            print(f"       Make sure your gridfunction name does not have any underscores in it!")
-            raise Exception()
+            print("Error: Attempting to take the derivative of "+basegf+", which is not a registered gridfunction.")
+            print("       Make sure your gridfunction name does not have any underscores in it!")
 
     # Step 2c:
     # Check each derivative operator to make sure it is

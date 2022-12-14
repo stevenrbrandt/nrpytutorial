@@ -668,7 +668,7 @@ class CactusThorn:
             with SafeWrite(self.interface_ccl) as fd:
                 print(f"# Interface definitions for thorn {self.thornname}",file=fd)
                 print(f"IMPLEMENTS: {self.thornname}",file=fd)
-                for v in grid.glb_gridfcs_map.values():
+                for v in grid.glb_gridfcs_list:
                     if v.external_module is not None:
                         self.external_modules[v.external_module]=1
                 print(f"INHERITS: {', '.join(sorted(list(self.external_modules.keys())))}",file=fd)
