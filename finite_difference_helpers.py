@@ -603,7 +603,7 @@ def add_FD_func_to_outC_function_dict(list_of_deriv_vars,
                 outfunc_params += "const " + c_type + " invdx" + str(d) + ","
 
         for j in range(len(fdcoeffs[which_op_idx])):
-            var = sp.sympify("f" + varsuffix(fdstencl[which_op_idx][j], FDparams))
+            var = sp.sympify("f" + varsuffix("",fdstencl[which_op_idx][j], FDparams))
             outfunc_params += "const " + c_type + " " + str(var)
             if j != len(fdcoeffs[which_op_idx])-1:
                 outfunc_params += ","

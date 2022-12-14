@@ -90,7 +90,8 @@ def unpickle_NRPy_env(NRPyEnvVars):
                                              rank      =pickle.loads(WhichParamSet[i+2]),
                                              DIM       =pickle.loads(WhichParamSet[i+3]),
                                              f_infinity=pickle.loads(WhichParamSet[i+4]),
-                                             wavespeed =pickle.loads(WhichParamSet[i+5]))) ; i+=6
+                                             wavespeed =pickle.loads(WhichParamSet[i+5]),
+                                             centering=None, external_module=None)) ; i+=6
         # parameters
         num_elements = pickle.loads(WhichParamSet[i]); i+=1
         for lst in range(num_elements):
