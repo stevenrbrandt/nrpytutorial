@@ -111,32 +111,15 @@ def parity_conditions_symbolic_dot_products():
 
     lhs_strings = []
     for i in range(10):
-        lhs_strings.append("REAL_parity_array["+str(i)+"]")
-    outstr = """
-    // NRPy+ Curvilinear Boundary Conditions: Unit vector dot products for all
-    //      ten parity conditions, in given coordinate system.
-    //      Needed for automatically determining sign of tensor across coordinate boundary.
-    // Documented in: Tutorial-Start_to_Finish-Curvilinear_BCs.ipynb
-"""
-    return outstr + outputC(parity, lhs_strings, filename="returnstring", params="preindent=2")
+        lhs_strings.append("parity[" + str(i) + "]")
+    outputC(parity, lhs_strings, os.path.join(Ccodesdir, "parity_conditions_symbolic_dot_products.h"))
 
 
-# For example, if the gridfunction name ends with "01", then (based on the table in the
-# NRPy+ Jupyter notebook corresponding to this Python module) the set_parity_types()
-# function below will set the parity_type of that gridfunction to 5. We can be assured
-# this is a rather robust algorithm, because gri.register_gridfunctions() in grid.py
-# will throw an error if a gridfunction's base name ends in an integer. This strict
-# syntax was added with the express purpose of making it easier to set parity types
-# based solely on the gridfunction name.
-#
-# After each parity type is found, we store the parity type of each gridfunction to
-# const int8_t arrays evol_gf_parity and aux_gf_parity, appended to the end of
-# NRPy_basic_defines.h.
-def NRPy_basic_defines_set_gridfunction_defines_with_parity_types(verbose=True):
-    # First add human-readable gridfunction aliases (grid.py) to NRPy_basic_defines dictionary,
-    evolved_variables_list, auxiliary_variables_list, auxevol_variables_list = gri.gridfunction_lists()[0:3]
+    # Step 2.a: Generate Ccodesdir/gridfunction_defines.h file,
+    #       containing human-readable gridfunction aliases
+    evolved_variables_list, auxiliary_variables_list, auxevol_variables_list = gri.output__gridfunction_defines_h__return_gf_lists(Ccodesdir)[0:3]
 
-    # Step 3.b: set the parity conditions on all gridfunctions in gf_list,
+    # Step 2.b: set the parity conditions on all gridfunctions in gf_list,
     #       based on how many digits are at the end of their names
     def set_parity_types(list_of_gf_names):
         parity_type = []
@@ -336,69 +319,73 @@ def Cfunction__EigenCoord_set_x0x1x2_inbounds__i0i1i2_inbounds_single_pt():
     par.set_parval_from_str("reference_metric::CoordSystem",CoordSystem_orig)
     rfm.reference_metric()
 
-    # Step 3:
-    body += """
-  // Step 3: Convert x0(i0_inbounds),x1(i1_inbounds),x2(i2_inbounds) -> (Cartx,Carty,Cartz),
-  //         and check that
-  //         (Cartx,Carty,Cartz) == (Cartx(x0(i0)),Cartx(x1(i1)),Cartx(x2(i2)))
-  //         If not, error out!
+# Sommerfeld boundary condition class; generates Sommerfeld parameters and functions to be used in subsequent
+# C code
+# Author: Terrence Pierre Jacques
+class sommerfeld_boundary_condition_class():
+    """
+    Class for generating C code to apply Sommerfeld boundary conditions
+    """
+    # class variables should be the resulting dicts
+    # Set class variable default values
+    # radial falloff power n = 3 has been found to yield the best results
+    #  - see Tutorial-SommerfeldBoundaryCondition.ipynb Step 2 for details
+    def __init__(self, fd_order=2, vars_at_inf_default = 0., vars_radial_falloff_power_default = 3., vars_speed_default = 1.):
+        evolved_variables_list = gri.gridfunction_lists()[0]
 
-  // Step 3.a: Compute x0(i0_inbounds),x1(i1_inbounds),x2(i2_inbounds):
-  const REAL x0_inbounds = xx[0][i0_inbounds];
-  const REAL x1_inbounds = xx[1][i1_inbounds];
-  const REAL x2_inbounds = xx[2][i2_inbounds];
+        # set class finite differencing order
+        self.fd_order = fd_order
 
-  // Step 3.b: Compute {x,y,z}Cart_from_xx, as a
-  //           function of i0,i1,i2
-  REAL xCart_from_xx, yCart_from_xx, zCart_from_xx;
-  {
-    // xx_to_Cart for Coordinate """+CoordSystem_orig+r"""):
-    REAL xx0 = xx[0][i0];
-    REAL xx1 = xx[1][i1];
-    REAL xx2 = xx[2][i2];
-"""+ \
-    outputC([rfm.xx_to_Cart[0],rfm.xx_to_Cart[1],rfm.xx_to_Cart[2]],
-            ["xCart_from_xx","yCart_from_xx","zCart_from_xx"],
-            "returnstring", params="preindent=2,includebraces=False")
-    body += r"""  }
+        NRPy_FD_order = par.parval_from_str("finite_difference::FD_CENTDERIVS_ORDER")
 
-  // Step 3.c: Compute {x,y,z}Cart_from_xx_inbounds, as a
-  //           function of i0_inbounds,i1_inbounds,i2_inbounds
-  REAL xCart_from_xx_inbounds, yCart_from_xx_inbounds, zCart_from_xx_inbounds;
-  {
-    // xx_to_Cart_inbounds for Coordinate """+CoordSystem_orig+r"""):
-    REAL xx0 = xx[0][i0_inbounds];
-    REAL xx1 = xx[1][i1_inbounds];
-    REAL xx2 = xx[2][i2_inbounds];
-"""+ \
-    outputC([rfm.xx_to_Cart[0],rfm.xx_to_Cart[1],rfm.xx_to_Cart[2]],
-            ["xCart_from_xx_inbounds","yCart_from_xx_inbounds","zCart_from_xx_inbounds"],
-            "returnstring", params="preindent=2,includebraces=False")
-    body += r"""  }
+        if NRPy_FD_order < fd_order:
+            print("ERROR: The global central finite differencing order within NRPy+ must be greater than or equal to the Sommerfeld boundary condition's finite differencing order")
+            sys.exit(1)
 
-  // Step 3.d: Compare xCart_from_xx to xCart_from_xx_inbounds;
-  //           they should be identical!!!
-#define EPS_REL 1e-8
-  const REAL norm_factor = sqrt(xCart_from_xx*xCart_from_xx + yCart_from_xx*yCart_from_xx + zCart_from_xx*zCart_from_xx) + 1e-15;
-  if(fabs( (double)(xCart_from_xx - xCart_from_xx_inbounds) ) > EPS_REL * norm_factor ||
-     fabs( (double)(yCart_from_xx - yCart_from_xx_inbounds) ) > EPS_REL * norm_factor ||
-     fabs( (double)(zCart_from_xx - zCart_from_xx_inbounds) ) > EPS_REL * norm_factor) {
-    fprintf(stderr,"Error in """+CoordSystem_orig+r""" coordinate system: Cartesian disagreement: ( %.15e %.15e %.15e ) != ( %.15e %.15e %.15e ) | xx: %e %e %e -> %e %e %e | %d %d %d\n",
-            (double)xCart_from_xx,(double)yCart_from_xx,(double)zCart_from_xx,
-            (double)xCart_from_xx_inbounds,(double)yCart_from_xx_inbounds,(double)zCart_from_xx_inbounds,
-            xx[0][i0],xx[1][i1],xx[2][i2],
-            xx[0][i0_inbounds],xx[1][i1_inbounds],xx[2][i2_inbounds],
-            Nxx_plus_2NGHOSTS0,Nxx_plus_2NGHOSTS1,Nxx_plus_2NGHOSTS2);
-    exit(1);
-  }
+        # Define class dictionaries to store sommerfeld parameters for each EVOL gridfunction
 
-  // Step 4: Set output arrays.
-  x0x1x2_inbounds[0] = xx[0][i0_inbounds];
-  x0x1x2_inbounds[1] = xx[1][i1_inbounds];
-  x0x1x2_inbounds[2] = xx[2][i2_inbounds];
-  i0i1i2_inbounds[0] = i0_inbounds;
-  i0i1i2_inbounds[1] = i1_inbounds;
-  i0i1i2_inbounds[2] = i2_inbounds;
+        # EVOL gridfunction asymptotic value at infinity
+        self.vars_at_infinity = {}
+
+        # EVOL gridfunction wave speed at outer boundaries
+        self.vars_speed = {}
+
+        # EVOL gridfunction radial falloff power
+        self.vars_radial_falloff_power = {}
+
+        # Set default values for each specific EVOL gridfunction
+        for gf in evolved_variables_list:
+            self.vars_at_infinity[gf.upper() + 'GF'] = vars_at_inf_default
+            self.vars_radial_falloff_power[gf.upper() + 'GF'] = vars_radial_falloff_power_default
+            self.vars_speed[gf.upper() + 'GF'] = vars_speed_default
+
+    def sommerfeld_params(self):
+        # Write parameters to C file
+
+        # Creating array for EVOL gridfunction values at infinity
+        var_at_inf_string = "{"
+        for _gf,val in self.vars_at_infinity.items():
+            var_at_inf_string += str(val) + ", "
+        var_at_inf_string = var_at_inf_string[:-2] + "};"
+
+        # Creating array for EVOL gridfunction values of radial falloff power
+        vars_radial_falloff_power_string = "{"
+        for _gf,val in self.vars_radial_falloff_power.items():
+            vars_radial_falloff_power_string += str(val) + ", "
+        vars_radial_falloff_power_string = vars_radial_falloff_power_string[:-2] + "};"
+
+        # Creating array for EVOL gridfunction values of wave speed at outer boundaries
+        var_speed_string = "{"
+        for _gf,val in self.vars_speed.items():
+            var_speed_string += str(val) + ", "
+        var_speed_string = var_speed_string[:-2] + "};"
+
+        # Writing to values to sommerfeld_params.h file
+        out_str = """
+// Sommerfeld EVOL grid function parameters
+const REAL evolgf_at_inf[NUM_EVOL_GFS] = """+var_at_inf_string+"""
+const REAL evolgf_radial_falloff_power[NUM_EVOL_GFS] = """+vars_radial_falloff_power_string+"""
+const REAL evolgf_speed[NUM_EVOL_GFS] = """+var_speed_string+"""
 """
     __function_prototype_ignore, Cfunc = Cfunction(
         desc=desc, c_type=c_type, name=name, params=params,

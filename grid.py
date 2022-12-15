@@ -13,8 +13,20 @@ import re
 
 # Initialize globals related to the grid
 ET_driver = ""
-glb_gridfcs_list = []
+
+# These next two are needed by Tutorial-Numerical_Grids.py
+tile_tmp_variables_list = []
+scalar_tmp_variables_list = []
+
 glb_gridfc = namedtuple('gridfunction', 'gftype name rank DIM f_infinity wavespeed centering external_module')
+
+glb_gridfcs_list = []
+def glb_gridfcs_map():
+    m = {}
+    for gf in glb_gridfcs_list:
+        m[gf.name] = gf
+    assert len(glb_gridfcs_list) == len(m)
+    return m
 
 # Grids may have centerings. These will be C=cell-centered or V=vertex centered, with either one C or V per dimension
 gf_centering = {}
@@ -106,11 +118,16 @@ def find_gfmodule(varname,die=True):
 from_access = {}
 
 def var_from_access(access):
+    access = access.strip() # This really shouldn't be necessary
     v = from_access.get(access, None)
     if v is not None:
         return v
-    if re.match(r'^\w+$', access):
-        return access
+    g = re.match(r'^(\w+)(\[\w+\])*$', access)
+    if g:
+        return g.group(1)
+    g = re.match(r'in_gfs\w*\[IDX4S\((\w+),i0,i1,i2\)\]', access)
+    if g:
+        return g.group(1)
     g = re.match(r'^const\s+(\w+)\s+(\w+)', access)
     if g:
         return g.group(2)
