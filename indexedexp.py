@@ -408,7 +408,7 @@ def register_gridfunctions_for_single_rankN(rank, gf_type, gf_basename, symmetry
                                f_infinity=f_infinity, wavespeed=wavespeed,
                                external_module=external_module, centering=centering)
 
-    assert gf_basename not in index_group, f"Duplicate use of grid function {gf_basename}"
+    assert gf_basename not in index_group, "Duplicate use of grid function "+gf_basename
     index_group[gf_basename] = {}
     add_index_group(gf_basename, IDX_OBJ_TMP)
 

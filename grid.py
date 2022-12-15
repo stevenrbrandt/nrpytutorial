@@ -81,7 +81,7 @@ def variable_type(var):
     elif var_is_gf:
         return "gridfunction"
     else:
-        raise Exception(f"grid.py: Could not find variable_type for '{var}'.")
+        raise Exception("grid.py: Could not find variable_type for '"+var+"'.")
     if not found_registered_gf:
         print("Error: gridfunction \""+varname+"\" is not registered!")
         print("Here's the list of registered gridfunctions:", grid.glb_gridfcs_list)
@@ -198,16 +198,16 @@ def _gfaccess(gfarrayname, varname, ijklstring, context):
             vartype = par.parval_from_str("PRECISION")
             mask = "mask, " if vartype == "CCTK_REALVEC" else ""
             if gfarrayname == "rhs_gfs":
-                return retstring + varname + f"_rhsGF" + "({mask}{get_centering(varname)}_index)"
+                return retstring + varname + "_rhsGF" + "("+mask+get_centering(varname)+"_index)"
             elif gftype == "EXTERNAL":
-                return retstring + varname + f"({mask}{find_centering(varname)}_index)"
+                return retstring + varname + "("+mask+find_centering(varname)+"_index)"
             elif gftype == "CORE":
                 return retstring + "p." + varname
             elif gftype == "TILE_TMP":
                 if ijklstring == "":
-                    return retstring + varname + f"({mask}{find_centering(varname)}_tmp_index)"
+                    return retstring + varname + "("+mask+find_centering(varname)+"_tmp_index)"
                 else:
-                    return retstring + varname + f"({mask}{find_centering(varname)}_tmp_layout, p.I{ijklstring})"
+                    return retstring + varname + "("+mask+find_centering(varname)+"_tmp_layout, p.I{ijklstring})"
             elif gftype == "SCALAR_TMP":
                 if context == "USE":
                     return retstring + "const " + vartype + " " + varname + " CCTK_ATTRIBUTE_UNUSED "
@@ -215,9 +215,9 @@ def _gfaccess(gfarrayname, varname, ijklstring, context):
                     return None
             else:
                 if ijklstring == "":
-                    return retstring + varname + f"GF({mask}{find_centering(varname)}_index)"
+                    return retstring + varname + "GF("+mask+find_centering(varname)+"_index)"
                 else:
-                    return retstring + varname + f"GF({mask}{find_centering(varname)}_layout, p.I{ijklstring})"
+                    return retstring + varname + "GF("+mask+find_centering(varname)+"_layout, p.I"+ijklstring+")"
     else:
         print("grid::GridFuncMemAccess = "+par.parval_from_str("GridFuncMemAccess")+" not supported")
         sys.exit(1)
@@ -277,11 +277,11 @@ def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_inf
         sys.exit(1)
 
     assert centering is None or type(centering) == str, \
-        f"Centering, if supplied, should be of type str. Type was '{type(centering)}'"
+        "Centering, if supplied, should be of type str. Type was '"+type(centering)+"'"
     if centering is not None:
-        assert len(centering) == DIM, f"len(centering) ({len(centering)}) is not equal to DIM ({DIM})"
+        assert len(centering) == DIM, "len(centering) ("+len(centering)+") is not equal to DIM ("+DIM+")"
         for c in centering:
-            assert c in "CV", f"Centering should contain only 'C' or 'V'. The letter '{c}' was found."
+            assert c in "CV", "Centering should contain only 'C' or 'V'. The letter '"+c+"' was found."
 
     # Step 1: convert gf_names to a list if it's not already a list
     if not isinstance(gf_names, list):
@@ -437,7 +437,7 @@ def gridfunction_lists():
         elif gf_type == "SCALAR_TMP":
            scalar_tmp_variables_list.append(gf_name)
         else:
-           raise Exception(f"Bad gftype '{gf_type}'")
+           raise Exception("Bad gftype '"+gf_type+"'")
 
     # Next we alphabetize the lists
     evolved_variables_list.sort()
