@@ -15,6 +15,7 @@ import sympy as sp                  # SymPy: The Python computer algebra package
 import grid as gri                  # NRPy+: Functions having to do with numerical grids
 import sys                          # Standard Python module for multiplatform OS-level functions
 from collections import namedtuple  # Standard Python: Enable namedtuple data type
+from here import here
 
 FDparams = namedtuple('FDparams', 'PRECISION FD_CD_order enable_FD_functions enable_SIMD DIM MemAllocStyle upwindcontrolvec fullindent outCparams')
 
@@ -217,7 +218,7 @@ def type__var(in_var,FDparams, AddPrefix_for_UpDownWindVars=True,is_const=True):
     else:
         return vartype + " " + varname
 
-def read_from_memory_Ccode_onept(gfname,idx, FDparams, idxs):
+def read_from_memory_Ccode_onept(gfname,idx, FDparams, idxs=set()):
     """
 
     :param gfname: gridfunction name; a string
@@ -314,7 +315,7 @@ def varsuffix(name, idx4, FDparams):
     :return: returns suffix to uniquely name a point of data for a gridfunction
     >>> from finite_difference_helpers import varsuffix, FDparams
     >>> FDparams.DIM=3
-    >>> varsuffix([-2,0,-1,-300], FDparams)
+    >>> varsuffix("", [-2,0,-1,-300], FDparams)
     \'_i0m2_i1_i2m1\'
     """
     base_suffix = getsuffix(name)
@@ -322,7 +323,7 @@ def varsuffix(name, idx4, FDparams):
         return base_suffix 
     return base_suffix + "_" + ijkl_string(idx4, FDparams).replace(",", "_").replace("+", "p").replace("-", "m")
 
-def read_gfs_from_memory(list_of_base_gridfunction_names_in_derivs, fdstencl, sympyexpr_list, FDparams, idxs):
+def read_gfs_from_memory(list_of_base_gridfunction_names_in_derivs, fdstencl, sympyexpr_list, FDparams, idxs=None):
     # with open(list_of_base_gridfunction_names_in_derivs[0]+".txt","w") as file:
     #     file.write(str(list_of_base_gridfunction_names_in_derivs))
     #     file.write(str(fdstencl))
