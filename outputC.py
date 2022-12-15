@@ -475,7 +475,6 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
         # sympyexpr = list(map(map_synthesize_muladd, sympyexpr))
         for i in range(len(sympyexpr)):
             outstring += outtypestring + ccode_postproc(sp.ccode(dosubs(sympyexpr[i]), output_varname_str[i],
-                                                                 allow_unknown_functions=True,
                                                                  user_functions=custom_functions_for_SymPy_ccode))+"\n"
     # Step 6b: If CSE enabled, then perform CSE using SymPy and then
     #          resulting C code.
