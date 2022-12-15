@@ -23,6 +23,8 @@ ET_driver = ""
 tile_tmp_variables_list = []
 scalar_tmp_variables_list = []
 
+glb_gridfc = namedtuple('gridfunction', 'gftype name rank DIM f_infinity wavespeed centering external_module')
+
 glb_gridfcs_list = []
 def glb_gridfcs_map():
     m = {}
@@ -30,8 +32,6 @@ def glb_gridfcs_map():
         m[gf.name] = gf
     assert len(glb_gridfcs_list) == len(m)
     return m
-
-glb_gridfc = namedtuple('gridfunction', 'gftype name rank DIM f_infinity wavespeed centering external_module')
 
 # Grids may have centerings. These will be C=cell-centered or V=vertex centered, with either one C or V per dimension
 gf_centering = {}
@@ -114,13 +114,14 @@ def find_gfmodule(varname,die=True):
 from_access = {}
 
 def var_from_access(access):
+    access = access.strip() # This really shouldn't be necessary
     v = from_access.get(access, None)
     if v is not None:
         return v
     g = re.match(r'^(\w+)(\[\w+\])*$', access)
     if g:
         return g.group(1)
-    g = re.match(r'in_gfs\[IDX4S\((\w+),i0,i1,i2\)\]', access)
+    g = re.match(r'in_gfs\w*\[IDX4S\((\w+),i0,i1,i2\)\]', access)
     if g:
         return g.group(1)
     g = re.match(r'^const\s+(\w+)\s+(\w+)', access)
@@ -478,7 +479,7 @@ def gridfunction_defines():
 static const REAL gridfunctions_f_infinity[NUM_EVOL_GFS] = { """
         for evol_var in evolved_variables_list:  # This list is sorted
             #                                      We need to preserve the order to ensure consistency with the #defines
-            for gf in enumerate(glb_gridfcs_list):
+            for gf in glb_gridfcs_list:
                 if gf.name == evol_var and gf.gftype == "EVOL":
                     outstr += str(gf.f_infinity) + ", "
         outstr = outstr[:-2] + " };\n"
@@ -492,11 +493,12 @@ static const REAL gridfunctions_wavespeed[NUM_EVOL_GFS] = { """
                     outstr += str(gf.wavespeed) + ", "
         outstr = outstr[:-2] + " };\n"
 
+        # This code could never have worked
         outstr += """\n\n// SET gridfunctions_centering[i] = gridfunction i's vertex/cell centering:
-static const REAL gridfunctions_centering[NUM_EVOL_GFS] = { """
+//static const REAL gridfunctions_centering[NUM_EVOL_GFS] = { """
         for evol_var in evolved_variables_list:  # This list is sorted
             #                                      We need to preserve the order to ensure consistency with the #defines
-            for gf in glb_gridfcs:
+            for gf in glb_gridfcs_list:
                 if gf.name == evol_var and gf.gftype == "EVOL":
                     outstr += str(gf.centering) + ", "
         outstr = outstr[:-2] + " };\n"
