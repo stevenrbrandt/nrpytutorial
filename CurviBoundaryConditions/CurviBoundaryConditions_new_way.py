@@ -613,10 +613,11 @@ Step 2: Set up outer boundary structs bcstruct->outer_bc_array[which_gz][face][i
     ////////////////////////
     // x0min and x0max faces: Allocate memory for outer_bc_array and set bc_loop_bounds:
     //                        Note that x0min and x0max faces have exactly the same size.
-    bcstruct->pure_outer_bc_array[which_gz + NGHOSTS*(face/2)] = (outerpt_bc_struct *restrict)malloc(sizeof(outerpt_bc_struct) * 2 *
-                                                                                                     ((x0min_face_range[1]-x0min_face_range[0]) *
-                                                                                                      (x0min_face_range[3]-x0min_face_range[2]) *
-                                                                                                      (x0min_face_range[5]-x0min_face_range[4])));
+    //                   Also, note that face/2 --v   offsets this factor of 2 ------------------------------------------v
+    bcstruct->pure_outer_bc_array[3*which_gz + face/2] = (outerpt_bc_struct *restrict)malloc(sizeof(outerpt_bc_struct) * 2 *
+                                                                                             ((x0min_face_range[1]-x0min_face_range[0]) *
+                                                                                              (x0min_face_range[3]-x0min_face_range[2]) *
+                                                                                              (x0min_face_range[5]-x0min_face_range[4])));
     // x0min face: Can't set bc_info->bc_loop_bounds[which_gz][face] = { i0min,i0max, ... } since it's not const :(
     for(int i=0;i<6;i++) { bcstruct->bc_info.bc_loop_bounds[which_gz][face][i] = x0min_face_range[i]; }
     face++;
@@ -628,10 +629,11 @@ Step 2: Set up outer boundary structs bcstruct->outer_bc_array[which_gz][face][i
     ////////////////////////
     // x1min and x1max faces: Allocate memory for outer_bc_array and set bc_loop_bounds:
     //                        Note that x1min and x1max faces have exactly the same size.
-    bcstruct->pure_outer_bc_array[which_gz + NGHOSTS*(face/2)] = (outerpt_bc_struct *restrict)malloc(sizeof(outerpt_bc_struct) * 2 *
-                                                                                                     ((x1min_face_range[1]-x1min_face_range[0]) *
-                                                                                                      (x1min_face_range[3]-x1min_face_range[2]) *
-                                                                                                      (x1min_face_range[5]-x1min_face_range[4])));
+    //                   Also, note that face/2 --v   offsets this factor of 2 ------------------------------------------v
+    bcstruct->pure_outer_bc_array[3*which_gz + face/2] = (outerpt_bc_struct *restrict)malloc(sizeof(outerpt_bc_struct) * 2 *
+                                                                                             ((x1min_face_range[1]-x1min_face_range[0]) *
+                                                                                              (x1min_face_range[3]-x1min_face_range[2]) *
+                                                                                              (x1min_face_range[5]-x1min_face_range[4])));
     // x1min face: Can't set bc_info->bc_loop_bounds[which_gz][face] = { i0min,i0max, ... } since it's not const :(
     for(int i=0;i<6;i++) { bcstruct->bc_info.bc_loop_bounds[which_gz][face][i] = x1min_face_range[i]; }
     face++;
@@ -644,10 +646,11 @@ Step 2: Set up outer boundary structs bcstruct->outer_bc_array[which_gz][face][i
     ////////////////////////
     // x2min and x2max faces: Allocate memory for outer_bc_array and set bc_loop_bounds:
     //                        Note that x2min and x2max faces have exactly the same size.
-    bcstruct->pure_outer_bc_array[which_gz + NGHOSTS*(face/2)] = (outerpt_bc_struct *restrict)malloc(sizeof(outerpt_bc_struct) * 2 *
-                                                                                                     ((x2min_face_range[1]-x2min_face_range[0]) *
-                                                                                                      (x2min_face_range[3]-x2min_face_range[2]) *
-                                                                                                      (x2min_face_range[5]-x2min_face_range[4])));
+    //                   Also, note that face/2 --v   offsets this factor of 2 ------------------------------------------v
+    bcstruct->pure_outer_bc_array[3*which_gz + face/2] = (outerpt_bc_struct *restrict)malloc(sizeof(outerpt_bc_struct) * 2 *
+                                                                                             ((x2min_face_range[1]-x2min_face_range[0]) *
+                                                                                              (x2min_face_range[3]-x2min_face_range[2]) *
+                                                                                              (x2min_face_range[5]-x2min_face_range[4])));
     // x2min face: Can't set bc_info->bc_loop_bounds[which_gz][face] = { i0min,i0max, ... } since it's not const :(
     for(int i=0;i<6;i++) { bcstruct->bc_info.bc_loop_bounds[which_gz][face][i] = x2min_face_range[i]; }
     face++;
