@@ -87,7 +87,8 @@ def Cfunction_ADM_SphorCart_to_Cart(input_Coord="Spherical", include_T4UU=False)
     BCartU = rfm.basis_transform_vectorU_from_rfmbasis_to_Cartesian(Jac_dUCart_dDrfmUD, BSphorCartU)
     T4CartUU = ixp.zerorank2(DIM=4)
     if include_T4UU:
-        T4CartUU = rfm.basis_transform_4tensorUU_from_CartorSph_to_rfm(T4SphorCartUU, CoordType_in=input_Coord)
+        T4CartUU = rfm.basis_transform_4tensorUU_from_CartorSph_to_Cartesian(T4SphorCartUU,
+                                                                             CoordType_in=input_Coord)
 
     alpha = sp.symbols("initial_data->alpha", real=True)
     list_of_output_exprs    = [alpha]
