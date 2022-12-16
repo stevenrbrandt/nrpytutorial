@@ -1029,8 +1029,6 @@ def basis_transform_4tensorUU_from_CartorSph_to_rfm(T4UU, CoordType_in="Spherica
 
     # Next apply Jacobian transformations to convert into the (xx0,xx1,xx2) basis
 
-    # rho and S are scalar, so no Jacobian transformations are necessary.
-
     Jac4_dUSphorCart_dDrfmUD = ixp.zerorank2(DIM=4)
     Jac4_dUSphorCart_dDrfmUD[0][0] = sp.sympify(1)
     for i in range(3):
@@ -1039,9 +1037,7 @@ def basis_transform_4tensorUU_from_CartorSph_to_rfm(T4UU, CoordType_in="Spherica
 
     Jac4_dUrfm_dDSphorCartUD, dummyDET = ixp.generic_matrix_inverter4x4(Jac4_dUSphorCart_dDrfmUD)
 
-    # Perform Jacobian operations on T^{mu nu} and gamma_{ij}
-    #T4UU = ixp.register_gridfunctions_for_single_rank2("AUXEVOL","T4UU","sym01",DIM=4)
-
+    # Perform Jacobian operations on T^{mu nu}
     rfm_basis_T4UU = ixp.zerorank2(DIM=4)
     for mu in range(4):
         for nu in range(4):
@@ -1050,6 +1046,16 @@ def basis_transform_4tensorUU_from_CartorSph_to_rfm(T4UU, CoordType_in="Spherica
                     rfm_basis_T4UU[mu][nu] += \
                          Jac4_dUrfm_dDSphorCartUD[mu][delta]*Jac4_dUrfm_dDSphorCartUD[nu][sigma]*T4UU[delta][sigma]
     return rfm_basis_T4UU
+
+
+def basis_transform_4tensorUU_from_CartorSph_to_Cartesian(T4UU, CoordType_in="Spherical"):
+    rfm_basis_name = par.parval_from_str("reference_metric::CoordSystem")
+    par.set_parval_from_str("reference_metric::CoordSystem", "Cartesian")
+    reference_metric()
+    T4UUCart = basis_transform_4tensorUU_from_CartorSph_to_rfm(T4UU, CoordType_in=CoordType_in)
+    par.set_parval_from_str("reference_metric::CoordSystem", rfm_basis_name)
+    reference_metric()
+    return T4UUCart
 
 
 # to/from spherical coordinates
