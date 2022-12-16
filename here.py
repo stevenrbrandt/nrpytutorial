@@ -1,3 +1,4 @@
+from __future__ import print_function
 from colored import colored
 import os
 import re
