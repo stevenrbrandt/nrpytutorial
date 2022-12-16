@@ -15,6 +15,7 @@ from inspect import currentframe
 import nrpylatex
 from nrpylatex import parse_latex as parse_latex_
 from here import here, herecc
+from fstr import f
 
 import warnings
 warnings.filterwarnings('ignore',r'some variable\(s\) in the namespace were overridden')
@@ -90,7 +91,7 @@ def _latex_def(basename, fmt, gf, args):
             _latex_def(basename, fmt, gf[i], args + [coords[i]])
     else:
         indexes = fmt % tuple(args)
-        latex = f"% \\text{{{basename}}}{indexes} = \\text{{{gf}}}"
+        latex = f("% \\text{{{basename}}}{indexes} = \\text{{{gf}}}")
         parse_latex(latex)
 
 
@@ -116,7 +117,7 @@ def match_expr(expr):
         ''',expr)
         if g:
             s = g.group(0)
-            assert s != '', f"{g.group(0)}, {expr}"
+            assert s != '', f("{g.group(0)}, {expr}")
             if g.group(1) is not None:
                 result += [("symbol",g.group(1))]
             elif g.group(2) is not None:
@@ -201,7 +202,7 @@ def _deriv_decl(globs, tens, base, suffix, rank, div, indexes, rstart, sym_start
             suffix2 += 'D'
     s = [x for x in sym_start]
     for i in range(rstart,rank-1):
-        s += [f"sym{i}{i+1}"]
+        s += [f("sym{i}{i+1}")]
     fullname = base + suffix + div + suffix2
     syms = "_".join(s)
     result = ixp.declare_indexedexp(rank=rank, \
@@ -234,9 +235,9 @@ def deriv_decl(tens, *args):
     sym_start = []
     for sym in symmetries:
         if sym[2] == 1:
-            sym_start += [f"sym{sym[0]}{sym[1]}"]
+            sym_start += [f("sym{sym[0]}{sym[1]}")]
         else:
-            sym_start += [f"asym{sym[0]}{sym[1]}"]
+            sym_start += [f("asym{sym[0]}{sym[1]}")]
     div = None
     indexes = None
     for arg in args:
@@ -277,9 +278,9 @@ def gfdecl(*args):
                 elif str(k)[0] == "l":
                     suffix += "D"
                 else:
-                    assert False,f"{k} {type(k)}"
+                    assert False,f("{k} {type(k)}")
             for basename in namelist:
-                assert not re.match(r'^.*[DU]$',basename), f"Bad declaration for '{basename}'. Basenames should not end in D or U."
+                assert not re.match(r'^.*[DU]$',basename), f("Bad declaration for '{basename}'. Basenames should not end in D or U.")
                 fullname = basename + suffix
                 if basename not in globs:
                     if rank>0:
@@ -295,7 +296,7 @@ def gfdecl(*args):
                 if copy["gf_type"] != "EXTERNAL":
                     copy["external_module"] = None
 
-                assert fullname not in properties, f"Redefinition of {fullname}"
+                assert fullname not in properties, f("Redefinition of {fullname}")
 
                 base_variants = variants.get(basename,set())
                 sym1 = copy.get("symmetry_option", "")
@@ -303,7 +304,7 @@ def gfdecl(*args):
                     variant_copy = properties.get(k)
                     sym2 = variant_copy.get("symmetry_option", None)
                     #assert n(sym1) == n(sym2), \
-                    #    f"Inconsistent declaration of {basename}. Variant {k} has {sym2}, and {fullname} has {sym1}"
+                    #    f("Inconsistent declaration of {basename}. Variant {k} has {sym2}, and {fullname} has {sym1}")
 
                 if verbose:
                     print(colored("Adding Definition for:","cyan"),basename)
@@ -312,9 +313,9 @@ def gfdecl(*args):
                     if len(base_variants) > 0:
                         print("  ",colored("Previous Definitions:","yellow"),base_variants)
                     print()
-                latex = f"% define {fullname} --dim {properties.get('DIM',3)}"
+                latex = f("% define {fullname} --dim {properties.get('DIM',3)}")
                 if sym1 not in ["", None]:
-                    latex += f" --sym {sym1}"
+                    latex += f(" --sym {sym1}")
                 parse_latex(latex)
 
                 base_variants.add(fullname)
@@ -358,9 +359,9 @@ def latex_tensor(inp, globs = None):
     if globs is None:
         globs = currentframe().f_back.f_globals
     assert type(inp) == str, "input shoud be str"
-    assert "," not in inp, f"Commas are not valid in input: '{inp}'"
+    assert "," not in inp, f("Commas are not valid in input: '{inp}'")
     args = match_expr(inp)
-    assert len(args) > 0, f"Failed to parse {inp}"
+    assert len(args) > 0, f("Failed to parse {inp}")
     assert args[-1][0] == "end", args[-1]
     symbol = None
     indexes = []
@@ -392,7 +393,7 @@ def symlatex(inp, globs=None):
     if len(indexes) == 0:
         estr = symbol
     else:
-        estr = f"{symbol}{indexes}"
+        estr = f("{symbol}{indexes}")
     try:
         return eval(estr,globs)
     except Exception as e:
@@ -410,9 +411,9 @@ def decl_indexes():
     g = currentframe().f_back.f_globals
     for c in range(ord('a'),ord('z')+1):
         letter = chr(c)
-        dn, up = sp.symbols(f"l{letter} u{letter}", cls=sp.Idx)
-        g[f"l{letter}"] = dn
-        g[f"u{letter}"] = up
+        dn, up = sp.symbols(f("l{letter} u{letter}"), cls=sp.Idx)
+        g[f("l{letter}")] = dn
+        g[f("u{letter}")] = up
         indexdefs[letter] = (dn, up)
 
 def ixnam(i):
@@ -476,7 +477,7 @@ def incrindexes(indexes_input,dim,symmetries=[]):
             for symmetry in symmetries:
 
                 # Check the symmetry
-                assert len(symmetry) == 3, f"The symmetry is {symmetry}, it should be (index1,index2,sign)"
+                assert len(symmetry) == 3, f("The symmetry is {symmetry}, it should be (index1,index2,sign)")
                 assert symmetry[2] in [1, -1] # Third index is the sign
                 assert type(symmetry) in [list, tuple]
 
@@ -511,13 +512,13 @@ def getsyms(syms):
         return li
     for sym in syms.split('_'):
         g = re.match(r'^(a?sym)(\d)(\d)', sym)
-        assert g, f"Bad symmetry: '{sym}'"
+        assert g, f("Bad symmetry: '{sym}'")
         if g.group(1) == "sym":
             sign = 1
         else:
             sign = -1
         sym = (int(g.group(2)),int(g.group(3)),sign)
-        assert sym[0] < sym[1], f"Symmetry indexes should be in order: {sym}"
+        assert sym[0] < sym[1], f("Symmetry indexes should be in order: {sym}")
         li += [sym]
     return li
 
@@ -566,7 +567,7 @@ def make_sum(expr, dim=3):
         elif len(expr.args)==2:
             expr = expr.func(make_sum(expr.args[0]),make_sum(expr.args[1]))
         else:
-            raise Exception(f"len(expr.args)={len(expr.args)} not handled.")
+            raise Exception(f("len(expr.args)={len(expr.args)} not handled."))
         return expr
 
     indexes = {}
@@ -587,9 +588,9 @@ def make_sum(expr, dim=3):
     for index in indexes:
         if indexes[index] == 3:
             new_expr = sp.sympify(0)
-            un, dn = sp.symbols(f"u{index} l{index}", cls=sp.Idx)
+            un, dn = sp.symbols(f("u{index} l{index}"), cls=sp.Idx)
             for d in range(dim):
-                u1, d1 = sp.symbols(f"u{d} l{d}", cls=sp.Idx)
+                u1, d1 = sp.symbols(f("u{d} l{d}"), cls=sp.Idx)
                 new_expr += expr.subs(un,u1).subs(dn,d1)
             expr = new_expr
     return expr
@@ -602,17 +603,17 @@ def eval_expression(expr):
             indexes = []
             for k in sym.args[1:]:
                 ks = str(k)
-                assert not re.match(r'([ul])([a-z])$', ks), f"Unevaluated index '{ks}' in expression '{expr}'"
+                assert not re.match(r'([ul])([a-z])$', ks), f("Unevaluated index '{ks}' in expression '{expr}'")
                 g = re.match(r'([ul])(\d)$', ks)
                 if not g:
-                    here(f"`{ks}'")
+                    here(f("`{ks}'"))
                     continue
                 if g.group(1) == "u":
                     nm += "U"
                 else:
                     nm += "D"
                 indexes += [int(g.group(2))]
-            assert nm in definitions, f"Missing defenition for '{nm}'."
+            assert nm in definitions, f("Missing defenition for '{nm}'.")
             subs[sym] = lookup(definitions[nm],indexes)
     return expr.subs(subs)
 
@@ -624,7 +625,7 @@ def geneqns3(eqn, DIM=3, globs=None, loop=False):
     if globs is None:
         globs = currentframe().f_back.f_globals
     m = match_expr(eqn)
-    assert len(m) >= 2, f"match_expr failed for '{eqn}' -> {m}"
+    assert len(m) >= 2, f("match_expr failed for '{eqn}' -> {m}")
     if m[-2][0] == "equals":
         ltx = parse_latex(m[-1][1])
     sy = symlatex(eqn,globs)
@@ -639,7 +640,7 @@ def geneqns2(lhs, rhs, DIM=3, globs=None, loop=False):
 
     # We expect a tensor expression of the form Foo[la,lb,ua,ub]
     # We will create a latex expression for this to pass to nrpylatex.
-    assert type(lhs) == sp.Indexed, f"Type of lhs was '{type(lhs)}', not Indexed"
+    assert type(lhs) == sp.Indexed, f("Type of lhs was '{type(lhs)}', not Indexed")
     for a in lhs.args[1:]:
         sa = str(a)
         # Ensure that we have an index, ua, ub,... or la, lb, ...
@@ -679,18 +680,18 @@ def geneqns(lhs, rhs=None, values=None, DIM=3, globs=None, loop=False):
         props = properties.get(nm, {})
         symmetries = getsyms(props.get("symmetry_option",""))
     else:
-        assert lhs, f"{lhs}, {type(lhs)}"
+        assert lhs, f("{lhs}, {type(lhs)}")
     if values is None:
         assert rhs is not None, "Must supply either values or rhs to geneqns"
         lhs_indexes = getindexes(lhs)
         rhs_indexes = getindexes(rhs)
         for k in lhs_indexes:
-            assert lhs_indexes[k] != CONTRACTED_INDEX, f"Contracted indexes are not allowed on the left hand side: '{lhs}'"
-            assert lhs_indexes.get(k,-1) == rhs_indexes.get(k,-1), f"Free index '{k}' does not match on the lhs and rhs."
+            assert lhs_indexes[k] != CONTRACTED_INDEX, f("Contracted indexes are not allowed on the left hand side: '{lhs}'")
+            assert lhs_indexes.get(k,-1) == rhs_indexes.get(k,-1), f("Free index '{k}' does not match on the lhs and rhs.")
         for k in rhs_indexes:
             if rhs_indexes[k] == CONTRACTED_INDEX:
                 continue
-            assert lhs_indexes.get(k,-1) == rhs_indexes.get(k,-1), f"Free index '{k}' does not match on the rhs and lhs."
+            assert lhs_indexes.get(k,-1) == rhs_indexes.get(k,-1), f("Free index '{k}' does not match on the rhs and lhs.")
         if len(lhs_indexes)==0:
             return [lhrh(lhs=lhs, rhs=eval_sum(rhs))]
         else:
@@ -717,7 +718,7 @@ def geneqns(lhs, rhs=None, values=None, DIM=3, globs=None, loop=False):
         assert values is not None, "Must supply either values or rhs to geneqns"
         indexes = getindexes(lhs)
         for index in indexes:
-            assert indexes[index] != CONTRACTED_INDEX, f"Error, contracted index in lhs: '{index}'"
+            assert indexes[index] != CONTRACTED_INDEX, f("Error, contracted index in lhs: '{index}'")
         for index in incrindexes(len(indexes), DIM, symmetries):
             result += [lhrh(lhs=lookup(definitions[nm],index),rhs=lookup(values, index))]
             if loop:
