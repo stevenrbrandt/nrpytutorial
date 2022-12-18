@@ -1015,47 +1015,44 @@ def basis_transform_tensorDD_from_Cartesian_to_rfmbasis(Jac_dUCart_dDrfmUD, Cart
     return rfm_dst_tensorDD
 
 
-# Useful for stress-energy tensor; assumes rfm is time-independent.
-def basis_transform_4tensorUU_from_CartorSph_to_rfm(T4UU, CoordType_in="Spherical"):
-    # First generate expressions
-    r_th_ph_or_Cart_xyz_oID_xx = []
-    if CoordType_in == "Spherical":
-        r_th_ph_or_Cart_xyz_oID_xx = xxSph
-    elif CoordType_in == "Cartesian":
-        r_th_ph_or_Cart_xyz_oID_xx = xx_to_Cart
-    else:
-        print("Error: Can only convert ADM Cartesian or Spherical initial data to BSSN Curvilinear coords.")
-        exit(1)
-
-    # Next apply Jacobian transformations to convert into the (xx0,xx1,xx2) basis
-
-    Jac4_dUSphorCart_dDrfmUD = ixp.zerorank2(DIM=4)
-    Jac4_dUSphorCart_dDrfmUD[0][0] = sp.sympify(1)
+# Useful for stress-energy tensor; assumes reference metric is time-independent.
+def basis_transform_4tensorUU_from_time_indep_rfmbasis_to_Cartesian(Jac_dUCart_dDrfmUD, T4UU):
+    # 4D Jacobians assume that reference metric is time-independent
+    Jac4_dUCart_dDrfmUD = ixp.zerorank2(DIM=4)
+    Jac4_dUCart_dDrfmUD[0][0] = sp.sympify(1)
     for i in range(3):
         for j in range(3):
-            Jac4_dUSphorCart_dDrfmUD[i+1][j+1] = sp.diff(r_th_ph_or_Cart_xyz_oID_xx[i], xx[j])
-
-    Jac4_dUrfm_dDSphorCartUD, dummyDET = ixp.generic_matrix_inverter4x4(Jac4_dUSphorCart_dDrfmUD)
+            Jac4_dUCart_dDrfmUD[i+1][j+1] = Jac_dUCart_dDrfmUD[i][j]
 
     # Perform Jacobian operations on T^{mu nu}
-    rfm_basis_T4UU = ixp.zerorank2(DIM=4)
+    Cart_dst_T4UU = ixp.zerorank2(DIM=4)
     for mu in range(4):
         for nu in range(4):
             for delta in range(4):
                 for sigma in range(4):
-                    rfm_basis_T4UU[mu][nu] += \
-                         Jac4_dUrfm_dDSphorCartUD[mu][delta]*Jac4_dUrfm_dDSphorCartUD[nu][sigma]*T4UU[delta][sigma]
-    return rfm_basis_T4UU
+                    Cart_dst_T4UU[mu][nu] += \
+                         Jac4_dUCart_dDrfmUD[mu][delta]*Jac4_dUCart_dDrfmUD[nu][sigma]*T4UU[delta][sigma]
+    return Cart_dst_T4UU
 
 
-def basis_transform_4tensorUU_from_CartorSph_to_Cartesian(T4UU, CoordType_in="Spherical"):
-    rfm_basis_name = par.parval_from_str("reference_metric::CoordSystem")
-    par.set_parval_from_str("reference_metric::CoordSystem", "Cartesian")
-    reference_metric()
-    T4UUCart = basis_transform_4tensorUU_from_CartorSph_to_rfm(T4UU, CoordType_in=CoordType_in)
-    par.set_parval_from_str("reference_metric::CoordSystem", rfm_basis_name)
-    reference_metric()
-    return T4UUCart
+# Useful for stress-energy tensor; assumes reference metric is time-independent.
+def basis_transform_4tensorUU_from_Cartesian_to_time_indep_rfmbasis(Jac_dUrfm_dDCartUD, T4UU):
+    # 4D Jacobians assume that reference metric is time-independent
+    Jac4_dUrfm_dDCartUD = ixp.zerorank2(DIM=4)
+    Jac4_dUrfm_dDCartUD[0][0] = sp.sympify(1)
+    for i in range(3):
+        for j in range(3):
+            Jac4_dUrfm_dDCartUD[i+1][j+1] = Jac_dUrfm_dDCartUD[i][j]
+
+    # Perform Jacobian operations on T^{mu nu}
+    Cart_dst_T4UU = ixp.zerorank2(DIM=4)
+    for mu in range(4):
+        for nu in range(4):
+            for delta in range(4):
+                for sigma in range(4):
+                    Cart_dst_T4UU[mu][nu] += \
+                         Jac4_dUrfm_dDCartUD[mu][delta]*Jac4_dUrfm_dDCartUD[nu][sigma]*T4UU[delta][sigma]
+    return Cart_dst_T4UU
 
 
 # to/from spherical coordinates

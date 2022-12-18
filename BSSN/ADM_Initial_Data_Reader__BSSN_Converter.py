@@ -87,8 +87,8 @@ def Cfunction_ADM_SphorCart_to_Cart(input_Coord="Spherical", include_T4UU=False)
     BCartU = rfm.basis_transform_vectorU_from_rfmbasis_to_Cartesian(Jac_dUCart_dDrfmUD, BSphorCartU)
     T4CartUU = ixp.zerorank2(DIM=4)
     if include_T4UU:
-        T4CartUU = rfm.basis_transform_4tensorUU_from_CartorSph_to_Cartesian(T4SphorCartUU,
-                                                                             CoordType_in=input_Coord)
+        T4CartUU = rfm.basis_transform_4tensorUU_from_time_indep_rfmbasis_to_Cartesian(Jac_dUCart_dDrfmUD,
+                                                                                       T4SphorCartUU)
 
     alpha = sp.symbols("initial_data->alpha", real=True)
     list_of_output_exprs    = [alpha]
@@ -248,7 +248,7 @@ to the basis specified by `reference_metric::CoordSystem`, then rescale these BS
     rescaled_T4UU = ixp.zerorank2(DIM=4)
     if include_T4UU:
         T4CartUU = ixp.declarerank2("BSSN_Cart_basis->T4UU", "sym01", DIM=4)
-        T4UU = rfm.basis_transform_4tensorUU_from_CartorSph_to_rfm(T4CartUU, CoordType_in="Cartesian")
+        T4UU = rfm.basis_transform_4tensorUU_from_Cartesian_to_time_indep_rfmbasis(Jac_dUrfm_dDCartUD, T4CartUU)
         rescaled_T4UU = ixp.zerorank2(DIM=4)
         for mu in range(4):
             for nu in range(mu, 4):
