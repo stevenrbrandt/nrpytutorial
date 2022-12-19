@@ -40,6 +40,10 @@ gf_centering = {}
 glb_griddata = namedtuple('griddata', 'module string')
 glb_griddata_struct_list = []
 
+# griddata_struct contains data needed by each grid
+glb_griddata = namedtuple('griddata', 'module string')
+glb_griddata_struct_list = []
+
 thismodule = __name__
 par.initialize_param(par.glb_param("char", thismodule, "GridFuncMemAccess", "SENRlike"))
 par.initialize_param(par.glb_param("char", thismodule, "MemAllocStyle", "210"))
