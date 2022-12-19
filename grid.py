@@ -137,7 +137,8 @@ def var_from_access(access):
     g = re.match(r'^(\w+)\[CCTK_GFINDEX3D\(cctkGH,i0,i1,i2\)\]', access)
     if g:
         return g.group(1)
-    raise Exception("Could not identify a variable name from the access string '"+access+"'")
+    return "?"
+    #raise Exception("Could not identify a variable name from the access string '"+access+"'")
 
 def gfaccess(gfarrayname = "", varname = "", ijklstring = "", context = "DECL"):
     ret = _gfaccess(gfarrayname, varname, ijklstring, context)
