@@ -1,5 +1,7 @@
+from inspect import currentframe
 import re
 import sys
+from here import here
 
 def f(s):
     """
@@ -13,37 +15,46 @@ def f(s):
     '=== test ==='
     >>> f('{{hello}}')
     '{hello}'
+
+    >>> metric="gxx"
+    >>> f('\\texttt{{{metric}}}')
+    '\\texttt{gxx}'
     """
+    globs = currentframe().f_back.f_globals
+    locs= currentframe().f_back.f_locals
     count = 0
     ns = ''
     w = ''
-    for g in re.finditer(r'\\(.)|.', s):
-        if g.group(1) is not None:
-            if count > 0:
-                w += g.group(0)
-            else:
-                ns += g.group(0)
-        elif g.group(0) == '{':
-            if count > 0:
-                w += '{' 
-            count += 1
-        elif g.group(0) == '}':
-            assert count > 0
-            if count > 1:
-                w += "}"
-            count -= 1
-            if w == '':
-                pass
-            elif w.startswith("{"):
-                ns += w
-            else:
-                ns += str(eval(w))
-            w = ''
-        elif count > 0:
-            w += g.group(0)
+    i = 0
+    while i < len(s):
+        c = s[i]
+        if i + 1 < len(s):
+            nc = s[i+1]
         else:
-            ns += g.group(0)
-    assert w == '', f("Unclosed curly bracket in expression: '{s}'")
+            nc = ""
+        i += 1
+
+        if c == '{' and nc == '{':
+            ns += '{'
+            i += 1
+        elif c == '}' and nc == '}':
+            ns += '}'
+            i += 1
+        elif c == '{':
+            count = 1
+            j = i
+            while i < len(s):
+                if s[i] == '{':
+                    count += 1
+                elif s[i] == '}':
+                    count -= 1
+                if count == 0:
+                    break
+                i += 1
+            ns += str(eval(s[j:i],globs,locs))
+            i += 1
+        else:
+           ns += c 
     return ns
 
 if __name__ == "__main__":

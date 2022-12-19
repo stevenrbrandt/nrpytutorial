@@ -41,6 +41,11 @@ def set_coords(*c):
     coords = c
 
 def flatten(lists):
+    """
+    Convert lists of lists of list to one list.
+    >>> flatten([[1,2,[3,4],5,[6,[7,[8]]]]])
+    [1, 2, 3, 4, 5, 6, 7, 8]
+    """
     new_list = []
     for item in lists:
         if type(item) == list:
@@ -150,14 +155,14 @@ def match_expr(expr):
     return result
 ###
 
-def get_types():
+def get_add_type():
     a,b = sp.symbols("a b")
     return type(a+b)
 
 # Need to get type type of two symbols added together
 # comparing with sp.core.add.Add seems to sometimes
 # not work.
-Add = get_types()
+Add = get_add_type()
 
 properties = {}
 variants = {}
@@ -168,6 +173,17 @@ verbose = False
 sim_params = {}
 
 def gfparams(**kw):
+    """
+    > import NRPy_param_funcs as par
+    > fd_order = 4
+    > par.set_parval_from_str("finite_difference::FD_CENTDERIVS_ORDER", fd_order)
+    > decl_indexes()
+    >>> set_coords("x","y","z")
+
+
+    > gfparams(gf_type="EXTERNAL",symmetries="sym01",centering="VVV",external_module="ADMBase",namefun=name_xyz)
+    > gflatex(r"g_{i j} alp beta^i")
+    """
     global sim_params
     sim_params = {}
     for k in kw:
@@ -571,8 +587,8 @@ def make_sum(expr, dim=3):
         return expr
 
     indexes = {}
-    for f in expr.free_symbols:
-        fs = str(f)
+    for fsym in expr.free_symbols:
+        fs = str(fsym)
         g = matchindex(fs)
         if g:
             # This is an index
@@ -726,3 +742,7 @@ def geneqns(lhs, rhs=None, values=None, DIM=3, globs=None, loop=False):
         return result #generatevalues(lhs,rhs,[0]*len(indexes),symmetries)
     else:
         assert False, "Must supply either values or rhs to geneqns"
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
