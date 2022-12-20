@@ -29,7 +29,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip setuptools
         python -m pip install --upgrade nbconvert
-        python -m pip install testfixtures sympy mpmath jupyter matplotlib scipy nrpylatex
+        python -m pip install testfixtures sympy mpmath jupyter matplotlib scipy nrpylatex clang_format
     - name: Core Jupyter notebook testsuite
       run: |
         bash ./UnitTesting/run_NRPy_UnitTests.sh python3
