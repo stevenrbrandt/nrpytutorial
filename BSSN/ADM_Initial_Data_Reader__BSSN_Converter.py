@@ -245,17 +245,9 @@ to the basis specified by `reference_metric::CoordSystem`, then rescale these BS
             hDD[i][j] = (gammabarDD[i][j] - rfm.ghatDD[i][j]) / rfm.ReDD[i][j]
             aDD[i][j] = AbarDD[i][j] / rfm.ReDD[i][j]
 
-    rescaled_T4UU = ixp.zerorank2(DIM=4)
     if include_T4UU:
         T4CartUU = ixp.declarerank2("BSSN_Cart_basis->T4UU", "sym01", DIM=4)
         T4UU = rfm.basis_transform_4tensorUU_from_Cartesian_to_time_indep_rfmbasis(Jac_dUrfm_dDCartUD, T4CartUU)
-        rescaled_T4UU = ixp.zerorank2(DIM=4)
-        for mu in range(4):
-            for nu in range(mu, 4):
-                rescaled_T4UU[mu][nu] = T4UU[mu][nu]
-        for mu in range(1, 4):
-            for nu in range(mu, 4):
-                rescaled_T4UU[mu][nu] = T4UU[mu][nu] * rfm.ReDD[(mu-1)][(nu-1)]
 
     alpha, cf, trK = sp.symbols('BSSN_Cart_basis->alpha BSSN_Cart_basis->cf BSSN_Cart_basis->trK', real=True)
 
@@ -276,7 +268,8 @@ to the basis specified by `reference_metric::CoordSystem`, then rescale these BS
     if include_T4UU:
         for mu in range(4):
             for nu in range(mu, 4):
-                list_of_output_exprs += [rescaled_T4UU[mu][nu]]
+                # T4UU IS ASSUMED NOT RESCALED; RESCALINGS ARE HANDLED WITHIN BSSN RHSs, etc.
+                list_of_output_exprs += [T4UU[mu][nu]]
                 list_of_output_varnames += ["rescaled_BSSN_rfm_basis->T4UU" + str(mu) + str(nu)]
 
     # Sort the outputs before calling outputC()
