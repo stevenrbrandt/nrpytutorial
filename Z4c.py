@@ -42,10 +42,6 @@ import sympy as sp
 
 # Generic helpers
 
-# TODO: Specify names `gxx` etc.
-def ixnam(i):
-    return ["x", "y", "z"][i]
-
 def namefun(symbol, index, shape, prefix):
     symbol = prefix
     result = [sp.Symbol(symbol + ''.join(ixnam(n) for n in index + [i]))

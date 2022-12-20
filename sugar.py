@@ -173,17 +173,6 @@ verbose = False
 sim_params = {}
 
 def gfparams(**kw):
-    """
-    > import NRPy_param_funcs as par
-    > fd_order = 4
-    > par.set_parval_from_str("finite_difference::FD_CENTDERIVS_ORDER", fd_order)
-    > decl_indexes()
-    >>> set_coords("x","y","z")
-
-
-    > gfparams(gf_type="EXTERNAL",symmetries="sym01",centering="VVV",external_module="ADMBase",namefun=name_xyz)
-    > gflatex(r"g_{i j} alp beta^i")
-    """
     global sim_params
     sim_params = {}
     for k in kw:
@@ -208,6 +197,18 @@ def numstr(n):
         return str(n)
 
 def _deriv_decl(globs, tens, base, suffix, rank, div, indexes, rstart, sym_start, DIM):
+    """
+    >>> import NRPy_param_funcs as par
+    >>> decl_indexes()
+    >>> set_coords("x","y","z")
+    >>> gfparams(gf_type="EXTERNAL",symmetries="sym01",centering="VVV",external_module="ADMBase",namefun=name_xyz)
+    >>> gfdecl("chi",[])
+    >>> deriv_decl(chi, ("_d",[li]), ("_dup",[li]))
+    >>> chi_dD
+    [chi_dD0, chi_dD1, chi_dD2]
+    >>> chi_dupD
+    [chi_dupD0, chi_dupD1, chi_dupD2]
+    """
     # base += div
     suffix2 = ''
     for k in indexes:
@@ -272,6 +273,15 @@ def deriv_decl(tens, *args):
         _deriv_decl(globs, tens, base, suffix, rank, div, indexes, rstart, sym_start, DIM)
 
 def gfdecl(*args):
+    """
+    >>> import NRPy_param_funcs as par
+    >>> decl_indexes()
+    >>> set_coords("x","y","z")
+    >>> gfparams(gf_type="EXTERNAL",symmetries="sym01",centering="VVV",external_module="ADMBase",namefun=name_xyz)
+    >>> gfdecl("eTtt",[],"eTt",[la],"eT",[la,lb])
+    >>> (eTtt,eTtD,eTDD)
+    (eTtt, [eTtx, eTty, eTtz], [[eTxx, eTxy, eTxz], [eTxy, eTyy, eTyz], [eTxz, eTyz, eTzz]])
+    """
     if len(args)>0 and type(args[-1]) == dict:
         globs = args[-1]
         args = args[:-1]
@@ -417,6 +427,15 @@ def symlatex(inp, globs=None):
         raise e
 
 def gflatex(inp, globs = None):
+    """
+    >>> import NRPy_param_funcs as par
+    >>> decl_indexes()
+    >>> set_coords("x","y","z")
+    >>> gfparams(gf_type="EXTERNAL",symmetries="sym01",centering="VVV",external_module="ADMBase",namefun=name_xyz)
+    >>> gflatex(r"k_{i j} alpt beta^i")
+    >>> (kDD,alpt,betaU)
+    ([[kxx, kxy, kxz], [kxy, kyy, kyz], [kxz, kyz, kzz]], alpt, [betax, betay, betaz])
+    """
     if globs is None:
         globs = currentframe().f_back.f_globals
     for symbol, indexes in latex_tensor(inp, globs):
@@ -685,6 +704,17 @@ def geneqns2(lhs, rhs, DIM=3, globs=None, loop=False):
     return geneqns(lhs=lhs, values=globals()["result"+suffix], globs=globs, loop=loop, DIM=DIM)
 
 def geneqns(lhs, rhs=None, values=None, DIM=3, globs=None, loop=False):
+    """
+    >>> #import NRPy_param_funcs as par
+    >>> decl_indexes()
+    >>> #set_coords("x","y","z")
+    >>> gfparams(gf_type="EXTERNAL",symmetries="sym01",centering="VVV",external_module="ADMBase",namefun=name_xyz)
+    >>> gfdecl("alp",[])
+    >>> deriv_decl(alp, ("_d",[li]), ("_dup",[li]))
+    >>> gfdecl("dalp",[la])
+    >>> geneqns(lhs=dalp[li], values=alp_dD)
+    [lhrh(lhs=dalpx, rhs=alp_dD0), lhrh(lhs=dalpy, rhs=alp_dD1), lhrh(lhs=dalpz, rhs=alp_dD2)]
+    """
     if globs is None:
         globs = currentframe().f_back.f_globals
     if rhs is None and values is None and type(lhs) is str:
