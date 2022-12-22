@@ -20,6 +20,63 @@ import sympy as sp                # SymPy: The Python computer algebra package u
 import sys                        # Standard Python modules for multiplatform OS-level functions
 
 
+def add_to_Cfunction_dict_exact_ADM_ID_function(IDtype, IDCoordSystem, alpha, betaU, BU, gammaDD, KDD):
+    includes = ["NRPy_basic_defines.h"]
+    desc = IDtype + " initial data"
+    c_type = "void"
+    name = IDtype
+    params = "const paramstruct *params, const REAL xCart[3], const ID_persist_struct *restrict ID_persist, initial_data_struct *restrict initial_data"
+    desired_rfm_coord = par.parval_from_str("reference_metric::CoordSystem")
+    par.set_parval_from_str("reference_metric::CoordSystem", IDCoordSystem)
+    rfm.reference_metric()
+    body = ""
+    if IDCoordSystem == "Spherical":
+        body += r"""  const REAL Cartx=xCart[0], Carty=xCart[1], Cartz=xCart[2];
+  REAL xx0,xx1,xx2 __attribute__((unused));  // xx2 might be unused in the case of axisymmetric initial data.
+  {
+""" + outputC(rfm.Cart_to_xx[:3], ["xx0", "xx1", "xx2"], filename="returnstring",
+              params="outCverbose=False,includebraces=False,preindent=2") + """
+  }
+  const REAL r  = xx0; // Some ID only specify r,th,ph.
+  const REAL th = xx1;
+  const REAL ph = xx2;
+"""
+    elif IDCoordSystem == "Cartesian":
+        body += r"""  const REAL xx0=xCart[0], xx1=xCart[1], xx2=xCart[2];
+"""
+    else:
+        print("add_to_Cfunction_dict_exact_ADM_ID_function() Error: IDCoordSystem == " + IDCoordSystem + " unsupported")
+        sys.exit(1)
+    list_of_output_exprs = [alpha]
+    list_of_output_varnames = ["initial_data->alpha"]
+    for i in range(3):
+        list_of_output_exprs += [betaU[i]]
+        list_of_output_varnames += ["initial_data->betaSphorCartU" + str(i)]
+        list_of_output_exprs += [BU[i]]
+        list_of_output_varnames += ["initial_data->BSphorCartU" + str(i)]
+        for j in range(i, 3):
+            list_of_output_exprs += [gammaDD[i][j]]
+            list_of_output_varnames += ["initial_data->gammaSphorCartDD" + str(i) + str(j)]
+            list_of_output_exprs += [KDD[i][j]]
+            list_of_output_varnames += ["initial_data->KSphorCartDD" + str(i) + str(j)]
+    # Sort the outputs before calling outputC()
+    # https://stackoverflow.com/questions/9764298/is-it-possible-to-sort-two-listswhich-reference-each-other-in-the-exact-same-w
+    list_of_output_varnames, list_of_output_exprs = (list(t) for t in zip(*sorted(zip(list_of_output_varnames, list_of_output_exprs))))
+
+    body += outputC(list_of_output_exprs, list_of_output_varnames,
+                    filename="returnstring", params="outCverbose=False,includebraces=False,preindent=1")
+
+    # Restore CoordSystem:
+    par.set_parval_from_str("reference_metric::CoordSystem", desired_rfm_coord)
+    rfm.reference_metric()
+    add_to_Cfunction_dict(
+        includes=includes,
+        desc=desc, c_type=c_type, name=name, params=params,
+        body=body,
+        enableCparameters=True)
+    return pickle_NRPy_env()
+
+
 def Cfunction_ADM_SphorCart_to_Cart(input_Coord="Spherical", include_T4UU=False):
     includes = []
 
@@ -338,8 +395,8 @@ def Cfunction_initial_data_lambdaU_grid_interior():
     return func
 
 
-def add_to_Cfunction_dict_initial_data_reader__convert_ADM_Sph_or_Cart_to_BSSN_rfm(input_Coord="Spherical",
-                                                                                   include_T4UU=False):
+def add_to_Cfunction_dict_initial_data_reader__convert_ADM_Sph_or_Cart_to_BSSN(input_Coord="Spherical",
+                                                                               include_T4UU=False):
     def T4UU_prettyprint():
         return r"""
   REAL T4UU00,T4UU01,T4UU02,T4UU03;
@@ -392,7 +449,7 @@ typedef struct __rescaled_BSSN_rfm_basis_struct__ {
     output_Coord = par.parval_from_str("reference_metric::CoordSystem")
     desc = "Read in ADM initial data in the " + input_Coord + " basis, and convert to BSSN data in " + output_Coord + " coordinates"
     c_type = "void"
-    name = "initial_data_reader__convert_to_BSSN_from_ADM_" + input_Coord
+    name = "initial_data_reader__convert_ADM_" + input_Coord + "_to_BSSN"
     params = """griddata_struct *restrict griddata, ID_persist_struct *restrict ID_persist,
                                                              void ID_function(const paramstruct *params, const REAL xCart[3],
                                                                               const ID_persist_struct *restrict ID_persist,
@@ -449,63 +506,6 @@ typedef struct __rescaled_BSSN_rfm_basis_struct__ {
         c_type=c_type, name=name, params=params,
         body=body,
         enableCparameters=False)
-    return pickle_NRPy_env()
-
-
-def add_to_Cfunction_dict_exact_ADM_ID_function(IDtype, IDCoordSystem, alpha, betaU, BU, gammaDD, KDD):
-    includes = ["NRPy_basic_defines.h"]
-    desc = IDtype + " initial data"
-    c_type = "void"
-    name = IDtype
-    params = "const paramstruct *params, const REAL xCart[3], const ID_persist_struct *restrict ID_persist, initial_data_struct *restrict initial_data"
-    desired_rfm_coord = par.parval_from_str("reference_metric::CoordSystem")
-    par.set_parval_from_str("reference_metric::CoordSystem", IDCoordSystem)
-    rfm.reference_metric()
-    body = ""
-    if IDCoordSystem == "Spherical":
-        body += r"""  const REAL Cartx=xCart[0], Carty=xCart[1], Cartz=xCart[2];
-  REAL xx0,xx1,xx2 __attribute__((unused));  // xx2 might be unused in the case of axisymmetric initial data.
-  {
-""" + outputC(rfm.Cart_to_xx[:3], ["xx0", "xx1", "xx2"], filename="returnstring",
-              params="outCverbose=False,includebraces=False,preindent=2") + """
-  }
-  const REAL r  = xx0; // Some ID only specify r,th,ph.
-  const REAL th = xx1;
-  const REAL ph = xx2;
-"""
-    elif IDCoordSystem == "Cartesian":
-        body += r"""  const REAL xx0=xCart[0], xx1=xCart[1], xx2=xCart[2];
-"""
-    else:
-        print("add_to_Cfunction_dict_exact_ADM_ID_function() Error: IDCoordSystem == " + IDCoordSystem + " unsupported")
-        sys.exit(1)
-    list_of_output_exprs = [alpha]
-    list_of_output_varnames = ["initial_data->alpha"]
-    for i in range(3):
-        list_of_output_exprs += [betaU[i]]
-        list_of_output_varnames += ["initial_data->betaSphorCartU" + str(i)]
-        list_of_output_exprs += [BU[i]]
-        list_of_output_varnames += ["initial_data->BSphorCartU" + str(i)]
-        for j in range(i, 3):
-            list_of_output_exprs += [gammaDD[i][j]]
-            list_of_output_varnames += ["initial_data->gammaSphorCartDD" + str(i) + str(j)]
-            list_of_output_exprs += [KDD[i][j]]
-            list_of_output_varnames += ["initial_data->KSphorCartDD" + str(i) + str(j)]
-    # Sort the outputs before calling outputC()
-    # https://stackoverflow.com/questions/9764298/is-it-possible-to-sort-two-listswhich-reference-each-other-in-the-exact-same-w
-    list_of_output_varnames, list_of_output_exprs = (list(t) for t in zip(*sorted(zip(list_of_output_varnames, list_of_output_exprs))))
-
-    body += outputC(list_of_output_exprs, list_of_output_varnames,
-                    filename="returnstring", params="outCverbose=False,includebraces=False,preindent=1")
-
-    # Restore CoordSystem:
-    par.set_parval_from_str("reference_metric::CoordSystem", desired_rfm_coord)
-    rfm.reference_metric()
-    add_to_Cfunction_dict(
-        includes=includes,
-        desc=desc, c_type=c_type, name=name, params=params,
-        body=body,
-        enableCparameters=True)
     return pickle_NRPy_env()
 
 
