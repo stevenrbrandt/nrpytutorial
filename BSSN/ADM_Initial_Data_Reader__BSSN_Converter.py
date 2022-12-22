@@ -514,11 +514,7 @@ typedef struct __rescaled_BSSN_rfm_basis_struct__ {
 # used to store e.g., pseudospectral coefficients for TwoPunctures,
 # initial data gridfunctions from NRPyElliptic, pointers to TOV 1D data
 # from the TOV solver, etc.
-def register_C_functions_and_NRPy_basic_defines(input_Coord="Spherical", ID_persist_struct_contents_str="",
-                                                include_T4UU=False):
-    add_to_Cfunction_dict_initial_data_reader__convert_ADM_Sph_or_Cart_to_BSSN(input_Coord=input_Coord,
-                                                                               include_T4UU=include_T4UU)
-
+def register_NRPy_basic_defines(ID_persist_struct_contents_str="", include_T4UU=False):
     Nbd = r"""typedef struct __initial_data_struct__ {
   REAL alpha;
 
