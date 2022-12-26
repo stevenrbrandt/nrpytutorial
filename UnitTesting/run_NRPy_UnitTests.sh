@@ -47,7 +47,7 @@ add_test GRMHD/tests/test_GRMHD.py
 add_test FishboneMoncriefID/tests/test_FishboneMoncriefID.py
 add_test in_progress/GiRaFFE_HO/tests/test_GiRaFFE_HO.py
 add_test in_progress/GiRaFFEfood_HO/tests/test_GiRaFFEfood_HO.py
-add_test Maxwell/tests/test_Maxwell.py
+#add_test Maxwell/tests/test_Maxwell.py
 add_test ScalarWave/tests/test_ScalarWave.py
 add_test tests/test_reference_metric.py
 add_test u0_smallb_Poynting__Cartesian/tests/test_u0_smallb_Poynting__Cartesian.py
