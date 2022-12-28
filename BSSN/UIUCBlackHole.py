@@ -107,13 +107,14 @@ def UIUCBlackHole():
     KDD[1][2] = KDD[2][1] = -((2*a**3*M*rBL*sp.cos(th)*sp.sin(th)**3)/ \
                     (SIG*sp.sqrt(AA*SIG)))*(r - rp/4)*sp.sqrt((rBL - rm)/r)
 
-    alpha = sp.sympify(1)   # We generally choose alpha = 1/psi**2 (psi = BSSN conformal factor) for these initial data
     betaU = ixp.zerorank1() # We generally choose \beta^i = 0 for these initial data
     BU    = ixp.zerorank1() # We generally choose B^i = 0 for these initial data
 
     # Validated against original SENR: KDD[0][2], KDD[1][2], gammaDD[2][2], gammaDD[0][0], gammaDD[1][1]
     #print(sp.mathematica_code(gammaDD[1][1]))
 
+    # Finally set alpha. We generally choose alpha = 1/psi**2 (psi = BSSN conformal factor)
+    #                    for these initial data
     try:
         cf_type = par.parval_from_str("EvolvedConformalFactor_cf")
     except:
