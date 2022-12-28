@@ -28,18 +28,15 @@
 import sympy as sp             # SymPy: The Python computer algebra package upon which NRPy+ depends
 import NRPy_param_funcs as par # NRPy+: Parameter interface
 import indexedexp as ixp       # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
-from pickling import pickle_NRPy_env  # NRPy+: Pickle/unpickle NRPy+ environment, for parallel codegen
-import BSSN.ADM_Exact_Spherical_or_Cartesian_to_BSSNCurvilinear as AtoB
 
 thismodule = __name__
 
 # Input parameters:
 M = par.Cparameters("REAL", thismodule, ["M"], [1.0])
 
-# ComputeADMGlobalsOnly == True will only set up the ADM global quantities.
-#                       == False will perform the full ADM SphorCart->BSSN Curvi conversion
-def StaticTrumpet(ComputeADMGlobalsOnly = False, include_NRPy_basic_defines_and_pickle=False):
-    global Sph_r_th_ph,r,th,ph, gammaSphDD, KSphDD, alphaSph, betaSphU, BSphU
+
+def StaticTrumpet():
+    global r,th,ph, gammaDD, KDD, alpha, betaU, BU
 
     # All gridfunctions will be written in terms of spherical coordinates (r, th, ph):
     r,th,ph = sp.symbols('r th ph', real=True)
@@ -60,52 +57,34 @@ def StaticTrumpet(ComputeADMGlobalsOnly = False, include_NRPy_basic_defines_and_
     # Eq. 15
     # gamma_{ij} = psi^4 * eta_{ij}
     # eta_00 = 1, eta_11 = r^2, eta_22 = r^2 * sin^2 (theta)
-    gammaSphDD = ixp.zerorank2()
-    gammaSphDD[0][0] = psi0**4
-    gammaSphDD[1][1] = psi0**4 * r**2
-    gammaSphDD[2][2] = psi0**4 * r**2*sp.sin(th)**2
+    gammaDD = ixp.zerorank2()
+    gammaDD[0][0] = psi0**4
+    gammaDD[1][1] = psi0**4 * r**2
+    gammaDD[2][2] = psi0**4 * r**2*sp.sin(th)**2
     # ... then apply symmetries to get the other components
 
     # *** The physical trace-free extrinsic curvature in spherical basis ***
     # Set the upper-triangle of the matrix...
 
     # Eq.19 and 20
-    KSphDD = ixp.zerorank2()
+    KDD = ixp.zerorank2()
 
     # K_{rr} = M / r^2
-    KSphDD[0][0] = -M / r**2
+    KDD[0][0] = -M / r**2
 
     # K_{theta theta} = K_{phi phi} / sin^2 theta = M
-    KSphDD[1][1] = M
+    KDD[1][1] = M
 
-    KSphDD[2][2] = M * sp.sin(th)**2
+    KDD[2][2] = M * sp.sin(th)**2
     # ... then apply symmetries to get the other components
 
     # Lapse function and shift vector
     # Eq. 15
     # alpha = r / (r+M)
-    alphaSph = r / (r + M)
+    alpha = r / (r + M)
 
-    betaSphU = ixp.zerorank1()
+    betaU = ixp.zerorank1()
     # beta^r = Mr / (r + M)^2
-    betaSphU[0] = M*r / (r + M)**2
+    betaU[0] = M*r / (r + M)**2
 
-    BSphU    = ixp.zerorank1()
-
-    if ComputeADMGlobalsOnly == True:
-        return
-
-    # Validated against original SENR:
-    #print(sp.mathematica_code(gammaSphDD[1][1]))
-
-    Sph_r_th_ph = [r,th,ph]
-    cf,hDD,lambdaU,aDD,trK,alpha,vetU,betU = \
-        AtoB.Convert_Spherical_or_Cartesian_ADM_to_BSSN_curvilinear("Spherical", Sph_r_th_ph,
-                                                                    gammaSphDD,KSphDD,alphaSph,betaSphU,BSphU)
-
-    import BSSN.BSSN_ID_function_string as bIDf
-    # Generates initial_data() C function & stores to outC_function_dict["initial_data"]
-    bIDf.BSSN_ID_function_string(cf, hDD, lambdaU, aDD, trK, alpha, vetU, betU,
-                                 include_NRPy_basic_defines=include_NRPy_basic_defines_and_pickle)
-    if include_NRPy_basic_defines_and_pickle:
-        return pickle_NRPy_env()
+    BU    = ixp.zerorank1()

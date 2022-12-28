@@ -29,8 +29,6 @@
 import sympy as sp             # SymPy: The Python computer algebra package upon which NRPy+ depends
 import NRPy_param_funcs as par # NRPy+: Parameter interface
 import indexedexp as ixp       # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
-from pickling import pickle_NRPy_env  # NRPy+: Pickle/unpickle NRPy+ environment, for parallel codegen
-import BSSN.ADM_Exact_Spherical_or_Cartesian_to_BSSNCurvilinear as AtoB
 
 thismodule = __name__
 
@@ -46,14 +44,14 @@ BH2_mass = par.Cparameters("REAL", thismodule, ["BH2_mass"], 1.0)
 
 # ComputeADMGlobalsOnly == True will only set up the ADM global quantities.
 #                       == False will perform the full ADM SphorCart->BSSN Curvi conversion
-def BrillLindquist(ComputeADMGlobalsOnly = False, include_NRPy_basic_defines_and_pickle=False):
+def BrillLindquist():
     # Step 2: Setting up Brill-Lindquist initial data
 
     # Step 2.a: Set spatial dimension (must be 3 for BSSN)
     DIM = 3
     par.set_parval_from_str("grid::DIM",DIM)
 
-    global Cartxyz, gammaCartDD, KCartDD, alphaCart, betaCartU, BCartU
+    global Cartxyz, gammaDD, KDD, alpha, betaU, BU
     Cartxyz = ixp.declarerank1("Cartxyz")
 
     # Step 2.b: Set psi, the conformal factor:
@@ -62,25 +60,11 @@ def BrillLindquist(ComputeADMGlobalsOnly = False, include_NRPy_basic_defines_and
     psi += BH2_mass / ( 2 * sp.sqrt((Cartxyz[0]-BH2_posn_x)**2 + (Cartxyz[1]-BH2_posn_y)**2 + (Cartxyz[2]-BH2_posn_z)**2) )
 
     # Step 2.c: Set all needed ADM variables in Cartesian coordinates
-    gammaCartDD = ixp.zerorank2()
-    KCartDD     = ixp.zerorank2() # K_{ij} = 0 for these initial data
+    gammaDD = ixp.zerorank2()
+    KDD     = ixp.zerorank2() # K_{ij} = 0 for these initial data
     for i in range(DIM):
-        gammaCartDD[i][i] = psi**4
+        gammaDD[i][i] = psi**4
 
-    alphaCart = 1/psi**2
-    betaCartU = ixp.zerorank1() # We generally choose \beta^i = 0 for these initial data
-    BCartU    = ixp.zerorank1() # We generally choose B^i = 0 for these initial data
-
-    if ComputeADMGlobalsOnly == True:
-        return
-
-    cf,hDD,lambdaU,aDD,trK,alpha,vetU,betU = \
-        AtoB.Convert_Spherical_or_Cartesian_ADM_to_BSSN_curvilinear("Cartesian",Cartxyz,
-                                                                    gammaCartDD,KCartDD,alphaCart,betaCartU,BCartU)
-
-    import BSSN.BSSN_ID_function_string as bIDf
-    # Generates initial_data() C function & stores to outC_function_dict["initial_data"]
-    bIDf.BSSN_ID_function_string(cf, hDD, lambdaU, aDD, trK, alpha, vetU, betU,
-                                 include_NRPy_basic_defines=include_NRPy_basic_defines_and_pickle)
-    if include_NRPy_basic_defines_and_pickle:
-        return pickle_NRPy_env()
+    alpha = 1/psi**2  # Choose pre-collapsed lapse. FIXME: Allow for other choices
+    betaU = ixp.zerorank1() # We generally choose \beta^i = 0 for these initial data
+    BU    = ixp.zerorank1() # We generally choose B^i = 0 for these initial data

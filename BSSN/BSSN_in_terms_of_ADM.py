@@ -121,7 +121,7 @@ def cf_from_gammaDD(gammaDD):
     global cf
 
     if gammaDD is None: # Use "is None" instead of "==None", as the former is more correct.
-        gammaDD = ixp.declarerank2("gammaDD","sym01")
+        gammaDD = ixp.declarerank2("gammaDD", "sym01")
 
     # \bar{Lambda}^i = \bar{gamma}^{jk}(\bar{Gamma}^i_{jk} - \hat{Gamma}^i_{jk}).
     gammabarDD_hDD(gammaDD)
