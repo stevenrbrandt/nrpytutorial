@@ -22,11 +22,13 @@
 # * Desired initial lapse $\alpha$ and shift $\beta^i$. We will choose our gauge conditions as $\alpha=1$ and $\beta^i=B^i=0$. $\alpha = \psi^{-2}$ will yield much better behavior, but the conformal factor $\psi$ depends on the desired *destination* coordinate system (which may not be spherical coordinates).
 
 # Step P0: Load needed modules
-import sympy as sp             # SymPy: The Python computer algebra package upon which NRPy+ depends
-import NRPy_param_funcs as par # NRPy+: Parameter interface
-import indexedexp as ixp       # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
-import sys                     # Standard Python module for multiplatform OS-level functions
+import sympy as sp              # SymPy: The Python computer algebra package upon which NRPy+ depends
+import NRPy_param_funcs as par  # NRPy+: Parameter interface
+import indexedexp as ixp        # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
+import reference_metric as rfm  # NRPy+: Reference metric support
+import sys                      # Standard Python module for multiplatform OS-level functions
 import BSSN.BSSN_in_terms_of_ADM as BitoA  # Needed to compute conformal factor
+import BSSN.BSSN_quantities as Bq  # Sets default for EvolvedConformalFactor_cf
 
 thismodule = __name__
 
@@ -122,6 +124,14 @@ def UIUCBlackHole():
         print("                     the lapse is set in terms of the BSSN conformal factor")
         sys.exit(1)
 
+    try:
+        cf_type = par.parval_from_str("EvolvedConformalFactor_cf")
+    except:
+        print("UIUCBlackHole Error: Must set BSSN_quantities::EvolvedConformalFactor_cf;")
+        print("                     the lapse is set in terms of the BSSN conformal factor")
+        sys.exit(1)
+
+    rfm.reference_metric()  # BitoA.cf_from_gammaDD requires reference_metric() first be called.
     BitoA.cf_from_gammaDD(gammaDD)
     cf = BitoA.cf
 
