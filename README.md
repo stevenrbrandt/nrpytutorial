@@ -1,6 +1,9 @@
 # NRPy+, SENRv2, and the NRPy+ Jupyter Tutorial
+[![CI: Ubuntu 20.04](https://github.com/zachetienne/nrpytutorial/actions/workflows/github-actions-ubuntu20.yml/badge.svg)](https://github.com/zachetienne/nrpytutorial/actions/workflows/github-actions-ubuntu20.yml)
+[![CI: Ubuntu 22.04](https://github.com/zachetienne/nrpytutorial/actions/workflows/github-actions-ubuntu22.yml/badge.svg)](https://github.com/zachetienne/nrpytutorial/actions/workflows/github-actions-ubuntu22.yml)
+[![CI: MacOS 12](https://github.com/zachetienne/nrpytutorial/actions/workflows/github-actions-MacOS12.yml/badge.svg)](https://github.com/zachetienne/nrpytutorial/actions/workflows/github-actions-MacOS12.yml)
+[![CI: Windows 2022](https://github.com/zachetienne/nrpytutorial/actions/workflows/github-actions-windows2022.yml/badge.svg)](https://github.com/zachetienne/nrpytutorial/actions/workflows/github-actions-windows2022.yml)
 [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/zachetienne/nrpytutorial/master?filepath=NRPyPlus_Tutorial.ipynb)
-[![LGTM Grade](https://img.shields.io/lgtm/grade/python/github/zachetienne/nrpytutorial)](http://lgtm.com/projects/g/zachetienne/nrpytutorial/)
 
 This repository houses
 * [The newest version of NRPy+: Python-Based Code Generation for Numerical Relativity... and Beyond](https://arxiv.org/abs/1712.07658),
