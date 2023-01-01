@@ -853,19 +853,6 @@ As derived in nrpytutorial's Tutorial-Start_to_Finish-Curvilinear_BCs.ipynb,
 ##  Functions are fully documented in nrpytutorial's
 ##   Tutorial-Start_to_Finish-Curvilinear_BCs.ipynb,
 ##   as well as below, in desc= and body=.
-
-
-# partial_r f term: generate symbolic expressions for dx^i / dr
-def compute_Jacobian_and_inverseJacobian_tofrom_Spherical():
-    # Step 2.a: First construct Jacobian matrix:
-    Jac_dUSph_dDrfmUD = ixp.zerorank2()
-    for i in range(3):
-        for j in range(3):
-            Jac_dUSph_dDrfmUD[i][j] = sp.diff(rfm.xxSph[i], rfm.xx[j])
-    Jac_dUrfm_dDSphUD, dummyDET = ixp.generic_matrix_inverter3x3(Jac_dUSph_dDrfmUD)
-    return Jac_dUSph_dDrfmUD, Jac_dUrfm_dDSphUD
-
-
 # r_and_partial_xi_partial_r_derivs(): Compute r(x0,x1,x2) and dx^i / dr
 def setup_Cfunction_r_and_partial_xi_partial_r_derivs():
     desc = "Compute r(xx0,xx1,xx2) and partial_r x^i."
@@ -874,7 +861,7 @@ def setup_Cfunction_r_and_partial_xi_partial_r_derivs():
     params = """const paramstruct *restrict params,const REAL xx0,const REAL xx1,const REAL xx2,
                                                      REAL *r,
                                                      REAL *partial_x0_partial_r,REAL *partial_x1_partial_r,REAL *partial_x2_partial_r"""
-    Jac_dUSph_dDrfmUD, Jac_dUrfm_dDSphUD = compute_Jacobian_and_inverseJacobian_tofrom_Spherical()
+    Jac_dUSph_dDrfmUD, Jac_dUrfm_dDSphUD = rfm.compute_Jacobian_and_inverseJacobian_tofrom_Spherical()
     body = outputC([rfm.xxSph[0],
                     Jac_dUrfm_dDSphUD[0][0], # sp.simplify(expr) is too slow here for SinhCylindrical
                     Jac_dUrfm_dDSphUD[1][0], # sp.simplify(expr) is too slow here for SinhCylindrical
@@ -971,7 +958,7 @@ def setup_Cfunction_compute_partial_r_f(radiation_BC_FD_order=-1):
                                        const int which_gf, const int dest_i0,const int dest_i1,const int dest_i2,
                                        const int FACEi0,const int FACEi1,const int FACEi2,
                                        const REAL partial_x0_partial_r, const REAL partial_x1_partial_r, const REAL partial_x2_partial_r"""
-    Jac_dUSph_dDrfmUD, Jac_dUrfm_dDSphUD = compute_Jacobian_and_inverseJacobian_tofrom_Spherical()
+    Jac_dUSph_dDrfmUD, Jac_dUrfm_dDSphUD = rfm.compute_Jacobian_and_inverseJacobian_tofrom_Spherical()
 
     default_FDORDER = par.parval_from_str("finite_difference::FD_CENTDERIVS_ORDER")
     if radiation_BC_FD_order == -1:
@@ -1022,7 +1009,7 @@ def setup_Cfunction_compute_partial_r_f(radiation_BC_FD_order=-1):
 def setup_Cfunction_radiation_bcs(radiation_BC_FD_order=-1):
     includes = []
     prefunc = ""
-    Jac_dUSph_dDrfmUD, Jac_dUrfm_dDSphUD = compute_Jacobian_and_inverseJacobian_tofrom_Spherical()
+    Jac_dUSph_dDrfmUD, Jac_dUrfm_dDSphUD = rfm.compute_Jacobian_and_inverseJacobian_tofrom_Spherical()
     for i in range(3):
         # Do not generate FD1_arbitrary_upwind_xj_dirn() if the symbolic expression for dxj/dr == 0!
         if not check_zero(Jac_dUrfm_dDSphUD[i][0]):
