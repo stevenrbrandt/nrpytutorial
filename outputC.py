@@ -891,7 +891,7 @@ def construct_NRPy_function_prototypes_h(Ccodesrootdir):
             file.write(item + "\n")
 
 
-def outputC_register_C_functions_and_NRPy_basic_defines():
+def outputC_register_C_functions_and_NRPy_basic_defines(addl_includes=None):
     # First register C functions needed by outputC
 
     # Then set up the dictionary entry for outputC in NRPy_basic_defines
@@ -901,6 +901,14 @@ def outputC_register_C_functions_and_NRPy_basic_defines():
 #include "math.h"
 #include "string.h" // "string.h Needed for strncmp, etc.
 #include "stdint.h" // "stdint.h" Needed for Windows GCC 6.x compatibility, and for int8_t
+"""
+    if addl_includes is not None:
+        if not isinstance(addl_includes, list):
+            print("Error: addl_includes must be a list!")
+            sys.exit(1)
+        for include in addl_includes:
+            Nbd_str += "#include \"" + include + "\"\n"
+    Nbd_str += """
 
 #ifndef M_PI
 #define M_PI 3.141592653589793238462643383279502884L

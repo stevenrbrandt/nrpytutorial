@@ -22,12 +22,14 @@
 # * Desired initial lapse $\alpha$ and shift $\beta^i$. We will choose our gauge conditions as $\alpha=1$ and $\beta^i=B^i=0$. $\alpha = \psi^{-2}$ will yield much better behavior, but the conformal factor $\psi$ depends on the desired *destination* coordinate system (which may not be spherical coordinates).
 
 # Step P0: Load needed modules
-import sympy as sp             # SymPy: The Python computer algebra package upon which NRPy+ depends
-import NRPy_param_funcs as par # NRPy+: Parameter interface
-import indexedexp as ixp       # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
-import sys                     # Standard Python module for multiplatform OS-level functions
-from pickling import pickle_NRPy_env  # NRPy+: Pickle/unpickle NRPy+ environment, for parallel codegen
-import BSSN.ADM_Exact_Spherical_or_Cartesian_to_BSSNCurvilinear as AtoB
+import sympy as sp              # SymPy: The Python computer algebra package upon which NRPy+ depends
+import NRPy_param_funcs as par  # NRPy+: Parameter interface
+import indexedexp as ixp        # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
+import reference_metric as rfm  # NRPy+: Reference metric support
+import sys                      # Standard Python module for multiplatform OS-level functions
+import BSSN.BSSN_in_terms_of_ADM as BitoA  # Needed to compute conformal factor
+import BSSN.BSSN_quantities as Bq  # Sets default for EvolvedConformalFactor_cf
+
 thismodule = __name__
 
 # The UIUC initial data represent a Kerr black hole with mass M
@@ -36,10 +38,9 @@ thismodule = __name__
 # Input parameters:
 M, chi = par.Cparameters("REAL", thismodule, ["M", "chi"], [1.0, 0.99])
 
-# ComputeADMGlobalsOnly == True will only set up the ADM global quantities.
-#                       == False will perform the full ADM SphorCart->BSSN Curvi conversion
-def UIUCBlackHole(ComputeADMGlobalsOnly = False, include_NRPy_basic_defines_and_pickle=False):
-    global Sph_r_th_ph,r,th,ph, gammaSphDD, KSphDD, alphaSph, betaSphU, BSphU
+
+def UIUCBlackHole():
+    global r,th,ph, gammaDD, KDD, alpha, betaU, BU
 
     # All gridfunctions will be written in terms of spherical coordinates (r, th, ph):
     r,th,ph = sp.symbols('r th ph', real=True)
@@ -74,28 +75,28 @@ def UIUCBlackHole(ComputeADMGlobalsOnly = False, include_NRPy_basic_defines_and_
     AA = (rBL**2 + a**2)**2 - DEL*a**2*sp.sin(th)**2
 
     # *** The ADM 3-metric in spherical basis ***
-    gammaSphDD = ixp.zerorank2()
+    gammaDD = ixp.zerorank2()
     # Declare the nonzero components of the 3-metric
     # (Eq. 13 of Liu, Etienne, & Shapiro, https://arxiv.org/pdf/1001.4077.pdf):
 
     # ds^2 = Sigma (r + r_+/4)^2 / ( r^3 (r_{BL} - r_- ) * dr^2 +
                 # Sigma d theta^2  +  (A sin^2 theta) / Sigma  *  d\phi^2
 
-    gammaSphDD[0][0] = ((SIG*(r + rp/4)**2)/(r**3*(rBL - rm)))
-    gammaSphDD[1][1] = SIG
-    gammaSphDD[2][2] = AA/SIG*sp.sin(th)**2
+    gammaDD[0][0] = ((SIG*(r + rp/4)**2)/(r**3*(rBL - rm)))
+    gammaDD[1][1] = SIG
+    gammaDD[2][2] = AA/SIG*sp.sin(th)**2
 
     # *** The physical trace-free extrinsic curvature in spherical basis ***
     # Nonzero components of the extrinsic curvature K, given by
     # Eq. 14 of Liu, Etienne, & Shapiro, https://arxiv.org/pdf/1001.4077.pdf:
-    KSphDD     = ixp.zerorank2()
+    KDD     = ixp.zerorank2()
 
 
     # K_{r phi} = K_{phi r} = (Ma sin^2 theta) / (Sigma sqrt{A Sigma}) *
     #     [3r^4_{BL} + 2a^2 r^2_{BL} - a^4 - a^2 (r^2_{BL} - a^2) sin^2 theta] *
     #     (1 + r_+ / 4r) (1 / sqrt{r(r_{BL} - r_-)})
 
-    KSphDD[0][2] = KSphDD[2][0] = (M*a*sp.sin(th)**2)/(SIG*sp.sqrt(AA*SIG))*\
+    KDD[0][2] = KDD[2][0] = (M*a*sp.sin(th)**2)/(SIG*sp.sqrt(AA*SIG))*\
                     (3*rBL**4 + 2*a**2*rBL**2 - a**4- a**2*(rBL**2 - a**2)*\
                      sp.sin(th)**2)*(1 + rp/(4*r))*1/sp.sqrt(r*(rBL - rm))
 
@@ -105,39 +106,43 @@ def UIUCBlackHole(ComputeADMGlobalsOnly = False, include_NRPy_basic_defines_and_
     # K_{theta phi} = K_{phi theta} = -(2a^3 Mr_{BL} cos theta sin^3 theta) /
     #         (Sigma sqrt{A Sigma}) x (r - r_+ / 4) sqrt{(r_{BL} - r_-) / r }
 
-    KSphDD[1][2] = KSphDD[2][1] = -((2*a**3*M*rBL*sp.cos(th)*sp.sin(th)**3)/ \
+    KDD[1][2] = KDD[2][1] = -((2*a**3*M*rBL*sp.cos(th)*sp.sin(th)**3)/ \
                     (SIG*sp.sqrt(AA*SIG)))*(r - rp/4)*sp.sqrt((rBL - rm)/r)
 
-    alphaSph = sp.sympify(1)   # We generally choose alpha = 1/psi**2 (psi = BSSN conformal factor) for these initial data
-    betaSphU = ixp.zerorank1() # We generally choose \beta^i = 0 for these initial data
-    BSphU    = ixp.zerorank1() # We generally choose B^i = 0 for these initial data
+    betaU = ixp.zerorank1() # We generally choose \beta^i = 0 for these initial data
+    BU    = ixp.zerorank1() # We generally choose B^i = 0 for these initial data
 
-    if ComputeADMGlobalsOnly:
-        return
+    # Validated against original SENR: KDD[0][2], KDD[1][2], gammaDD[2][2], gammaDD[0][0], gammaDD[1][1]
+    #print(sp.mathematica_code(gammaDD[1][1]))
 
-    # Validated against original SENR: KSphDD[0][2], KSphDD[1][2], gammaSphDD[2][2], gammaSphDD[0][0], gammaSphDD[1][1]
-    #print(sp.mathematica_code(gammaSphDD[1][1]))
+    # Finally set alpha. We generally choose alpha = 1/psi**2 (psi = BSSN conformal factor)
+    #                    for these initial data
+    try:
+        cf_type = par.parval_from_str("EvolvedConformalFactor_cf")
+    except:
+        print("UIUCBlackHole Error: Must set BSSN_quantities::EvolvedConformalFactor_cf;")
+        print("                     the lapse is set in terms of the BSSN conformal factor")
+        sys.exit(1)
 
-    Sph_r_th_ph = [r,th,ph]
-    cf,hDD,lambdaU,aDD,trK,alpha,vetU,betU = \
-        AtoB.Convert_Spherical_or_Cartesian_ADM_to_BSSN_curvilinear("Spherical", Sph_r_th_ph,
-                                                                    gammaSphDD,KSphDD,alphaSph,betaSphU,BSphU)
+    try:
+        cf_type = par.parval_from_str("EvolvedConformalFactor_cf")
+    except:
+        print("UIUCBlackHole Error: Must set BSSN_quantities::EvolvedConformalFactor_cf;")
+        print("                     the lapse is set in terms of the BSSN conformal factor")
+        sys.exit(1)
+
+    rfm.reference_metric()  # BitoA.cf_from_gammaDD requires reference_metric() first be called.
+    BitoA.cf_from_gammaDD(gammaDD)
+    cf = BitoA.cf
 
     # Let's choose alpha = 1/psi**2 (psi = BSSN conformal factor) for these initial data,
     # where psi = exp(phi); chi = 1/psi**4; W = 1/psi**2
-    if par.parval_from_str("EvolvedConformalFactor_cf") == "phi":
+    if cf_type == "phi":
         alpha = sp.exp(-2*cf)
-    elif par.parval_from_str("EvolvedConformalFactor_cf") == "chi":
+    elif cf_type == "chi":
         alpha = sp.sqrt(cf)
-    elif par.parval_from_str("EvolvedConformalFactor_cf") == "W":
+    elif cf_type == "W":
         alpha = cf
     else:
-        print("Error EvolvedConformalFactor_cf type = \""+par.parval_from_str("EvolvedConformalFactor_cf")+"\" unknown.")
+        print("Error EvolvedConformalFactor_cf type = \""+cf_type+"\" unknown.")
         sys.exit(1)
-
-    import BSSN.BSSN_ID_function_string as bIDf
-    # Generates initial_data() C function & stores to outC_function_dict["initial_data"]
-    bIDf.BSSN_ID_function_string(cf, hDD, lambdaU, aDD, trK, alpha, vetU, betU,
-                                 include_NRPy_basic_defines=include_NRPy_basic_defines_and_pickle)
-    if include_NRPy_basic_defines_and_pickle:
-        return pickle_NRPy_env()

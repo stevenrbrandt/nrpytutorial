@@ -3,7 +3,7 @@
 set -e # Error out if any commands complete with an error.
 
 # Run GiRaFFE unit tests first:
-for i in in_progress/Tutorial-Start_to_Finish-GiRaFFE_NRPy-1D_tests-staggered.ipynb in_progress/Tutorial-Start_to_Finish_UnitTest*; do
+for i in in_progress-GiRaFFE_NRPy/Tutorial-Start_to_Finish-GiRaFFE_NRPy-1D_tests-staggered.ipynb in_progress-GiRaFFE_NRPy/Tutorial-Start_to_Finish_UnitTest*.ipynb; do
     ./run_Jupyter_notebook.sh $i # notimer
     cat $i | sed "s/\\\r\\\n/\\\n/g" > $i-new && mv $i-new $i
     git diff $i |grep -v "image/png"|grep -E "^\-|^\+"|grep -v  '^\-\-\-'| \
