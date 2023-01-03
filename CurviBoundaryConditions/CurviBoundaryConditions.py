@@ -122,7 +122,7 @@ def parity_conditions_symbolic_dot_products():
 # NRPy_basic_defines.h.
 def NRPy_basic_defines_set_gridfunction_defines_with_parity_types(verbose=True):
     # First add human-readable gridfunction aliases (grid.py) to NRPy_basic_defines dictionary,
-    evolved_variables_list, auxiliary_variables_list, auxevol_variables_list = gri.gridfunction_lists()
+    evolved_variables_list, auxiliary_variables_list, auxevol_variables_list = gri.gridfunction_lists()[0:3]
 
     # Step 3.b: set the parity conditions on all gridfunctions in gf_list,
     #       based on how many digits are at the end of their names
