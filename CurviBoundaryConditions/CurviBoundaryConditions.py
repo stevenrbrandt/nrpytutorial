@@ -111,15 +111,32 @@ def parity_conditions_symbolic_dot_products():
 
     lhs_strings = []
     for i in range(10):
-        lhs_strings.append("parity[" + str(i) + "]")
-    outputC(parity, lhs_strings, os.path.join(Ccodesdir, "parity_conditions_symbolic_dot_products.h"))
+        lhs_strings.append("REAL_parity_array["+str(i)+"]")
+    outstr = """
+    // NRPy+ Curvilinear Boundary Conditions: Unit vector dot products for all
+    //      ten parity conditions, in given coordinate system.
+    //      Needed for automatically determining sign of tensor across coordinate boundary.
+    // Documented in: Tutorial-Start_to_Finish-Curvilinear_BCs.ipynb
+"""
+    return outstr + outputC(parity, lhs_strings, filename="returnstring", params="preindent=2")
 
 
-    # Step 2.a: Generate Ccodesdir/gridfunction_defines.h file,
-    #       containing human-readable gridfunction aliases
-    evolved_variables_list, auxiliary_variables_list, auxevol_variables_list = gri.output__gridfunction_defines_h__return_gf_lists(Ccodesdir)[0:3]
+# For example, if the gridfunction name ends with "01", then (based on the table in the
+# NRPy+ Jupyter notebook corresponding to this Python module) the set_parity_types()
+# function below will set the parity_type of that gridfunction to 5. We can be assured
+# this is a rather robust algorithm, because gri.register_gridfunctions() in grid.py
+# will throw an error if a gridfunction's base name ends in an integer. This strict
+# syntax was added with the express purpose of making it easier to set parity types
+# based solely on the gridfunction name.
+#
+# After each parity type is found, we store the parity type of each gridfunction to
+# const int8_t arrays evol_gf_parity and aux_gf_parity, appended to the end of
+# NRPy_basic_defines.h.
+def NRPy_basic_defines_set_gridfunction_defines_with_parity_types(verbose=True):
+    # First add human-readable gridfunction aliases (grid.py) to NRPy_basic_defines dictionary,
+    evolved_variables_list, auxiliary_variables_list, auxevol_variables_list = gri.gridfunction_lists()[0:3]
 
-    # Step 2.b: set the parity conditions on all gridfunctions in gf_list,
+    # Step 3.b: set the parity conditions on all gridfunctions in gf_list,
     #       based on how many digits are at the end of their names
     def set_parity_types(list_of_gf_names):
         parity_type = []
