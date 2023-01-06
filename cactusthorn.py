@@ -34,12 +34,20 @@ def check_msg(vtype, v, scalar_writes, tile_writes, forgotten):
         msg = ""
     assert v in scalar_writes or v in tile_writes, f"{vtype} variable '{v}' was read without being written.{msg}"
 
+class sortedset(set):
+    def __init__(self):
+        set.__init__(self)
+    def __iter__(self):
+        li = list(set.__iter__(self))
+        li = sorted(li)
+        return li.__iter__()
+
 def check_eqns(name, eqns):
-    forgotten = set()
-    scalar_reads = set()
-    scalar_writes = set()
-    tile_writes = set()
-    tmp_tile_writes = set()
+    forgotten = sortedset()
+    scalar_reads = sortedset()
+    scalar_writes = sortedset()
+    tile_writes = sortedset()
+    tmp_tile_writes = sortedset()
     for lr in eqns:
         if lr.lhs is None:
             for v in scalar_reads:
@@ -260,8 +268,8 @@ class CactusFunc:
     def __init__(self, name, body, schedule_bin, doc, centering):
         self.name = name
         self.body = body
-        self.writegfs = set()
-        self.readgfs = set()
+        self.writegfs = sortedset()
+        self.readgfs = sortedset()
         self.schedule_bin = schedule_bin
         self.doc = doc
         self.centering = centering
@@ -299,9 +307,9 @@ class CactusThorn:
         else:
             assert False
         self._add_src(name + ".cc")
-        writegfs = set()
-        readgfs = set()
-        tmps = set()
+        writegfs = sortedset()
+        readgfs = sortedset()
+        tmps = sortedset()
         has_fd = False
         if type(body)==list:
             new_body = []
@@ -364,7 +372,7 @@ class CactusThorn:
         else:
             assert False, "Body must be list or str"
 
-        centerings_used = set()
+        centerings_used = sortedset()
         for gf in readgfs:
             gtype = grid.find_gftype(gf,die=False)
             c = grid.find_centering(gf)
@@ -375,7 +383,7 @@ class CactusThorn:
             c = grid.find_centering(gf)
             if gtype in ["AUX","EVOL","AUXEVOL"] and centering is not None:
                 centerings_used.add(c)
-        centerings_needed = set()
+        centerings_needed = sortedset()
         centerings_needed.add(centering)
         layout_decls = ""
         for c in centerings_needed:
@@ -386,7 +394,7 @@ class CactusThorn:
         for gf in tmps:
             c = grid.find_centering(gf)
             if c not in tmp_centerings:
-                tmp_centerings[c] = set()
+                tmp_centerings[c] = sortedset()
             tmp_centerings[c].add(gf)
         if grid.ET_driver == "CarpetX":
             if where == 'interior':
@@ -428,7 +436,7 @@ class CactusThorn:
 
     def do_body(self, body, where, centering):
             # idxs is a list of integer offsets for stencils used by the FD routine
-            idxs = set()
+            idxs = sortedset()
             kernel = fin.FD_outputC("returnstring",body,idxs=idxs)
             # Compute the max offset from 0 for the stencils
             maxx = 0
@@ -639,7 +647,7 @@ class CactusThorn:
         else:
             assert os.path.exists(os.path.join(dirname,"arrangements","Carpet","Carpet")), \
                 "Generating for Carpet, but the Carpet driver is not present."
-        rhs_pairs = set()
+        rhs_pairs = sortedset()
         cwd = None
         try:
             if dirname is not None:
@@ -740,7 +748,7 @@ void {self.thornname}_RegisterVars(CCTK_ARGUMENTS)
                 for gf_name in sorted(grid.find_gfnames()):
                     if grid.ET_driver == "CarpetX" and gf_name in ["x","y","z"]:
                         continue
-                    storage_written = set()
+                    storage_written = sortedset()
                     module = grid.find_gfmodule(gf_name)
                     if module is None or module == self.thornname:
                         gf_group = ixp.rev_index_group.get(gf_name, gf_name)
@@ -764,8 +772,8 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                 for src in self.src_files.values():
                     fsrc = os.path.join(self.src_dir, src.name)
 
-                    readgfs = set()
-                    writegfs = set()
+                    readgfs = sortedset()
+                    writegfs = sortedset()
 
                     for func in src.funcs:
                         print(file=fd)

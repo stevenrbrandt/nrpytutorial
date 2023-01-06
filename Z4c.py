@@ -14,7 +14,7 @@ from outputC import lhrh, outCparams
 
 import safewrite
 # safewrite.nochange = True
-# safewrite.verbose = True
+safewrite.verbose = True
 
 outCparams.CSE_enable = "True"
 
@@ -72,7 +72,8 @@ one = sp.IndexedBase("one")
 definitions["oneU"] = [1]*3
 
 gfparams(gf_type="EXTERNAL",symmetries="sym01",centering=centering,external_module="ADMBase",namefun=name_xyz)
-gflatex(r"g_{i j} k_{i j} dtk_{i j} alp dtalp dtdtalp beta^i dtbeta^i dtdtbeta^i")
+gflatex(r"g_{i j} k_{i j} dtk_{i j} alp dtalp beta^i dtbeta^i dtdtbeta^i")
+gfdecl("dt2alp",[])
 gfparams(gf_type="EXTERNAL",symmetries="sym01",centering=centering,external_module="TmunuBase",namefun=name_xyz)
 gfdecl("eTtt",[],"eTt",[la],"eT",[la,lb])
 
@@ -213,7 +214,7 @@ def ADM():
         # Second time derivatives
         # TODO: Use correct expressions
         geneqns(lhs=dtk[li,lj], rhs=zero * Atilde[li,lj]),
-        geneqns(lhs=dtdtalp, rhs=sympify(0)),
+        geneqns(lhs=dt2alp, rhs=sympify(0)),
         geneqns(lhs=dtdtbeta[ui], rhs=zero * betaG[ui]),
     ]
     
