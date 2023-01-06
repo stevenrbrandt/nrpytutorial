@@ -294,7 +294,7 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
 
     # Set up the C function for the BSSN RHSs
     desc = "Evaluate the BSSN RHSs"
-    name = "rhs_eval" + func_name_suffix
+    func_name = "rhs_eval" + func_name_suffix
     params = "const paramstruct *restrict params, "
     if enable_rfm_precompute:
         params += "const rfm_struct *restrict rfmstruct, "
@@ -314,7 +314,7 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
     enableCparameters=True
     # Set up preloop in case we're outputting code for the Einstein Toolkit (ETK)
     if par.parval_from_str("grid::GridFuncMemAccess") == "ETK":
-        params, preloop = set_ETK_func_params_preloop(name)
+        params, preloop = set_ETK_func_params_preloop(func_name)
         enableCparameters=False
 
     FD_outCparams = "outCverbose=False,enable_SIMD=" + str(enable_SIMD)
@@ -355,7 +355,7 @@ def add_rhs_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.jo
     add_to_Cfunction_dict(
         includes=includes,
         desc=desc,
-        name=name, params=params,
+        name=func_name, params=params,
         preloop=preloop, body=body, loopopts=loopopts, postloop=postloop,
         rel_path_to_Cparams=rel_path_to_Cparams, enableCparameters=enableCparameters)
     return pickle_NRPy_env()
@@ -410,7 +410,7 @@ def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.
 
     # Set up the C function for the 3-Ricci tensor
     desc = "Evaluate the 3-Ricci tensor"
-    name = "Ricci_eval" + func_name_suffix
+    func_name = "Ricci_eval" + func_name_suffix
     params = "const paramstruct *restrict params, "
     if enable_rfm_precompute:
         params += "const rfm_struct *restrict rfmstruct, "
@@ -432,7 +432,7 @@ def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.
     enableCparameters=True
     # Set up preloop in case we're outputting code for the Einstein Toolkit (ETK)
     if par.parval_from_str("grid::GridFuncMemAccess") == "ETK":
-        params, preloop = set_ETK_func_params_preloop(name)
+        params, preloop = set_ETK_func_params_preloop(func_name)
         enableCparameters=False
 
     if enable_split_for_optimizations_doesnt_help and FDorder >= 8:
@@ -464,7 +464,7 @@ def add_Ricci_eval_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os.path.
     add_to_Cfunction_dict(
         includes=includes,
         desc=desc,
-        name=name, params=params,
+        name=func_name, params=params,
         preloop=preloop, body=body, loopopts=loopopts, postloop=postloop,
         rel_path_to_Cparams=rel_path_to_Cparams, enableCparameters=enableCparameters)
     return pickle_NRPy_env()
@@ -519,7 +519,7 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
 
     # Set up the C function for the BSSN constraints
     desc = "Evaluate the BSSN constraints"
-    name = "BSSN_constraints" + func_name_suffix
+    func_name = "BSSN_constraints" + func_name_suffix
     params = "const paramstruct *restrict params, "
     if enable_rfm_precompute:
         params += "const rfm_struct *restrict rfmstruct, "
@@ -538,7 +538,7 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
     enableCparameters=True
     # Set up preloop in case we're outputting code for the Einstein Toolkit (ETK)
     if par.parval_from_str("grid::GridFuncMemAccess") == "ETK":
-        params, preloop = set_ETK_func_params_preloop(name)
+        params, preloop = set_ETK_func_params_preloop(func_name)
         enableCparameters=False
 
     FD_outCparams = "outCverbose=False,enable_SIMD=" + str(enable_SIMD)
@@ -552,7 +552,7 @@ def add_BSSN_constraints_to_Cfunction_dict(includes=None, rel_path_to_Cparams=os
     add_to_Cfunction_dict(
         includes=includes,
         desc=desc,
-        name=name, params=params,
+        name=func_name, params=params,
         preloop=preloop,
         body=body,
         loopopts=get_loopopts("InteriorPoints", enable_SIMD, enable_rfm_precompute, OMP_pragma_on),
@@ -574,7 +574,7 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
 
     # Set up the C function for enforcing the det(gammabar) = det(gammahat) BSSN algebraic constraint
     desc = "Enforce the det(gammabar) = det(gammahat) (algebraic) constraint"
-    name = "enforce_detgammahat_constraint" + func_name_suffix
+    func_name = "enforce_detgammahat_constraint" + func_name_suffix
     params = "const paramstruct *restrict params, "
     if enable_rfm_precompute:
         params += "const rfm_struct *restrict rfmstruct, "
@@ -589,7 +589,7 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
     enableCparameters=True
     # Set up preloop in case we're outputting code for the Einstein Toolkit (ETK)
     if par.parval_from_str("grid::GridFuncMemAccess") == "ETK":
-        params, preloop = set_ETK_func_params_preloop(name, enable_SIMD=False)
+        params, preloop = set_ETK_func_params_preloop(func_name, enable_SIMD=False)
         enableCparameters=False
 
     FD_outCparams = "outCverbose=False,enable_SIMD=False"
@@ -603,7 +603,7 @@ def add_enforce_detgammahat_constraint_to_Cfunction_dict(includes=None, rel_path
     add_to_Cfunction_dict(
         includes=includes,
         desc=desc,
-        name=name, params=params,
+        name=func_name, params=params,
         preloop=preloop,
         body=body,
         loopopts=get_loopopts("AllPoints", enable_SIMD, enable_rfm_precompute, OMP_pragma_on),
