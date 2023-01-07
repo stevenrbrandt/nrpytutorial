@@ -20,7 +20,6 @@ import finite_difference as fin  # NRPy+: Finite-difference module
 import os, sys           # Standard Python modules for multiplatform OS-level functions
 from UnitTesting.assert_equal import check_zero  # NRPy+: Checks whether an expression evaluates to zero.
 
-_unused = par.Cparameters("int", __name__, "has_outer_boundary", 0)
 _unused = par.Cparameters("int", __name__, "outer_bc_type", "EXTRAPOLATION_OUTER_BCS")
 
 
