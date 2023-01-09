@@ -31,11 +31,13 @@ def add_to_Cfunction_dict_exact_ADM_ID_function(IDtype, IDCoordSystem, alpha, be
     rfm.reference_metric()
     body = ""
     if IDCoordSystem == "Spherical":
-        body += r"""  const REAL Cartx=xCart[0], Carty=xCart[1], Cartz=xCart[2];
+        body += r"""
   REAL xx0,xx1,xx2 __attribute__((unused));  // xx2 might be unused in the case of axisymmetric initial data.
   {
-""" + outputC(rfm.Cart_to_xx[:3], ["xx0", "xx1", "xx2"], filename="returnstring",
-              params="outCverbose=False,includebraces=False,preindent=2") + """
+    int unused_Cart_to_i0i1i2[3];
+    REAL xx[3];
+    Cart_to_xx_and_nearest_i0i1i2(params, xCart, xx, unused_Cart_to_i0i1i2);
+    xx0=xx[0];  xx1=xx[1];  xx2=xx[2];
   }
   const REAL r  = xx0; // Some ID only specify r,th,ph.
   const REAL th = xx1;
@@ -111,22 +113,20 @@ def Cfunction_ADM_SphorCart_to_Cart(input_Coord="Spherical", include_T4UU=False)
         body += "\n"
 
     body += r"""
-  // Perform the basis transform on ADM vectors/tensors from """+input_Coord+""" to Cartesian:
+  // Perform the basis transform on ADM vectors/tensors from """ + input_Coord + """ to Cartesian:
   {
-    // Set destination point
-    const REAL Cartx = xCart[0];
-    const REAL Carty = xCart[1];
-    const REAL Cartz = xCart[2];
-
-    // Set destination xx[3]
+    // Set destination xx[3] based on desired xCart[3]
+    REAL xx0,xx1,xx2;
+    {
+      int unused_Cart_to_i0i1i2[3];
+      REAL xx[3];
+      Cart_to_xx_and_nearest_i0i1i2(params, xCart, xx, unused_Cart_to_i0i1i2);
+      xx0=xx[0];  xx1=xx[1];  xx2=xx[2];
+    }
 """
     # Set reference_metric to the input_Coord
     par.set_parval_from_str("reference_metric::CoordSystem", input_Coord)
     rfm.reference_metric()
-
-    body += outputC(rfm.Cart_to_xx[:3], ["const REAL xx0", "const REAL xx1", "const REAL xx2"],
-                    filename="returnstring",
-                    params="outCverbose=False,includebraces=False,preindent=2,CSE_varprefix=tmp_xx")
 
     # Define the input variables:
     gammaSphorCartDD = ixp.declarerank2("gammaSphorCartDD", "sym01")
@@ -270,11 +270,15 @@ to the basis specified by `reference_metric::CoordSystem`, then rescale these BS
                                            const BSSN_Cart_basis_struct *restrict BSSN_Cart_basis,
                                            rescaled_BSSN_rfm_basis_struct *restrict rescaled_BSSN_rfm_basis"""
 
-    body = "  const REAL Cartx=xCart[0], Carty=xCart[1], Cartz=xCart[2];\n"
-    # We're in the rfm coordinate basis now.
-    body += outputC(rfm.Cart_to_xx[:3], ["const REAL xx0", "const REAL xx1", "const REAL xx2"],
-                   filename="returnstring",
-                   params="outCverbose=False,includebraces=False,preindent=1,CSE_varprefix=tmp_xx")
+    body = r"""
+  REAL xx0,xx1,xx2 __attribute__((unused));  // xx2 might be unused in the case of axisymmetric initial data.
+  {
+    int unused_Cart_to_i0i1i2[3];
+    REAL xx[3];
+    Cart_to_xx_and_nearest_i0i1i2(params, xCart, xx, unused_Cart_to_i0i1i2);
+    xx0=xx[0];  xx1=xx[1];  xx2=xx[2];
+  }
+"""
 
     # Define the input variables:
     gammabarCartDD = ixp.declarerank2("BSSN_Cart_basis->gammabarDD", "sym01")
