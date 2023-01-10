@@ -33,7 +33,6 @@ class excepthook:
 def parse_latex(*args,**kwargs):
     with excepthook():
         args = (re.sub(r'dt2alp',r'dtdtalp',args[0]),)
-        here(args,kwargs)
         return parse_latex_(*args,**kwargs)
 
 def set_coords(*c):
@@ -98,7 +97,7 @@ def _latex_def(basename, fmt, gf, args):
             _latex_def(basename, fmt, gf[i], args + [coords[i]])
     else:
         indexes = fmt % tuple(args)
-        latex = f("% \\mathrm{{{basename}}}{indexes} = \\mathrm{{{gf}}}")
+        latex = f("% \\text{{{basename}}}{indexes} = \\text{{{gf}}}")
         parse_latex(latex)
 
 
