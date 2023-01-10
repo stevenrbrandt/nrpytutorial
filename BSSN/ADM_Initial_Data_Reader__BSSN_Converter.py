@@ -21,7 +21,7 @@ import os, sys                    # Standard Python modules for multiplatform OS
 
 
 def add_to_Cfunction_dict_exact_ADM_ID_function(IDtype, IDCoordSystem, alpha, betaU, BU, gammaDD, KDD):
-    includes = ["NRPy_basic_defines.h"]
+    includes = ["NRPy_basic_defines.h", "NRPy_function_prototypes.h"]
     desc = IDtype + " initial data"
     c_type = "void"
     name = IDtype
@@ -112,17 +112,18 @@ def Cfunction_ADM_SphorCart_to_Cart(input_Coord="Spherical", include_T4UU=False)
                 body += "  const REAL " + varname + " = initial_data->" + varname + ";\n"
         body += "\n"
 
-    body += r"""
+    if input_Coord == "Spherical":
+        body += r"""
   // Perform the basis transform on ADM vectors/tensors from """ + input_Coord + """ to Cartesian:
+
+  // Set destination xx[3] based on desired xCart[3]
+  REAL xx0,xx1,xx2;
   {
-    // Set destination xx[3] based on desired xCart[3]
-    REAL xx0,xx1,xx2;
-    {
-      int unused_Cart_to_i0i1i2[3];
-      REAL xx[3];
-      Cart_to_xx_and_nearest_i0i1i2(params, xCart, xx, unused_Cart_to_i0i1i2);
-      xx0=xx[0];  xx1=xx[1];  xx2=xx[2];
-    }
+    int unused_Cart_to_i0i1i2[3];
+    REAL xx[3];
+    Cart_to_xx_and_nearest_i0i1i2(params, xCart, xx, unused_Cart_to_i0i1i2);
+    xx0=xx[0];  xx1=xx[1];  xx2=xx[2];
+  }
 """
     # Set reference_metric to the input_Coord
     par.set_parval_from_str("reference_metric::CoordSystem", input_Coord)
@@ -171,10 +172,8 @@ def Cfunction_ADM_SphorCart_to_Cart(input_Coord="Spherical", include_T4UU=False)
     list_of_output_varnames, list_of_output_exprs = (list(t) for t in zip(*sorted(zip(list_of_output_varnames, list_of_output_exprs))))
 
     body += outputC(list_of_output_exprs, list_of_output_varnames,
-                    filename="returnstring", params="outCverbose=False,includebraces=False,preindent=2")
-    body += r"""
-  }
-"""
+                    filename="returnstring", params="outCverbose=False,includebraces=False,preindent=1")
+
     # Restore reference metric globals to coordsystem on grid.
     par.set_parval_from_str("reference_metric::CoordSystem", desired_rfm_basis)
     rfm.reference_metric()
