@@ -257,7 +257,7 @@ def Cfunction__EigenCoord_set_x0x1x2_inbounds__i0i1i2_inbounds_single_pt():
   multiplying by a +/- 1 if the data is from a gridfunction
   storing tensors/vectors.
 """
-    c_type = "void"
+    c_type = "static void"
     name = "EigenCoord_set_x0x1x2_inbounds__i0i1i2_inbounds_single_pt"
     params = """const paramstruct *restrict params, REAL *restrict xx[3],
                                                                const int i0, const int i1, const int i2,
@@ -428,7 +428,7 @@ def Cfunction__set_parity_for_inner_boundary_single_pt():
   above for more details), here we compute the parity conditions
   for all 10 tensor types supported by NRPy+.
 """
-    c_type = "void"
+    c_type = "static void"
     name = "set_parity_for_inner_boundary_single_pt"
     params = """const paramstruct *restrict params, const REAL xx0,const REAL xx1,const REAL xx2,
                                              const REAL x0x1x2_inbounds[3], const int idx,
