@@ -1427,7 +1427,7 @@ def add_to_Cfunc_dict_xx_to_Cart(rel_path_to_Cparams=os.path.join("./")):
 
 def register_NRPy_basic_defines(enable_rfm_precompute=False):
     # TODO: Move the following to the top of this file when "old_way" is deprecated
-    par.initialize_Cparam(par.glb_Cparam("char [100]", thismodule, "CoordSystemName", "Nxx_dxx_invdx_params__and__xx_sets_this", common_to_all_grids=True))
+    par.initialize_Cparam(par.glb_Cparam("char [100]", thismodule, "CoordSystemName", "Nxx_dxx_invdx_params__and__xx_sets_this"))
 
     Nbd = ""
     if enable_rfm_precompute:
