@@ -52,9 +52,6 @@ def cylindrical_explosion(r, r_in=0.8, r_out=1.0):
 def magnetic_rotor(r, r_in=0.1, Omega=9.95, cartx=rfm.Cartx, carty=rfm.Carty):
     cart_list = [cartx, carty]
 
-    par.set_parval_from_str("reference_metric::CoordSystem","Cylindrical")
-    rfm.reference_metric()
-
     vU_cyl = ixp.zerorank1()
     BU = ixp.zerorank1()
 
