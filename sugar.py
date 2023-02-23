@@ -114,7 +114,7 @@ def match_expr(expr):
         g = re.match(r'''(?x)
         \s+| # spaces
         %.*| # comments
-        \\mathrm{([A-Za-z_]+)}| # var name, group 1
+        \\text{([A-Za-z_]+)}| # var name, group 1
         \\(hat|tilde|bar){\\?([A-Za-z_]+)}| # var name, group 2 and 3
         \\?([A-Za-z]+)| # var name, group 4
         ([\^_]){\ *((?:[a-z]\ )*[a-z])\ *}| # multi-index, group 5 and 6
@@ -670,7 +670,7 @@ def geneqns3(eqn, DIM=3, globs=None, loop=False):
 def geneqns2(lhs, rhs, DIM=3, globs=None, loop=False):
     if globs is None:
         globs = currentframe().f_back.f_globals
-    lhs_str = r"\mathrm{result}"
+    lhs_str = r"\text{result}"
     last = ""
     suffix = ""
 
@@ -700,7 +700,7 @@ def geneqns2(lhs, rhs, DIM=3, globs=None, loop=False):
 
     # The parse expression is of the form "result_{a b ...}^{c d ...} = foo_{a b ...}^{c d ...}"
     # When evaluated, it will assign to the "result" global variable.
-    parse_latex(latex,verbose=True)
+    parse_latex(latex) #,verbose=True)
 
     return geneqns(lhs=lhs, values=globals()["result"+suffix], globs=globs, loop=loop, DIM=DIM)
 
