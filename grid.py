@@ -10,6 +10,7 @@ from collections import namedtuple  # Standard Python `collections` module: defi
 import os                           # Standard Python module for multiplatform OS-level functions
 from suffixes import setsuffix
 import re
+from fstr import f
 
 # Initialize globals related to the grid
 ET_driver = ""
@@ -75,7 +76,7 @@ def variable_type(var):
         return "Cparameter"
     elif var_is_gf:
         return "gridfunction"
-    print(f"grid.py: Could not find variable_type for '{var}'.")
+    print(f("grid.py: Could not find variable_type for '{var}'."))
     sys.exit(1)
 
 def find_gftype(varname,die=True):
@@ -83,9 +84,9 @@ def find_gftype(varname,die=True):
         if gf.name == varname:
             return gf.gftype
     if die:
-        raise Exception(f"grid.py: Could not find gftype for '{varname}'.")
+        raise Exception(f("grid.py: Could not find gftype for '{varname}'."))
     else:
-        raise Exception(f"grid.py: Could not find variable_type for '{var}'.")
+        raise Exception(f("grid.py: Could not find variable_type for '{var}'."))
     if not found_registered_gf:
         print("Error: gridfunction \""+varname+"\" is not registered!")
         print("Here's the list of registered gridfunctions:", grid.glb_gridfcs_list)
@@ -114,29 +115,7 @@ def find_gfmodule(varname,die=True):
             return None
     else:
         return var_data.external_module
-
-from_access = {}
-
-def var_from_access(access):
-    access = access.strip() # This really shouldn't be necessary
-    v = from_access.get(access, None)
-    if v is not None:
-        return v
-    g = re.match(r'^(\w+)(\[\w+\])*$', access)
-    if g:
-        return g.group(1)
-    g = re.match(r'in_gfs\w*\[IDX4S\((\w+),i0,i1,i2\)\]', access)
-    if g:
-        return g.group(1)
-    g = re.match(r'^const\s+(\w+)\s+(\w+)', access)
-    if g:
-        return g.group(2)
-    raise Exception(f"Could not identify a variable name from the access string '{access}'")
-
-def gfaccess(gfarrayname = "", varname = "", ijklstring = "", context = "DECL"):
-    ret = _gfaccess(gfarrayname, varname, ijklstring, context)
-    from_access[ret] = varname
-    return ret
+from var_access import var_from_access, gfaccess
     
 def _gfaccess(gfarrayname, varname, ijklstring, context):
     var_data = glb_gridfcs_map.get(varname, None)
@@ -191,11 +170,11 @@ def _gfaccess(gfarrayname, varname, ijklstring, context):
             if gfarrayname == "rhs_gfs":
                 return retstring + varname + "_rhsGF" + "(p.I) /** 22 **/"
             elif gftype == "EXTERNAL":
-                return retstring + varname + f"(p.I) /* 11 DIM={str(DIM)} {str(type(DIM))} */"
+                return retstring + varname + f("(p.I) /* 11 DIM={str(DIM)} {str(type(DIM))} */")
             elif gftype == "CORE":
                 return retstring + "p." + varname
             elif gftype == "TMP":
-                return retstring + varname + f"({get_centering(varname)}_tmp_layout,p.I{ijklstring})"
+                return retstring + varname + f("({get_centering(varname)}_tmp_layout,p.I{ijklstring})")
             else:
                 return retstring + varname + "GF(p.I" + ijklstring + ")"
     else:
@@ -255,11 +234,11 @@ def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_inf
         sys.exit(1)
 
     assert centering is None or type(centering) == str, \
-        f"Centering, if supplied, should be of type str. Type was '{type(centering)}'"
+        f("Centering, if supplied, should be of type str. Type was '{type(centering)}'")
     if centering is not None:
-        assert len(centering) == DIM, f"len(centering) ({len(centering)}) is not equal to DIM ({DIM})"
+        assert len(centering) == DIM, f("len(centering) ({len(centering)}) is not equal to DIM ({DIM})")
         for c in centering:
-            assert c in "CV", f"Centering should contain only 'C' or 'V'. The letter '{c}' was found."
+            assert c in "CV", f("Centering should contain only 'C' or 'V'. The letter '{c}' was found.")
 
     # Step 1: convert gf_names to a list if it's not already a list
     if not isinstance(gf_names, list):

@@ -22,7 +22,7 @@ import sympy as sp                            # SymPy: The Python computer algeb
 import re, sys, os, stat                      # Standard Python: regular expressions, system, and multiplatform OS funcs
 from collections import namedtuple            # Standard Python: Enable namedtuple data type
 from suffixes import dosubs
-from grid import find_gftype, var_from_access
+#from grid import find_gftype, var_from_access
 
 lhrh = namedtuple('lhrh', 'lhs rhs')
 outCparams = namedtuple('outCparams', 'preindent includebraces declareoutputvars outCfileaccess outCverbose CSE_enable CSE_varprefix CSE_sorting CSE_preprocess enable_SIMD SIMD_find_more_subs SIMD_find_more_FMAsFMSs SIMD_debug enable_TYPE')
@@ -523,7 +523,6 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
             nm = output_varname_str[ii]
             var = var_from_access(nm)
             typ = find_gftype(var,die=False)
-            here(nm,"->",var,"=",typ)
             if typ == "SCALAR_TMP":
                 sympyexpr_group1 += [ sp.Eq(sp.sympify(var), sympyexpr[ii]) ]
                 names_group1 += [nm]
