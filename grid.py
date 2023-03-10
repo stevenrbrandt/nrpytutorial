@@ -79,19 +79,6 @@ def variable_type(var):
     print(f("grid.py: Could not find variable_type for '{var}'."))
     sys.exit(1)
 
-def find_gftype(varname,die=True):
-    for gf in glb_gridfcs_list:
-        if gf.name == varname:
-            return gf.gftype
-    if die:
-        raise Exception(f("grid.py: Could not find gftype for '{varname}'."))
-    else:
-        raise Exception(f("grid.py: Could not find variable_type for '{var}'."))
-    if not found_registered_gf:
-        print("Error: gridfunction \""+varname+"\" is not registered!")
-        print("Here's the list of registered gridfunctions:", grid.glb_gridfcs_list)
-        sys.exit(1)
-
 def find_gfnames():
     return sorted(list(glb_gridfcs_map().keys()))
 
@@ -115,10 +102,17 @@ def find_gfmodule(varname,die=True):
             return None
     else:
         return var_data.external_module
-from var_access import var_from_access, gfaccess
+
+from var_access import var_from_access, set_access
+
+def gfaccess(gfarrayname = "", varname = "", ijklstring = "", context = "DECL"):
+    ret = _gfaccess(gfarrayname, varname, ijklstring, context)
+    #from_access[ret] = varname
+    set_access(ret, varname)
+    return ret
     
 def _gfaccess(gfarrayname, varname, ijklstring, context):
-    var_data = glb_gridfcs_map.get(varname, None)
+    var_data = glb_gridfcs_map().get(varname, None)
 
     assert context in ["DECL","USE"], "The context must be either DECL or USE, not '"+context+"'"
 
@@ -144,8 +138,10 @@ def _gfaccess(gfarrayname, varname, ijklstring, context):
             gfarrayname = "ext_gfs"
         elif gftype == "CORE":
             gfarrayname = "core_gfs"
-        elif gftype == "TMP":
-            gfarrayname = "tmp_gfs"
+        elif gftype == "TILE_TMP":
+            gfarrayname = "tile_tmp_gfs"
+        elif gftype == "SCALAR_TMP":
+            gfarrayname = "scalar_tmp_gfs"
         # Return gfarrayname[IDX3(varname,i0)] for DIM=1, gfarrayname[IDX3(varname,i0,i1)] for DIM=2, etc.
         retstring += gfarrayname + "[IDX" + str(DIM+1) + "S(" + varname.upper()+"GF" + ", "
     elif par.parval_from_str("GridFuncMemAccess") == "ETK":
@@ -153,30 +149,46 @@ def _gfaccess(gfarrayname, varname, ijklstring, context):
         if DIM != 3:
             print("Error: GridFuncMemAccess = ETK currently requires that gridfunctions be 3D. Can be easily extended.")
             sys.exit(1)
-        if ET_driver is "Carpet":
+        if ET_driver == "Carpet":
             if gfarrayname == "rhs_gfs":
                 retstring += varname + "_rhsGF" + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
             elif gftype == "EXTERNAL":
                 retstring += varname + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
-            elif gftype == "CORE":
-                print("Error: gftype = CORE should only be used with the CarpetX driver.")
+            #elif gftype == "CORE":
+            #    print("Error: gftype = CORE should only be used with the CarpetX driver.")
+            #    sys.exit(1)
+            elif gftype == "TILE_TMP":
+                print("Error: gftype = TILE_TMP should only be used with the CarpetX driver.")
                 sys.exit(1)
-            elif gftype == "TMP":
-                print("Error: gftype = TMP should only be used with the CarpetX driver.")
+            elif gftype == "SCALAR_TMP":
+                print("Error: gftype = SCALAR_TMP should only be used with the CarpetX driver.")
                 sys.exit(1)
             else:
                 retstring += varname + "GF" + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
-        elif ET_driver is "CarpetX":
+        elif ET_driver == "CarpetX":
+            vartype = par.parval_from_str("PRECISION")
+            mask = "mask, " if vartype == "CCTK_REALVEC" else ""
             if gfarrayname == "rhs_gfs":
-                return retstring + varname + "_rhsGF" + "(p.I) /** 22 **/"
+                return retstring + varname + "_rhsGF" + "("+mask+get_centering(varname)+"_index)"
             elif gftype == "EXTERNAL":
-                return retstring + varname + f("(p.I) /* 11 DIM={str(DIM)} {str(type(DIM))} */")
+                return retstring + varname + "("+mask+find_centering(varname)+"_index)"
             elif gftype == "CORE":
                 return retstring + "p." + varname
-            elif gftype == "TMP":
-                return retstring + varname + f("({get_centering(varname)}_tmp_layout,p.I{ijklstring})")
+            elif gftype == "TILE_TMP":
+                if ijklstring == "":
+                    return retstring + varname + "("+mask+find_centering(varname)+"_tmp_index)"
+                else:
+                    return retstring + varname + "("+mask+find_centering(varname)+"_tmp_layout, p.I{ijklstring})"
+            elif gftype == "SCALAR_TMP":
+                if context == "USE":
+                    return retstring + "const " + vartype + " " + varname + " CCTK_ATTRIBUTE_UNUSED "
+                else:
+                    return None
             else:
-                return retstring + varname + "GF(p.I" + ijklstring + ")"
+                if ijklstring == "":
+                    return retstring + varname + "GF("+mask+find_centering(varname)+"_index)"
+                else:
+                    return retstring + varname + "GF("+mask+find_centering(varname)+"_layout, p.I"+ijklstring+")"
     else:
         print("grid::GridFuncMemAccess = "+par.parval_from_str("GridFuncMemAccess")+" not supported")
         sys.exit(1)
@@ -465,7 +477,7 @@ def output__gridfunction_defines_h__return_gf_lists(outdir):
     return gridfunction_lists()
 ####################
 
-from outputC import outC_NRPy_basic_defines_h_dict
+#from outputC import outC_NRPy_basic_defines_h_dict
 def register_C_functions_and_NRPy_basic_defines(enable_griddata_struct=True,
                                                 list_of_extras_in_griddata_struct=None):
     # First register C functions needed by grid

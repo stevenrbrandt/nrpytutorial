@@ -1,5 +1,10 @@
+import re
+from fstr import f
 
 from_access = {}
+
+def set_access(ret, varname):
+    from_access[ret] = varname
 
 def var_from_access(access):
     access = access.strip() # This really shouldn't be necessary
@@ -15,9 +20,11 @@ def var_from_access(access):
     g = re.match(r'^const\s+(\w+)\s+(\w+)', access)
     if g:
         return g.group(2)
-    raise Exception(f("Could not identify a variable name from the access string '{access}'"))
-
-def gfaccess(gfarrayname = "", varname = "", ijklstring = "", context = "DECL"):
-    ret = _gfaccess(gfarrayname, varname, ijklstring, context)
-    from_access[ret] = varname
-    return ret
+    g = re.match(r'^\*?([\w.]+?)[DU]*\d*$', access)
+    if g:
+        return g.group(1)
+    g = re.match(r'^(\w+)\[CCTK_GFINDEX3D\(cctkGH,i0,i1,i2\)\]', access)
+    if g:
+        return g.group(1)
+    return "?"
+    #raise Exception("Could not identify a variable name from the access string '"+access+"'")
