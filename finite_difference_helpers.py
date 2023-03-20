@@ -16,6 +16,7 @@ import grid as gri                  # NRPy+: Functions having to do with numeric
 import sys                          # Standard Python module for multiplatform OS-level functions
 from collections import namedtuple  # Standard Python: Enable namedtuple data type
 from here import here
+from fstr import f
 
 FDparams = namedtuple('FDparams', 'PRECISION FD_CD_order enable_FD_functions enable_SIMD DIM MemAllocStyle upwindcontrolvec fullindent outCparams')
 
@@ -244,26 +245,31 @@ def read_from_memory_Ccode_onept(gfname,idx, FDparams, idxs=set()):
     else:
         ijklstring = ijkl_string(idx4, FDparams)
     gfaccess_str = gri.gfaccess(gf_array_name,gfname,ijklstring)
+    idxs.add(",".join([str(ii) for ii in idx4]))
     if FDparams.enable_SIMD == "True":
         retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = ReadSIMD(&" + gfaccess_str + ");"
+    elif gri.find_gftype(gfname) == "SCALAR_TMP":
+        retstring = ""
     else:
+        assert varsuffix(gfname, idx4, FDparams) is not None
+        assert gfaccess_str is not None
         retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = " + gfaccess_str + ";"
     return retstring+"\n"
 
 def ijk_carpetx(idx4):
     result = ""
     for i in range(len(idx4)):
-        f = idx4[i]
-        if f == 0:
+        ff = idx4[i]
+        if ff == 0:
             pass
-        elif f == 1:
+        elif ff == 1:
             result += f("+PointDesc::DI[{i}]")
-        elif f == -1:
+        elif ff == -1:
             result += f("-PointDesc::DI[{i}]")
-        elif f < 0:
-            result += f("-{-f}*PointDesc::DI[{i}]")
+        elif ff < 0:
+            result += f("-{-ff}*PointDesc::DI[{i}]")
         else:
-            result += f("+{f}*PointDesc::DI[{i}]")
+            result += f("+{ff}*PointDesc::DI[{i}]")
     return result
 
 def ijkl_string(idx4, FDparams):

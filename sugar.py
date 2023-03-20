@@ -287,7 +287,7 @@ def gfdecl(*args):
         globs = args[-1]
         args = args[:-1]
     else:
-       g = inspect.stack()[1].frame.f_globals
+        globs = currentframe().f_back.f_globals
     namelist = []
     for arg in args:
         if type(arg) == str:
@@ -697,7 +697,6 @@ def geneqns2(lhs, rhs, DIM=3, globs=None, loop=False):
         lhs_str += sa[1] +  " "
         last = sa[0]
     latex = lhs_str + "}=" + rhs
-    r=parse_latex(latex,verbose=True)
 
     # The parse expression is of the form "result_{a b ...}^{c d ...} = foo_{a b ...}^{c d ...}"
     # When evaluated, it will assign to the "result" global variable.

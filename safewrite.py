@@ -13,9 +13,8 @@ verbose = False
 nochange = False
 
 class SafeWrite:
-    def __init__(self, fname):
-        self.fname = fname
-        print(f"Writing: {os.getcwd()}/{fname}")
+    def __init__(self, fname, do_format=False):
+        self.fname = os.path.abspath(fname)
         self.fd = None
         self.do_format = do_format
     def __enter__(self):
