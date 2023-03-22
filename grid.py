@@ -480,15 +480,6 @@ static const REAL gridfunctions_wavespeed[NUM_EVOL_GFS] = { """
                     outstr += str(gf.centering) + ", "
         outstr = outstr[:-2] + " };\n"
 
-        outstr += """\n\n// SET gridfunctions_centering[i] = gridfunction i's vertex/cell centering:
-static const REAL gridfunctions_centering[NUM_EVOL_GFS] = { """
-        for evol_var in evolved_variables_list:  # This list is sorted; glb_gridfcs_list is not.
-            #                                      We need to preserve the order to ensure consistency with the #defines
-            for i, gf in enumerate(glb_gridfcs_list):
-                if gf.name == evol_var and gf.gftype == "EVOL":
-                    outstr += str(glb_gridfcs_list[i].centering) + ", "
-        outstr = outstr[:-2] + " };\n"
-
     return outstr
 
 
@@ -502,6 +493,7 @@ def output__gridfunction_defines_h__return_gf_lists(outdir):
 ####################
 
 #from outputC import outC_NRPy_basic_defines_h_dict
+import defines_dict
 def register_C_functions_and_NRPy_basic_defines(enable_griddata_struct=True,
                                                 list_of_extras_in_griddata_struct=None):
     # First register C functions needed by grid
@@ -544,4 +536,4 @@ typedef struct __griddata__ {
                 Nbd_str += "  " + extra + ";\n"
         Nbd_str += "} griddata_struct;\n"
 
-    outC_NRPy_basic_defines_h_dict["grid"] = Nbd_str
+    defines_dict.outC_NRPy_basic_defines_h_dict["grid"] = Nbd_str

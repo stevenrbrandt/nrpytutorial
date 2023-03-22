@@ -1014,6 +1014,47 @@ def basis_transform_tensorDD_from_Cartesian_to_rfmbasis(Jac_dUCart_dDrfmUD, Cart
                     rfm_dst_tensorDD[i][j] += Jac_dUCart_dDrfmUD[l][i]*Jac_dUCart_dDrfmUD[m][j]*Cart_src_tensorDD[l][m]
     return rfm_dst_tensorDD
 
+
+# Useful for stress-energy tensor; assumes reference metric is time-independent.
+def basis_transform_4tensorUU_from_time_indep_rfmbasis_to_Cartesian(Jac_dUCart_dDrfmUD, T4UU):
+    # 4D Jacobians assume that reference metric is time-independent
+    Jac4_dUCart_dDrfmUD = ixp.zerorank2(DIM=4)
+    Jac4_dUCart_dDrfmUD[0][0] = sp.sympify(1)
+    for i in range(3):
+        for j in range(3):
+            Jac4_dUCart_dDrfmUD[i+1][j+1] = Jac_dUCart_dDrfmUD[i][j]
+
+    # Perform Jacobian operations on T^{mu nu}
+    Cart_dst_T4UU = ixp.zerorank2(DIM=4)
+    for mu in range(4):
+        for nu in range(4):
+            for delta in range(4):
+                for sigma in range(4):
+                    Cart_dst_T4UU[mu][nu] += \
+                         Jac4_dUCart_dDrfmUD[mu][delta]*Jac4_dUCart_dDrfmUD[nu][sigma]*T4UU[delta][sigma]
+    return Cart_dst_T4UU
+
+
+# Useful for stress-energy tensor; assumes reference metric is time-independent.
+def basis_transform_4tensorUU_from_Cartesian_to_time_indep_rfmbasis(Jac_dUrfm_dDCartUD, T4UU):
+    # 4D Jacobians assume that reference metric is time-independent
+    Jac4_dUrfm_dDCartUD = ixp.zerorank2(DIM=4)
+    Jac4_dUrfm_dDCartUD[0][0] = sp.sympify(1)
+    for i in range(3):
+        for j in range(3):
+            Jac4_dUrfm_dDCartUD[i+1][j+1] = Jac_dUrfm_dDCartUD[i][j]
+
+    # Perform Jacobian operations on T^{mu nu}
+    Cart_dst_T4UU = ixp.zerorank2(DIM=4)
+    for mu in range(4):
+        for nu in range(4):
+            for delta in range(4):
+                for sigma in range(4):
+                    Cart_dst_T4UU[mu][nu] += \
+                         Jac4_dUrfm_dDCartUD[mu][delta]*Jac4_dUrfm_dDCartUD[nu][sigma]*T4UU[delta][sigma]
+    return Cart_dst_T4UU
+
+
 # to/from spherical coordinates
 def compute_Jacobian_and_inverseJacobian_tofrom_Spherical():
     # Step 2.a: First construct Jacobian matrix:
@@ -1273,13 +1314,13 @@ def add_to_Cfunc_dict__Cart_to_xx_and_nearest_i0i1i2(rel_path_to_Cparams=os.path
                        ["xx[0]", "xx[1]", "xx[2]"], "returnstring", params="includebraces=False,preindent=1")
 
     body += """
-    // Then find the nearest index (i0,i1,i2) on underlying grid to (x,y,z)
-    // Recall that:
-    // xx[0][j] = xxmin[0] + ((REAL)(j-NGHOSTS) + (1.0/2.0))*params->dxx0; // Cell-centered grid.
-    //   --> j = (int) ( (xx[0][j] - xxmin[0]) / params->dxx0 + (1.0/2.0) + NGHOSTS )
-    Cart_to_i0i1i2[0] = (int)( ( xx[0] - ("""+str(xxmin[0])+""") ) / params->dxx0 + (1.0/2.0) + NGHOSTS - 0.5 ); // Account for (int) typecast rounding down
-    Cart_to_i0i1i2[1] = (int)( ( xx[1] - ("""+str(xxmin[1])+""") ) / params->dxx1 + (1.0/2.0) + NGHOSTS - 0.5 ); // Account for (int) typecast rounding down
-    Cart_to_i0i1i2[2] = (int)( ( xx[2] - ("""+str(xxmin[2])+""") ) / params->dxx2 + (1.0/2.0) + NGHOSTS - 0.5 ); // Account for (int) typecast rounding down
+  // Then find the nearest index (i0,i1,i2) on underlying grid to (x,y,z)
+  // Recall that:
+  // xx[0][j] = xxmin[0] + ((REAL)(j-NGHOSTS) + (1.0/2.0))*params->dxx0; // Cell-centered grid.
+  //   --> j = (int) ( (xx[0][j] - xxmin[0]) / params->dxx0 + (1.0/2.0) + NGHOSTS )
+  Cart_to_i0i1i2[0] = (int)( ( xx[0] - ("""+str(xxmin[0])+""") ) / params->dxx0 + (1.0/2.0) + NGHOSTS - 0.5 ); // Account for (int) typecast rounding down
+  Cart_to_i0i1i2[1] = (int)( ( xx[1] - ("""+str(xxmin[1])+""") ) / params->dxx1 + (1.0/2.0) + NGHOSTS - 0.5 ); // Account for (int) typecast rounding down
+  Cart_to_i0i1i2[2] = (int)( ( xx[2] - ("""+str(xxmin[2])+""") ) / params->dxx2 + (1.0/2.0) + NGHOSTS - 0.5 ); // Account for (int) typecast rounding down
 """
     add_to_Cfunction_dict(
         includes=[os.path.join(rel_path_to_Cparams, "NRPy_basic_defines.h")],
@@ -1386,7 +1427,7 @@ def add_to_Cfunc_dict_xx_to_Cart(rel_path_to_Cparams=os.path.join("./")):
 
 def register_NRPy_basic_defines(enable_rfm_precompute=False):
     # TODO: Move the following to the top of this file when "old_way" is deprecated
-    _ignore = par.initialize_Cparam(par.glb_param("char [100]", thismodule, "CoordSystemName", "Call_set_Nxx_dxx_invdx_params__and__xx_to_set"))
+    par.initialize_Cparam(par.glb_Cparam("char [100]", thismodule, "CoordSystemName", "Nxx_dxx_invdx_params__and__xx_sets_this"))
 
     Nbd = ""
     if enable_rfm_precompute:

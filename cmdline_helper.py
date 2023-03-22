@@ -24,6 +24,7 @@
 #          Kevin Lituchy
 
 import io, os, shlex, subprocess, sys, time, multiprocessing, getpass, platform, glob
+from here import here
 
 # check_executable_exists(): Check to see whether an executable exists.
 #                            Error out or return False if it does not exist;
@@ -134,6 +135,7 @@ def new_C_compile(Ccodesrootdir, exec_name, uses_free_parameters_h=False,
         Execute_input_string(os.path.join("./", "backup_script_nomake.sh"))
     os.chdir(orig_working_directory)
 
+    here('attempt:',attempt, Ccodesrootdir, exec_name)
     if not os.path.isfile(os.path.join(Ccodesrootdir, exec_name)) and attempt == 1:
         print("Optimized compilation FAILED. Removing optimizations (including OpenMP) and retrying with debug enabled...")
         # First clean up object files.
@@ -141,6 +143,9 @@ def new_C_compile(Ccodesrootdir, exec_name, uses_free_parameters_h=False,
         for file in filelist:
             os.remove(file)
         # Then retry compilation (recursion)
+        here(Ccodesrootdir, exec_name, uses_free_parameters_h,
+                      "debug", addl_CFLAGS,
+                      addl_libraries, mkdir_Ccodesrootdir, CC, 2)
         new_C_compile(Ccodesrootdir, exec_name, uses_free_parameters_h,
                       compiler_opt_option="debug", addl_CFLAGS=addl_CFLAGS,
                       addl_libraries=addl_libraries, mkdir_Ccodesrootdir=mkdir_Ccodesrootdir, CC=CC, attempt=2)
@@ -214,6 +219,7 @@ def Execute_input_string(input_string, file_to_redirect_stdout=os.devnull, verbo
     # https://stackoverflow.com/questions/18421757/live-output-from-subprocess-command
     filename = "tmp.txt"
     with io.open(filename, 'w') as writer, io.open(filename, 'rb', buffering=-1) as reader, io.open(file_to_redirect_stdout, 'wb') as rdirect:
+        here("CMD:",args)
         process = subprocess.Popen(args, stdout=rdirect, stderr=writer)
         while process.poll() is None:
             # https://stackoverflow.com/questions/21689365/python-3-typeerror-must-be-str-not-bytes-with-sys-stdout-write/21689447
@@ -224,7 +230,7 @@ def Execute_input_string(input_string, file_to_redirect_stdout=os.devnull, verbo
     delete_existing_files(filename)
     end = time.time()
     if verbose:
-        print("(BENCH): Finished executing in "+'{:#.2f}'.format(round(end-start, 2))+" seconds.")
+        print("(BENCH): Finished executing in "+'{:.2f}'.format(round(end-start, 2))+" seconds.")
 
 # delete_existing_files(file_or_wildcard):
 #          Runs del file_or_wildcard in Windows, or

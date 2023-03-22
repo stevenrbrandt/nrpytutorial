@@ -639,7 +639,7 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
             successstr = "Wrote "
         print(successstr + "to file \"" + filename + "\"")
 
-outC_NRPy_basic_defines_h_dict = {}
+from defines_dict import outC_NRPy_basic_defines_h_dict 
 
 outC_function_prototype_dict = {}
 outC_function_dict           = {}

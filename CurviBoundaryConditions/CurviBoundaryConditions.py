@@ -16,68 +16,55 @@ import sympy as sp               # SymPy: The Python computer algebra package up
 import grid as gri               # NRPy+: Functions having to do with numerical grids
 import indexedexp as ixp         # NRPy+: Symbolic indexed expression (e.g., tensors, vectors, etc.) support
 import reference_metric as rfm   # NRPy+: Reference metric support
-import cmdline_helper as cmd     # NRPy+: Multi-platform Python command-line interface
-import shutil, os, sys           # Standard Python modules for multiplatform OS-level functions
-import deprecated_reference_metric as evil_rfm  # NRPy+: PLEASE DON'T USE.
+import finite_difference as fin  # NRPy+: Finite-difference module
+import os, sys           # Standard Python modules for multiplatform OS-level functions
+from UnitTesting.assert_equal import check_zero  # NRPy+: Checks whether an expression evaluates to zero.
 
-def Set_up_CurviBoundaryConditions(Ccodesdir,verbose=True,Cparamspath=os.path.join("../"),
-                                   enable_copy_of_static_Ccodes=True, BoundaryCondition="QuadraticExtrapolation",
-                                   path_prefix=""):
-    # Step P0: Check that Ccodesdir is not the same as CurviBoundaryConditions/boundary_conditions,
-    #          to prevent trusted versions of these C codes from becoming contaminated.
-    if os.path.join(Ccodesdir) == os.path.join("CurviBoundaryConditions", "boundary_conditions"):
-        print("Error: Tried to output boundary conditions C code into CurviBoundaryConditions/boundary_conditions,"
-              "       which is not allowed, to prevent trusted versions of these C codes from becoming contaminated.")
-        sys.exit(1)
-
-    # Step P1: Create the C codes output directory & copy static CurviBC files
-    #          from CurviBoundaryConditions/boundary_conditions to Ccodesdir/
-    if enable_copy_of_static_Ccodes:
-        cmd.mkdir(os.path.join(Ccodesdir))
-
-        # Choosing boundary condition drivers with in NRPy+
-        #  - current options are Quadratic Polynomial Extrapolation for any coordinate system,
-        #    and the Sommerfeld boundary condition for only cartesian coordinates
-        if   str(BoundaryCondition) == "QuadraticExtrapolation":
-            for file in ["apply_bcs_curvilinear.h", "BCs_data_structs.h", "bcstruct_freemem.h", "CurviBC_include_Cfunctions.h",
-                         "driver_bcstruct.h", "set_bcstruct.h", "set_up__bc_gz_map_and_parity_condns.h"]:
-                shutil.copy(os.path.join(path_prefix,"CurviBoundaryConditions", "boundary_conditions", file),
-                            os.path.join(Ccodesdir))
-
-            with open(os.path.join(Ccodesdir,"CurviBC_include_Cfunctions.h"),"a") as file:
-                file.write("\n#include \"apply_bcs_curvilinear.h\"")
+_unused = par.Cparameters("int", __name__, "outer_bc_type", "EXTRAPOLATION_OUTER_BCS")
 
 
-        elif str(BoundaryCondition) == "Sommerfeld":
-            for file in ["BCs_data_structs.h", "bcstruct_freemem.h", "CurviBC_include_Cfunctions.h",
-                         "driver_bcstruct.h", "set_bcstruct.h", "set_up__bc_gz_map_and_parity_condns.h"]:
-                shutil.copy(os.path.join(path_prefix,"CurviBoundaryConditions", "boundary_conditions", file),
-                            os.path.join(Ccodesdir))
+# First register basic C data structures/macros inside NRPy_basic_defines.h
+def NRPy_basic_defines_CurviBC_data_structures():
+    return r"""
+// NRPy+ Curvilinear Boundary Conditions: Core data structures
+// Documented in: Tutorial-Start_to_Finish-Curvilinear_BCs.ipynb
 
-            with open(os.path.join(Ccodesdir,"CurviBC_include_Cfunctions.h"),"a") as file:
-                file.write("\n#include \"apply_bcs_sommerfeld.h\"")
+#define EXTRAPOLATION_OUTER_BCS 0  // used to identify/specify params.outer_bc_type
+#define RADIATION_OUTER_BCS     1  // used to identify/specify params.outer_bc_type
 
+typedef struct __innerpt_bc_struct__ {
+  int dstpt;  // dstpt is the 3D grid index IDX3S(i0,i1,i2) of the inner boundary point (i0,i1,i2)
+  int srcpt;  // srcpt is the 3D grid index (a la IDX3S) to which the inner boundary point maps
+  int8_t parity[10];  // parity[10] is a calculation of dot products for the 10 independent parity types
+} innerpt_bc_struct;
 
-        elif str(BoundaryCondition) == "QuadraticExtrapolation&Sommerfeld":
-            for file in ["apply_bcs_curvilinear.h", "BCs_data_structs.h", "bcstruct_freemem.h", "CurviBC_include_Cfunctions.h",
-                         "driver_bcstruct.h", "set_bcstruct.h", "set_up__bc_gz_map_and_parity_condns.h"]:
-                shutil.copy(os.path.join(path_prefix,"CurviBoundaryConditions", "boundary_conditions", file),
-                            os.path.join(Ccodesdir))
+typedef struct __outerpt_bc_struct__ {
+  short i0,i1,i2;  // the outer boundary point grid index (i0,i1,i2), on the 3D grid
+  int8_t FACEX0,FACEX1,FACEX2;  // 1-byte integers that store
+  //                               FACEX0,FACEX1,FACEX2 = +1, 0, 0 if on the i0=i0min face,
+  //                               FACEX0,FACEX1,FACEX2 = -1, 0, 0 if on the i0=i0max face,
+  //                               FACEX0,FACEX1,FACEX2 =  0,+1, 0 if on the i1=i2min face,
+  //                               FACEX0,FACEX1,FACEX2 =  0,-1, 0 if on the i1=i1max face,
+  //                               FACEX0,FACEX1,FACEX2 =  0, 0,+1 if on the i2=i2min face, or
+  //                               FACEX0,FACEX1,FACEX2 =  0, 0,-1 if on the i2=i2max face,
+} outerpt_bc_struct;
 
-            with open(os.path.join(Ccodesdir,"CurviBC_include_Cfunctions.h"),"a") as file:
-                file.write("\n#include \"apply_bcs_sommerfeld.h\"" +
-                           "\n#include \"apply_bcs_curvilinear.h\"")
+typedef struct __bc_info_struct__ {
+  int num_inner_boundary_points;  // stores total number of inner boundary points
+  int num_pure_outer_boundary_points[NGHOSTS][3];  // stores number of outer boundary points on each
+  //                                                  ghostzone level and direction (update min and
+  //                                                  max faces simultaneously on multiple cores)
+  int bc_loop_bounds[NGHOSTS][6][6];  // stores outer boundary loop bounds. Unused after bcstruct_set_up()
+} bc_info_struct;
 
-
-        else:
-            print("ERROR: Only Quadratic Polynomial Extrapolation (QuadraticExtrapolation) and Sommerfeld boundary conditions are currently supported\n")
-            sys.exit(1)
-
-
-    # Step P2: Output correct #include for set_Cparameters.h to
-    #          Ccodesdir/boundary_conditions/RELATIVE_PATH__set_Cparameters.h
-    with open(os.path.join(Ccodesdir, "RELATIVE_PATH__set_Cparameters.h"), "w") as file:
-        file.write("#include \"" + Cparamspath + "/set_Cparameters.h\"\n") # #include's may include forward slashes for paths, even in Windows.
+typedef struct __bc_struct__ {
+  innerpt_bc_struct *restrict inner_bc_array;  // information needed for updating each inner boundary point
+  outerpt_bc_struct *restrict pure_outer_bc_array[NGHOSTS*3]; // information needed for updating each outer
+  //                                                             boundary point
+  bc_info_struct bc_info;  // stores number of inner and outer boundary points, needed for setting loop
+  //                          bounds and parallelizing over as many boundary points as possible.
+} bc_struct;
+"""
 
 
 # Set unit-vector dot products (=parity) for each of the 10 parity condition types
@@ -302,11 +289,35 @@ def Cfunction__EigenCoord_set_x0x1x2_inbounds__i0i1i2_inbounds_single_pt():
     par.set_parval_from_str("reference_metric::CoordSystem",rfm.get_EigenCoord())
     rfm.reference_metric()
 
-    # Step 4: Output C code for the Eigen-Coordinate mapping from xx->Cartesian:
-    evil_rfm.xx_to_Cart_h("EigenCoord_xx_to_Cart", os.path.join(Cparamspath,"set_Cparameters.h"), os.path.join(Ccodesdir, "EigenCoord_xx_to_Cart.h"))
+    # Step 1: Output C code for the Eigen-Coordinate mapping from xx->Cartesian':
+    body += r"""
+  // Step 1: Convert the (curvilinear) coordinate (x0,x1,x2) to Cartesian coordinates
+  REAL xCart[3];  // where (x,y,z) is output
+  {
+    // xx_to_Cart for EigenCoordinate """+rfm.get_EigenCoord()+r""" (orig coord = """+CoordSystem_orig+r"""):
+    REAL xx0 = xx[0][i0];
+    REAL xx1 = xx[1][i1];
+    REAL xx2 = xx[2][i2];
+"""+ \
+    outputC([rfm.xx_to_Cart[0],rfm.xx_to_Cart[1],rfm.xx_to_Cart[2]],
+            ["xCart[0]","xCart[1]","xCart[2]"],
+            "returnstring", params="preindent=2")+"  }\n"
+    body += r"""
+  REAL Cartx = xCart[0];
+  REAL Carty = xCart[1];
+  REAL Cartz = xCart[2];"""
 
-    # Step 5: Output the Eigen-Coordinate mapping from Cartesian->xx:
-    # Step 5.a: Sanity check: First make sure that rfm.Cart_to_xx has been set. Error out if not!
+    # Step 2: Output C code for the Eigen-Coordinate mapping from Cartesian->xx':
+    body += r"""
+  // Step 2: Find the (i0_inbounds,i1_inbounds,i2_inbounds) corresponding to the above Cartesian coordinate.
+  //   If (i0_inbounds,i1_inbounds,i2_inbounds) is in a ghost zone, then it must equal (i0,i1,i2), and
+  //      the point is an outer boundary point.
+  //   Otherwise (i0_inbounds,i1_inbounds,i2_inbounds) is in the grid interior, and data at (i0,i1,i2)
+  //      must be replaced with data at (i0_inbounds,i1_inbounds,i2_inbounds), but multiplied by the
+  //      appropriate parity condition (+/- 1).
+  REAL Cart_to_xx0_inbounds,Cart_to_xx1_inbounds,Cart_to_xx2_inbounds;
+"""
+    # Step 2.a: Sanity check: First make sure that rfm.Cart_to_xx has been set. Error out if not!
     if rfm.Cart_to_xx[0] == 0 or rfm.Cart_to_xx[1] == 0 or rfm.Cart_to_xx[2] == 0:
         print("ERROR: rfm.Cart_to_xx[], which maps Cartesian -> xx, has not been set for")
         print("       reference_metric::CoordSystem = "+par.parval_from_str("reference_metric::CoordSystem"))
@@ -336,73 +347,69 @@ def Cfunction__EigenCoord_set_x0x1x2_inbounds__i0i1i2_inbounds_single_pt():
     par.set_parval_from_str("reference_metric::CoordSystem",CoordSystem_orig)
     rfm.reference_metric()
 
-# Sommerfeld boundary condition class; generates Sommerfeld parameters and functions to be used in subsequent
-# C code
-# Author: Terrence Pierre Jacques
-class sommerfeld_boundary_condition_class():
-    """
-    Class for generating C code to apply Sommerfeld boundary conditions
-    """
-    # class variables should be the resulting dicts
-    # Set class variable default values
-    # radial falloff power n = 3 has been found to yield the best results
-    #  - see Tutorial-SommerfeldBoundaryCondition.ipynb Step 2 for details
-    def __init__(self, fd_order=2, vars_at_inf_default = 0., vars_radial_falloff_power_default = 3., vars_speed_default = 1.):
-        evolved_variables_list = gri.gridfunction_lists()[0]
+    # Step 3:
+    body += """
+  // Step 3: Convert x0(i0_inbounds),x1(i1_inbounds),x2(i2_inbounds) -> (Cartx,Carty,Cartz),
+  //         and check that
+  //         (Cartx,Carty,Cartz) == (Cartx(x0(i0)),Cartx(x1(i1)),Cartx(x2(i2)))
+  //         If not, error out!
 
-        # set class finite differencing order
-        self.fd_order = fd_order
+  // Step 3.a: Compute x0(i0_inbounds),x1(i1_inbounds),x2(i2_inbounds):
+  const REAL x0_inbounds = xx[0][i0_inbounds];
+  const REAL x1_inbounds = xx[1][i1_inbounds];
+  const REAL x2_inbounds = xx[2][i2_inbounds];
 
-        NRPy_FD_order = par.parval_from_str("finite_difference::FD_CENTDERIVS_ORDER")
+  // Step 3.b: Compute {x,y,z}Cart_from_xx, as a
+  //           function of i0,i1,i2
+  REAL xCart_from_xx, yCart_from_xx, zCart_from_xx;
+  {
+    // xx_to_Cart for Coordinate """+CoordSystem_orig+r"""):
+    REAL xx0 = xx[0][i0];
+    REAL xx1 = xx[1][i1];
+    REAL xx2 = xx[2][i2];
+"""+ \
+    outputC([rfm.xx_to_Cart[0],rfm.xx_to_Cart[1],rfm.xx_to_Cart[2]],
+            ["xCart_from_xx","yCart_from_xx","zCart_from_xx"],
+            "returnstring", params="preindent=2,includebraces=False")
+    body += r"""  }
 
-        if NRPy_FD_order < fd_order:
-            print("ERROR: The global central finite differencing order within NRPy+ must be greater than or equal to the Sommerfeld boundary condition's finite differencing order")
-            sys.exit(1)
+  // Step 3.c: Compute {x,y,z}Cart_from_xx_inbounds, as a
+  //           function of i0_inbounds,i1_inbounds,i2_inbounds
+  REAL xCart_from_xx_inbounds, yCart_from_xx_inbounds, zCart_from_xx_inbounds;
+  {
+    // xx_to_Cart_inbounds for Coordinate """+CoordSystem_orig+r"""):
+    REAL xx0 = xx[0][i0_inbounds];
+    REAL xx1 = xx[1][i1_inbounds];
+    REAL xx2 = xx[2][i2_inbounds];
+"""+ \
+    outputC([rfm.xx_to_Cart[0],rfm.xx_to_Cart[1],rfm.xx_to_Cart[2]],
+            ["xCart_from_xx_inbounds","yCart_from_xx_inbounds","zCart_from_xx_inbounds"],
+            "returnstring", params="preindent=2,includebraces=False")
+    body += r"""  }
 
-        # Define class dictionaries to store sommerfeld parameters for each EVOL gridfunction
+  // Step 3.d: Compare xCart_from_xx to xCart_from_xx_inbounds;
+  //           they should be identical!!!
+#define EPS_REL 1e-8
+  const REAL norm_factor = sqrt(xCart_from_xx*xCart_from_xx + yCart_from_xx*yCart_from_xx + zCart_from_xx*zCart_from_xx) + 1e-15;
+  if(fabs( (double)(xCart_from_xx - xCart_from_xx_inbounds) ) > EPS_REL * norm_factor ||
+     fabs( (double)(yCart_from_xx - yCart_from_xx_inbounds) ) > EPS_REL * norm_factor ||
+     fabs( (double)(zCart_from_xx - zCart_from_xx_inbounds) ) > EPS_REL * norm_factor) {
+    fprintf(stderr,"Error in """+CoordSystem_orig+r""" coordinate system: Cartesian disagreement: ( %.15e %.15e %.15e ) != ( %.15e %.15e %.15e ) | xx: %e %e %e -> %e %e %e | %d %d %d\n",
+            (double)xCart_from_xx,(double)yCart_from_xx,(double)zCart_from_xx,
+            (double)xCart_from_xx_inbounds,(double)yCart_from_xx_inbounds,(double)zCart_from_xx_inbounds,
+            xx[0][i0],xx[1][i1],xx[2][i2],
+            xx[0][i0_inbounds],xx[1][i1_inbounds],xx[2][i2_inbounds],
+            Nxx_plus_2NGHOSTS0,Nxx_plus_2NGHOSTS1,Nxx_plus_2NGHOSTS2);
+    exit(1);
+  }
 
-        # EVOL gridfunction asymptotic value at infinity
-        self.vars_at_infinity = {}
-
-        # EVOL gridfunction wave speed at outer boundaries
-        self.vars_speed = {}
-
-        # EVOL gridfunction radial falloff power
-        self.vars_radial_falloff_power = {}
-
-        # Set default values for each specific EVOL gridfunction
-        for gf in evolved_variables_list:
-            self.vars_at_infinity[gf.upper() + 'GF'] = vars_at_inf_default
-            self.vars_radial_falloff_power[gf.upper() + 'GF'] = vars_radial_falloff_power_default
-            self.vars_speed[gf.upper() + 'GF'] = vars_speed_default
-
-    def sommerfeld_params(self):
-        # Write parameters to C file
-
-        # Creating array for EVOL gridfunction values at infinity
-        var_at_inf_string = "{"
-        for _gf,val in self.vars_at_infinity.items():
-            var_at_inf_string += str(val) + ", "
-        var_at_inf_string = var_at_inf_string[:-2] + "};"
-
-        # Creating array for EVOL gridfunction values of radial falloff power
-        vars_radial_falloff_power_string = "{"
-        for _gf,val in self.vars_radial_falloff_power.items():
-            vars_radial_falloff_power_string += str(val) + ", "
-        vars_radial_falloff_power_string = vars_radial_falloff_power_string[:-2] + "};"
-
-        # Creating array for EVOL gridfunction values of wave speed at outer boundaries
-        var_speed_string = "{"
-        for _gf,val in self.vars_speed.items():
-            var_speed_string += str(val) + ", "
-        var_speed_string = var_speed_string[:-2] + "};"
-
-        # Writing to values to sommerfeld_params.h file
-        out_str = """
-// Sommerfeld EVOL grid function parameters
-const REAL evolgf_at_inf[NUM_EVOL_GFS] = """+var_at_inf_string+"""
-const REAL evolgf_radial_falloff_power[NUM_EVOL_GFS] = """+vars_radial_falloff_power_string+"""
-const REAL evolgf_speed[NUM_EVOL_GFS] = """+var_speed_string+"""
+  // Step 4: Set output arrays.
+  x0x1x2_inbounds[0] = xx[0][i0_inbounds];
+  x0x1x2_inbounds[1] = xx[1][i1_inbounds];
+  x0x1x2_inbounds[2] = xx[2][i2_inbounds];
+  i0i1i2_inbounds[0] = i0_inbounds;
+  i0i1i2_inbounds[1] = i1_inbounds;
+  i0i1i2_inbounds[2] = i2_inbounds;
 """
     __function_prototype_ignore, Cfunc = Cfunction(
         desc=desc, c_type=c_type, name=name, params=params,
