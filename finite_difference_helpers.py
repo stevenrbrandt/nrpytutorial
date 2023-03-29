@@ -15,7 +15,6 @@ import sympy as sp                  # SymPy: The Python computer algebra package
 import grid as gri                  # NRPy+: Functions having to do with numerical grids
 import sys                          # Standard Python module for multiplatform OS-level functions
 from collections import namedtuple  # Standard Python: Enable namedtuple data type
-from here import here
 from fstr import f
 
 FDparams = namedtuple('FDparams', 'PRECISION FD_CD_order enable_FD_functions enable_SIMD DIM MemAllocStyle upwindcontrolvec fullindent outCparams')

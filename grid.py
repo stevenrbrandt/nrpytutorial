@@ -11,7 +11,6 @@ import os                           # Standard Python module for multiplatform O
 from suffixes import setsuffix
 import re
 from fstr import f
-from here import here
 
 # Initialize globals related to the grid
 ET_driver = ""
