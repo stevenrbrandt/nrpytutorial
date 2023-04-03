@@ -37,7 +37,7 @@ jobs:
         python -m pip install --upgrade pip setuptools
         python -m pip install --upgrade nbconvert
         python -m pip install --upgrade git+https://github.com/sympy/sympy/
-        python -m pip install testfixtures mpmath jupyter matplotlib scipy nrpylatex
+        python -m pip install testfixtures mpmath jupyter matplotlib scipy nrpylatex clang_format
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Core Jupyter notebook testsuite
       run: |
@@ -106,7 +106,7 @@ jobs:
         python -m pip install --upgrade pip setuptools
         python -m pip install --upgrade nbconvert
         python -m pip install --upgrade git+https://github.com/sympy/sympy/
-        python -m pip install testfixtures mpmath jupyter matplotlib scipy nrpylatex
+        python -m pip install testfixtures mpmath jupyter matplotlib scipy nrpylatex clang_format
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: UnitTests
       run: |
