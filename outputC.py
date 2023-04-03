@@ -562,7 +562,6 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
                              str(expr_convert_to_SIMD_intrins(commonsubexpression[1],map_sym_to_rat,varprefix,outCparams.SIMD_find_more_FMAsFMSs)) + ";\n"
             else:
                 outstring += indent + FULLTYPESTRING + ccode_postproc(sp.ccode(dosubs(commonsubexpression[1]), commonsubexpression[0],
-                                                                allow_unknown_functions=True,
                                                                 user_functions=custom_functions_for_SymPy_ccode)) + "\n"
 
         for i, result in enumerate(CSE_results[1]):
