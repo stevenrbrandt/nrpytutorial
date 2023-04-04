@@ -571,7 +571,6 @@ def outputC(sympyexpr, output_varname_str, filename = "stdout", params = "", pre
             else:
                 result = dosubs(result)
                 outstring += outtypestring+ccode_postproc(sp.ccode(result,names_group[i],
-                                                                   allow_unknown_functions=True,
                                                                    user_functions=custom_functions_for_SymPy_ccode))+"\n"
         # Finish processing a group
 
