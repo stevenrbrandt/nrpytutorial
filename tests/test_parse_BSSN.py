@@ -12,13 +12,6 @@ import BSSN.BSSN_RHSs as Brhs, BSSN.BSSN_quantities as Bq
 import BSSN.BSSN_gauge_RHSs as gaugerhs
 import BSSN.BSSN_constraints as bssncon
 
-def my_assert_equal(a, b, suppress_message):
-    for ka in a:
-        assert ka in b, f"{ka} not in b"
-    for kb in b:
-        assert kb in a, f"{kb} not in a"
-        assert a[kb] == b[kb], f"Not equal for [{kb}]: {a[kb]} != {b[kb]}"
-
 class TestParser(unittest.TestCase):
 
     def setUp(self):
@@ -125,7 +118,7 @@ class TestParser(unittest.TestCase):
         bssncon.BSSN_constraints()
         par.set_parval_from_str('BSSN.BSSN_quantities::LeaveRicciSymbolic', 'False')
         Bq.RicciBar__gammabarDD_dHatD__DGammaUDD__DGammaU()
-        my_assert_equal({'h_rhsDD': h_rhsDD,
+        assert_equal({'h_rhsDD': h_rhsDD,
                       'cf_rhs': cf_rhs,
                       'trK_rhs': trK_rhs,
                       'Lambdabar_rhsU': Lambdabar_rhsU,

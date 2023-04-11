@@ -438,6 +438,10 @@ class CactusThorn:
             # idxs is a list of integer offsets for stencils used by the FD routine
             idxs = sortedset()
             kernel = fin.FD_outputC("returnstring",body,idxs=idxs)
+            kernel = f"""
+            // Begin NRPy+ Kernel
+            {kernel}
+            // End NRPy+ Kernel\n"""
             # Compute the max offset from 0 for the stencils
             maxx = 0
             maxy = 0

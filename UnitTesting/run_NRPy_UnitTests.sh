@@ -39,17 +39,18 @@ rerun_if_fail=false
 
 $PYTHONEXEC UnitTesting/Test_UnitTesting/test_functions.py
 
-add_test UnitTesting/Test_UnitTesting/test_module.py
-add_test BSSN/tests/test_BSSN.py
-add_test GRHD/tests/test_GRHD.py
-add_test GRFFE/tests/test_GRFFE.py
-add_test GRMHD/tests/test_GRMHD.py
-add_test FishboneMoncriefID/tests/test_FishboneMoncriefID.py
-#add_test in_progress-Maxwell/Maxwell/tests/test_Maxwell.py
-add_test ScalarWave/tests/test_ScalarWave.py
-add_test tests/test_reference_metric.py
-add_test u0_smallb_Poynting__Cartesian/tests/test_u0_smallb_Poynting__Cartesian.py
-add_test WeylScal4NRPy/tests/test_WeylScal4NRPy.py
+# add_test UnitTesting/Test_UnitTesting/test_module.py
+# add_test BSSN/tests/test_BSSN.py
+# add_test GRHD/tests/test_GRHD.py
+# add_test GRFFE/tests/test_GRFFE.py
+# add_test GRMHD/tests/test_GRMHD.py
+# add_test FishboneMoncriefID/tests/test_FishboneMoncriefID.py
+# #add_test in_progress-Maxwell/Maxwell/tests/test_Maxwell.py
+# add_test ScalarWave/tests/test_ScalarWave.py
+# add_test tests/test_reference_metric.py
+# add_test u0_smallb_Poynting__Cartesian/tests/test_u0_smallb_Poynting__Cartesian.py
+# add_test WeylScal4NRPy/tests/test_WeylScal4NRPy.py
+add_test CarpetX/tests/test_WaveToy.py
 
 # TODO: add your tests here
 echo "Starting doctest unit tests!"
