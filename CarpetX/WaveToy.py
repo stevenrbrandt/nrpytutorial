@@ -220,21 +220,10 @@ def main():
     #cactus_home = "/project/sbrandt/release/Cactus"
     thorn.generate(cactus_home,cactus_config=cactus_sim,cactus_thornlist=cactus_thornlist)
 
-#def evol():
-#    return [1.2, 3.4, 5.6]
-
-#def anal():
-#    return [1.2, 3.4, 5.6]
-
-#def init():
-#    return [2.0, 5.5]
-
 def run_all():
-    with open("/tmp/data.txt","w") as fd:
-        print("RUNNING ALL",file=fd)
     before_main()
     main()
     after_main()
 
 if __name__ == "__main__":
-    run_all()
+    main()
