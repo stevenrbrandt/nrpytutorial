@@ -620,9 +620,11 @@ class CactusThorn:
                     if 'email' in user and self.email is None:
                         self.email = user['email']
         if self.author is None:
-            self.author = os.environ['USER']
+            import pwd
+            self.author = pwd.getpwuid(os.getuid()).pw_name
         if self.email is None:
-            self.email = os.environ['USER']
+            import pwd
+            self.author = pwd.getpwuid(os.getuid()).pw_name
 
     def get_full_name(self,gf_name):
         gfthorn = grid.find_gfmodule(gf_name,die=False)
