@@ -15,6 +15,7 @@ import NRPy_param_funcs as par
 from safewrite import SafeWrite
 from sympy.core.symbol import Symbol
 import indexedexp as ixp
+from fstr import f
 
 def flatten(lists):
     new_list = []
@@ -32,7 +33,7 @@ def check_msg(vtype, v, scalar_writes, tile_writes, forgotten):
         msg = " Was forgotten because of loop break."
     else:
         msg = ""
-    assert v in scalar_writes or v in tile_writes, f"{vtype} variable '{v}' was read without being written.{msg}"
+    assert v in scalar_writes or v in tile_writes, f("{vtype} variable '{v}' was read without being written.{msg}")
 
 class sortedset(set):
     def __init__(self):
@@ -239,9 +240,9 @@ doc_init=r"""
 def check_centering(centering):
     if centering is None:
         return
-    assert len(centering)==3, f"The centering string '{centering}' should be 3 characters long"
+    assert len(centering)==3, f("The centering string '{centering}' should be 3 characters long")
     for c in centering:
-        assert c in "cCvV", f"Invalid Centering Character: {c}"
+        assert c in "cCvV", f("Invalid Centering Character: {c}")
 
 # Divider used to break loops
 loop = lhrh(lhs=None, rhs=None)
@@ -260,7 +261,7 @@ def typeof(*args):
         elif t == float and ta == int:
             pass
         else:
-            assert t == ta, f"{t} and {ta}"
+            assert t == ta, f("{t} and {ta}")
     assert t is not None
     return t
 
@@ -344,10 +345,10 @@ class CactusThorn:
                 else:
                     writegfs.add(writem)
                     cent_gf = grid.find_centering(writem)
-                    assert cent_gf is not None, f"Centering for grid function '{writem}' is unknown"
+                    assert cent_gf is not None, f("Centering for grid function '{writem}' is unknown")
                     if centering is None:
                         centering = cent_gf
-                    assert cent_gf == centering, f"Centering of '{writem}' is '{cent_gf},' but it must match the loop centering of function '{name}': '{centering}'"
+                    assert cent_gf == centering, f("Centering of '{writem}' is '{cent_gf},' but it must match the loop centering of function '{name}': '{centering}'")
                 if type(item.lhs) == Symbol:
                     new_lhs=gri.gfaccess(varname=str(item.lhs),context="USE")
                     new_body += [lhrh(lhs=new_lhs, rhs=item.rhs)]
@@ -389,7 +390,7 @@ class CactusThorn:
         for c in centerings_needed:
             if c not in centerings_used:
                 nums = ",".join(["1" if n in ["c","C"] else "0" for n in c])
-                layout_decls += f" CCTK_CENTERING_LAYOUT({c},({{ {nums} }})); "
+                layout_decls += f(" CCTK_CENTERING_LAYOUT({c},({{ {nums} }})); ")
         tmp_centerings = {}
         for gf in tmps:
             c = grid.find_centering(gf)
@@ -398,34 +399,34 @@ class CactusThorn:
             tmp_centerings[c].add(gf)
         if grid.ET_driver == "CarpetX":
             if where == 'interior':
-                layout_decls += f"  // Allocate temporary grid functions without ghost zones\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVV_tmp_layout(cctkGH, {{0,0,0}}, {{0,0,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_tmp_layout(cctkGH, {{0,0,1}}, {{0,0,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCV_tmp_layout(cctkGH, {{0,1,0}}, {{0,0,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCC_tmp_layout(cctkGH, {{0,1,1}}, {{0,0,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVV_tmp_layout(cctkGH, {{1,0,0}}, {{0,0,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVC_tmp_layout(cctkGH, {{1,0,1}}, {{0,0,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCV_tmp_layout(cctkGH, {{1,1,0}}, {{0,0,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_tmp_layout(cctkGH, {{1,1,1}}, {{0,0,0}});\n"
+                layout_decls += f("  // Allocate temporary grid functions without ghost zones\n")
+                layout_decls += f("  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVV_tmp_layout(cctkGH, {{0,0,0}}, {{0,0,0}});\n")
+                layout_decls += f("  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_tmp_layout(cctkGH, {{0,0,1}}, {{0,0,0}});\n")
+                layout_decls += f("  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCV_tmp_layout(cctkGH, {{0,1,0}}, {{0,0,0}});\n")
+                layout_decls += f("  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCC_tmp_layout(cctkGH, {{0,1,1}}, {{0,0,0}});\n")
+                layout_decls += f("  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVV_tmp_layout(cctkGH, {{1,0,0}}, {{0,0,0}});\n")
+                layout_decls += f("  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVC_tmp_layout(cctkGH, {{1,0,1}}, {{0,0,0}});\n")
+                layout_decls += f("  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCV_tmp_layout(cctkGH, {{1,1,0}}, {{0,0,0}});\n")
+                layout_decls += f("  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_tmp_layout(cctkGH, {{1,1,1}}, {{0,0,0}});\n")
             else:
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVV_tmp_layout(cctkGH, {{0,0,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_tmp_layout(cctkGH, {{0,0,1}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCV_tmp_layout(cctkGH, {{0,1,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCC_tmp_layout(cctkGH, {{0,1,1}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVV_tmp_layout(cctkGH, {{1,0,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVC_tmp_layout(cctkGH, {{1,0,1}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCV_tmp_layout(cctkGH, {{1,1,0}});\n"
-                layout_decls += f"  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_tmp_layout(cctkGH, {{1,1,1}});\n"
+                layout_decls += f("  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVV_tmp_layout(cctkGH, {{0,0,0}});\n")
+                layout_decls += f("  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_tmp_layout(cctkGH, {{0,0,1}});\n")
+                layout_decls += f("  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCV_tmp_layout(cctkGH, {{0,1,0}});\n")
+                layout_decls += f("  const GF3D5layout CCTK_ATTRIBUTE_UNUSED VCC_tmp_layout(cctkGH, {{0,1,1}});\n")
+                layout_decls += f("  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVV_tmp_layout(cctkGH, {{1,0,0}});\n")
+                layout_decls += f("  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CVC_tmp_layout(cctkGH, {{1,0,1}});\n")
+                layout_decls += f("  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCV_tmp_layout(cctkGH, {{1,1,0}});\n")
+                layout_decls += f("  const GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_tmp_layout(cctkGH, {{1,1,1}});\n")
 
         tmp_decls = ""
         for c in tmp_centerings:
             ctmps = tmp_centerings[c]
-            tmp_decls=f"  const GF3D5vector<CCTK_REAL> tiles_{c}({c}_tmp_layout, {len(ctmps)});\n"
+            tmp_decls=f("  const GF3D5vector<CCTK_REAL> tiles_{c}({c}_tmp_layout, {len(ctmps)});\n")
             tmp_list = sorted(list(ctmps))
             for ix in range(len(tmp_list)):
                 tname = tmp_list[ix]
                 c = grid.find_centering(tname)
-                tmp_decls += f"  const GF3D5 {tname}(tiles_{c}({ix}));\n"
+                tmp_decls += f("  const GF3D5 {tname}(tiles_{c}({ix}));\n")
 
         body_str = layout_decls + tmp_decls + body_str
 
@@ -438,10 +439,10 @@ class CactusThorn:
             # idxs is a list of integer offsets for stencils used by the FD routine
             idxs = sortedset()
             kernel = fin.FD_outputC("returnstring",body,idxs=idxs)
-            kernel = f"""
+            kernel = f("""
             // Begin NRPy+ Kernel
             {kernel}
-            // End NRPy+ Kernel\n"""
+            // End NRPy+ Kernel\n""")
             # Compute the max offset from 0 for the stencils
             maxx = 0
             maxy = 0
@@ -454,17 +455,17 @@ class CactusThorn:
 
             # Generate code to check the stencils
             # have enough ghost zones
-            checkbounds = f"""
+            checkbounds = f("""
   if(cctk_nghostzones[0] < {maxx}) CCTK_ERROR("cctk_nghostzones[0] must be at least {maxx}");
   if(cctk_nghostzones[1] < {maxy}) CCTK_ERROR("cctk_nghostzones[1] must be at least {maxy}");
   if(cctk_nghostzones[2] < {maxz}) CCTK_ERROR("cctk_nghostzones[2] must be at least {maxz}");
   if(2*cctk_nghostzones[0] >= cctk_lsh[0]) CCTK_ERROR("cctk_nghostzones[0] is too large");
   if(2*cctk_nghostzones[1] >= cctk_lsh[1]) CCTK_ERROR("cctk_nghostzones[1] is too large");
-  if(2*cctk_nghostzones[2] >= cctk_lsh[2]) CCTK_ERROR("cctk_nghostzones[2] is too large");"""
+  if(2*cctk_nghostzones[2] >= cctk_lsh[2]) CCTK_ERROR("cctk_nghostzones[2] is too large");""")
             decl = ""
             if gri.ET_driver == "Carpet":
                 if where == "interior":
-                    body = f"""
+                    body = f("""
   {decl}
   {checkbounds}
   for(int i2=cctk_nghostzones[2];i2<cctk_lsh[2]-cctk_nghostzones[2];i2++) {{
@@ -472,18 +473,18 @@ class CactusThorn:
   for(int i0=cctk_nghostzones[0];i0<cctk_lsh[0]-cctk_nghostzones[0];i0++) {{
   {kernel}
   }} }} }}
-                    """.strip()
+                    """).strip()
                 elif where == "everywhere":
-                    body = f"""
+                    body = f("""
   {decl}
   for(int i2=0;i2<cctk_lsh[2];i2++) {{
   for(int i1=0;i1<cctk_lsh[1];i1++) {{
   for(int i0=0;i0<cctk_lsh[0];i0++) {{
   {kernel}
   }} }} }}
-                    """.strip()
+                    """).strip()
                 elif where == "boundary":
-                    body = f"""
+                    body = f("""
   {decl}
   for(int i2=0;i2<cctk_nghostzones[2];i2++) {{
   for(int i1=0;i1<cctk_lsh[1];i1++) {{
@@ -516,9 +517,9 @@ class CactusThorn:
   for(int i0=cctk_lsh[0]-cctk_nghostzones[0];i0<cctk_lsh[0];i0++) {{
   {kernel}
   }} }} }}
-                    """.strip()
+                    """).strip()
                 else:
-                    assert False, f"where={where} is not supported"
+                    assert False, f("where={where} is not supported")
             elif gri.ET_driver == "CarpetX":
                 if where == 'everywhere':
                     wtag = 'all'
@@ -528,7 +529,7 @@ class CactusThorn:
                     wtag = 'bnd'
                 else:
                     assert False, "where should be in ['interior', 'everywhere', 'boundary']"
-                body = f"""
+                body = f("""
   {decl}
   {checkbounds}
   grid.loop_{wtag}_device<{centering}_centered[0], {centering}_centered[1], {centering}_centered[2], CCTK_VECSIZE>(
@@ -539,7 +540,7 @@ class CactusThorn:
   const CCTK_BOOLVEC mask CCTK_ATTRIBUTE_UNUSED = mask_for_loop_tail<CCTK_BOOLVEC>(p.i, p.imax);
   {kernel}
   }});
-                """.strip()
+                """).strip()
             return body
 
     def declare_param(self, name, default, doc, vmin=None, vmax=None, options=None):
@@ -631,9 +632,9 @@ class CactusThorn:
         if gfthorn is None:
             gfthorn = self.thornname
         if gfthorn == self.thornname:
-            return f"{gfthorn}::{gf_name}GF"
+            return f("{gfthorn}::{gf_name}GF")
         else:
-            return f"{gfthorn}::{gf_name}"
+            return f("{gfthorn}::{gf_name}")
 
     def get_full_group_name(self,gf_name):
         gf_group = ixp.get_group_name(gf_name)
@@ -641,9 +642,9 @@ class CactusThorn:
         if gfthorn is None:
             gfthorn = self.thornname
         if gfthorn == self.thornname:
-            return f"{gfthorn}::{gf_group}GF"
+            return f("{gfthorn}::{gf_group}GF")
         else:
-            return f"{gfthorn}::{gf_name}"
+            return f("{gfthorn}::{gf_name}")
 
     def generate(self,dirname=None,cactus_config="sim",cactus_thornlist=None,schedule_raw=""):
         assert self.ET_driver == grid.ET_driver
@@ -664,31 +665,31 @@ class CactusThorn:
             os.makedirs(self.test_dir, exist_ok=True)
             os.makedirs(self.doc_dir, exist_ok=True)
             with SafeWrite(self.configuration_ccl) as fd:
-                print(f"# Configuration definitions for thorn {self.thornname}",file=fd)
+                print(f("# Configuration definitions for thorn {self.thornname}"),file=fd)
                 if gri.ET_driver == "CarpetX":
-                    print(f"REQUIRES Arith Loop",file=fd)
+                    print(f("REQUIRES Arith Loop"),file=fd)
             with SafeWrite(self.param_ccl) as fd:
-                print(f"# Parameter definitions for thorn {self.thornname}",file=fd)
+                print(f("# Parameter definitions for thorn {self.thornname}"),file=fd)
                 for name, default, doc, vmin, vmax, options in self.params:
                     t = typeof(default, vmin, vmax)
                     vmin = vmin if vmin is not None else '*'
                     vmax = vmax if vmax is not None else '*'
                     if t == bool:
-                        print(f'BOOLEAN {name} "{doc}" {{}} {default}', file=fd)
+                        print(f('BOOLEAN {name} "{doc}" {{}} {default}'), file=fd)
                     elif t == int:
-                        print(f'CCTK_INT {name} "{doc}" {{ {vmin}:{vmax} :: "" }} {default}', file=fd)
+                        print(f('CCTK_INT {name} "{doc}" {{ {vmin}:{vmax} :: "" }} {default}'), file=fd)
                     elif t == float:
-                        print(f'CCTK_REAL {name} "{doc}" {{ {vmin}:{vmax} :: "" }} {default}', file=fd)
+                        print(f('CCTK_REAL {name} "{doc}" {{ {vmin}:{vmax} :: "" }} {default}'), file=fd)
             with SafeWrite(self.interface_ccl) as fd:
-                print(f"# Interface definitions for thorn {self.thornname}",file=fd)
-                print(f"IMPLEMENTS: {self.thornname}",file=fd)
+                print(f("# Interface definitions for thorn {self.thornname}"),file=fd)
+                print(f("IMPLEMENTS: {self.thornname}"),file=fd)
                 for v in grid.glb_gridfcs_list:
                     if v.external_module is not None:
                         self.external_modules[v.external_module]=1
-                print(f"INHERITS: {', '.join(sorted(list(self.external_modules.keys())))}",file=fd)
+                print(f("INHERITS: {', '.join(sorted(list(self.external_modules.keys())))}"),file=fd)
                 if gri.ET_driver == "CarpetX":
-                    print(f"USES INCLUDE HEADER: loop_device.hxx",file=fd)
-                    print(f"USES INCLUDE HEADER: simd.hxx",file=fd)
+                    print(f("USES INCLUDE HEADER: loop_device.hxx"),file=fd)
+                    print(f("USES INCLUDE HEADER: simd.hxx"),file=fd)
                 elif gri.ET_driver == "Carpet":
                     print("CCTK_INT FUNCTION MoLRegisterEvolved(CCTK_INT IN EvolvedIndex, CCTK_INT IN RHSIndex)",file=fd)
                     print("USES FUNCTION MoLRegisterEvolved",file=fd)
@@ -707,29 +708,29 @@ class CactusThorn:
                         tag = "TAGS='checkpoint=\"no\"'"
                         rhs_pairs.add(gf_group)
                     elif rhs in all_group_names:
-                        tag = f"TAGS='rhs=\"{self.thornname}::{rhs}GF\"'"
+                        tag = f("TAGS='rhs=\"{self.thornname}::{rhs}GF\"'")
                     else:
                         # We assume that variables without RHS are not part of the state vector
-                        tag = f"TAGS='checkpoint=\"no\"'"
+                        tag = f("TAGS='checkpoint=\"no\"'")
 
                     module = ixp.find_gfmodule_for_group(gf_group,die=False)
                     if module is None or module == self.thornname:
                         gfs = ixp.get_gfnames_for_group(gf_group)
                         gfs_str = "GF, ".join(list(gfs))
                         if grid.ET_driver == "Carpet":
-                            print(f'REAL {gf_group}GF TYPE=gf TIMELEVELS=3 {{ {gfs_str}GF }} "{gf_group}"', file=fd)
+                            print(f('REAL {gf_group}GF TYPE=gf TIMELEVELS=3 {{ {gfs_str}GF }} "{gf_group}"'), file=fd)
                         elif grid.ET_driver == "CarpetX":
                             # CarpetX does not use sub-cycling in time, so it only needs one time level
                             _centering = ixp.find_centering_for_group(gf_group)
                             if _centering is None:
                                 _centering = ''
                             else:
-                                _centering=f"CENTERING={{ {_centering} }}"
-                            print(f'REAL {gf_group}GF TYPE=gf TIMELEVELS=1 {tag} {_centering} {{ {gfs_str}GF }} "{gf_group}"', file=fd)
+                                _centering=f("CENTERING={{ {_centering} }}")
+                            print(f('REAL {gf_group}GF TYPE=gf TIMELEVELS=1 {tag} {_centering} {{ {gfs_str}GF }} "{gf_group}"'), file=fd)
 
             if grid.ET_driver == "Carpet":
                 with SafeWrite(self.register_cc,do_format=True) as fd:
-                    print(f"""
+                    print(f("""
 #include "cctk.h"
 #include "cctk_Arguments.h"
 #include "cctk_Functions.h"
@@ -739,18 +740,18 @@ void {self.thornname}_RegisterVars(CCTK_ARGUMENTS)
 {{
   DECLARE_CCTK_ARGUMENTS_{self.thornname}_RegisterVars;
   DECLARE_CCTK_PARAMETERS;
-  int ierr, var, rhs;""".strip(),file=fd)
+  int ierr, var, rhs;""").strip(),file=fd)
                     for rhs_var in sorted(rhs_pairs):
                         var = rhs_var[4:]
-                        assert "rhs_" + var == rhs_var, f"rhs_{var} != {rhs_var}"
-                        print("   ",f"""
+                        assert "rhs_" + var == rhs_var, f("rhs_{var} != {rhs_var}")
+                        print("   ",f("""
   var   = CCTK_VarIndex("{self.thornname}::{var}GF");
   rhs   = CCTK_VarIndex("{self.thornname}::{rhs_var}GF");
   ierr += MoLRegisterEvolved(var, rhs);
-                        """.strip(),file=fd)
+                        """).strip(),file=fd)
                     print("}",file=fd)
             with SafeWrite(self.schedule_ccl) as fd:
-                print(f"# Schedule definitions for thorn {self.thornname}",file=fd)
+                print(f("# Schedule definitions for thorn {self.thornname}"),file=fd)
                 for gf_name in sorted(grid.find_gfnames()):
                     if grid.ET_driver == "CarpetX" and gf_name in ["x","y","z"]:
                         continue
@@ -764,17 +765,17 @@ void {self.thornname}_RegisterVars(CCTK_ARGUMENTS)
                         if grid.find_gftype(gf_name,die=False) in ["TILE_TMP","SCALAR_TMP"]:
                             continue
                         if grid.ET_driver == "Carpet":
-                            print(f"STORAGE: {gf_group}GF[3]", file=fd)
+                            print(f("STORAGE: {gf_group}GF[3]"), file=fd)
                         else:
-                            print(f"STORAGE: {gf_group}GF[1]", file=fd)
+                            print(f("STORAGE: {gf_group}GF[1]"), file=fd)
                 if grid.ET_driver == "Carpet":
-                    print(f"""
+                    print(f("""
 schedule {self.thornname}_RegisterVars in MoL_Register
 {{
   LANG: C
   OPTIONS: META
 }} "Register variables for MoL"
-                    """.strip(), file=fd)
+                    """).strip(), file=fd)
                 for src in self.src_files.values():
                     fsrc = os.path.join(self.src_dir, src.name)
 
@@ -789,8 +790,8 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                             atin = "AT"
                         else:
                             atin = "IN"
-                        print(f"SCHEDULE {func.name} {atin} {func.schedule_bin} {{",file=fd)
-                        print(f"    LANG: C",file=fd)
+                        print(f("SCHEDULE {func.name} {atin} {func.schedule_bin} {{"),file=fd)
+                        print(f("    LANG: C"),file=fd)
                         for readgf in sorted(func.readgfs):
                             if grid.ET_driver == "CarpetX" and readgf in ["x","y","z"]:
                                 continue
@@ -799,20 +800,20 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                             # such before generating read/write decls.
                             if readgf in grid.find_gfnames():
                                 full_name = self.get_full_name(readgf)
-                                print(f"    READS: {full_name}(everywhere)",file=fd)
+                                print(f("    READS: {full_name}(everywhere)"),file=fd)
                         for writegf in sorted(func.writegfs):
                             if writegf in grid.find_gfnames():
                                 full_name = self.get_full_name(writegf)
-                                print(f"    WRITES: {full_name}({src.where})",file=fd)
+                                print(f("    WRITES: {full_name}({src.where})"),file=fd)
                         if src.where == "interior":
                             for writegf in func.writegfs:
                                 if writegf in grid.find_gfnames():
                                     full_name = self.get_full_group_name(writegf)
-                                    pass #print(f"    SYNC: {full_name}",file=fd)
+                                    pass #print(f("    SYNC: {full_name}"),file=fd)
                         sync = self.sync.get(func.name,None)
                         if sync is not None:
-                            print(f"    SYNC: {sync}",file=fd)
-                        print(f'}} "{func.doc}"',file=fd)
+                            print(f("    SYNC: {sync}"),file=fd)
+                        print(f('}} "{func.doc}"'),file=fd)
                 print(schedule_raw,end='',file=fd)
 
             if not os.path.exists(self.doc_tex):
@@ -862,11 +863,11 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                         assert "Bad value for grid.ET_driver={grid.ET_driver}"
                     for func in src.funcs:
                         print(file=fd)
-                        print(f"void {func.name}(CCTK_ARGUMENTS) {{",file=fd)
+                        print(f("void {func.name}(CCTK_ARGUMENTS) {{"),file=fd)
                         if gri.ET_driver == "Carpet":
-                            print(f"  DECLARE_CCTK_ARGUMENTS_{func.name};",file=fd)
+                            print(f("  DECLARE_CCTK_ARGUMENTS_{func.name};"),file=fd)
                         elif gri.ET_driver == "CarpetX":
-                            print(f"  DECLARE_CCTK_ARGUMENTSX_{func.name};",file=fd)
+                            print(f("  DECLARE_CCTK_ARGUMENTSX_{func.name};"),file=fd)
                         print( "  DECLARE_CCTK_PARAMETERS;",file=fd)
                         if gri.ET_driver == "CarpetX":
                             print( "  using CCTK_BOOLVEC = simdl<CCTK_REAL>;",file=fd)
@@ -882,12 +883,12 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                             print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED CCV_layout(cctkGH, {1,1,0});",file=fd)
                             print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_layout(cctkGH, {1,1,1});",file=fd)
                         for ii in range(3):
-                            print(f"  const CCTK_REAL invdx{ii} CCTK_ATTRIBUTE_UNUSED = 1/CCTK_DELTA_SPACE({ii});",file=fd)
-                        print(f"  {func.body}",file=fd)
-                        print(f'}}',file=fd)
+                            print(f("  const CCTK_REAL invdx{ii} CCTK_ATTRIBUTE_UNUSED = 1/CCTK_DELTA_SPACE({ii});"),file=fd)
+                        print(f("  {func.body}"),file=fd)
+                        print(f('}}'),file=fd)
 
             # Create the thorn_list entry if needed
-            entry = f"{self.arrangement}/{self.thornname}"
+            entry = f("{self.arrangement}/{self.thornname}")
             thorn_list = os.path.join("configs", cactus_config, "ThornList")
             self.update_thornlist(entry, thorn_list)
             if cactus_thornlist is not None:
@@ -912,13 +913,13 @@ schedule {self.thornname}_RegisterVars in MoL_Register
         if os.path.exists(thorn_list):
             with open(thorn_list, "r") as fd:
                 contents = fd.read()
-            if re.search(f'^{entry}\\b', contents, re.MULTILINE):
-                print(f"Thorn {entry} is already in {thorn_list}")
+            if re.search(f('^{entry}\\b'), contents, re.MULTILINE):
+                print(f("Thorn {entry} is already in {thorn_list}"))
             else:
                 if not thorn_list.startswith("/"):
                     thorn_list = os.path.join(os.getcwd(), thorn_list)
-                print(f"Appending {entry} to {thorn_list}")
+                print(f("Appending {entry} to {thorn_list}"))
                 with open(thorn_list, "a") as fd:
                     print(entry, file=fd)
         else:
-            print(f"Thornlist {thorn_list} does not exist. Entry {entry} not added.")
+            print(f("Thornlist {thorn_list} does not exist. Entry {entry} not added."))
