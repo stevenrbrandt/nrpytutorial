@@ -39,6 +39,7 @@ rerun_if_fail=false
 
 $PYTHONEXEC UnitTesting/Test_UnitTesting/test_functions.py
 
+add_test CarpetX/tests/test_WaveToy.py
 add_test UnitTesting/Test_UnitTesting/test_module.py
 add_test BSSN/tests/test_BSSN.py
 add_test GRHD/tests/test_GRHD.py
@@ -54,7 +55,7 @@ add_test WeylScal4NRPy/tests/test_WeylScal4NRPy.py
 # TODO: add your tests here
 echo "Starting doctest unit tests!"
 failed_unittest=0
-for file in expr_tree.py indexedexp.py loop.py functional.py finite_difference_helpers.py assert_equal.py; do
+for file in expr_tree.py indexedexp.py loop.py functional.py finite_difference_helpers.py assert_equal.py sugar.py; do
     echo Running doctest on file: $file
     $PYTHONEXEC -m doctest $file
     if [ $? == 1 ]

@@ -117,7 +117,7 @@ def Set_up_CurviBoundaryConditions(Ccodesdir,verbose=True,Cparamspath=os.path.jo
 
     # Step 2.a: Generate Ccodesdir/gridfunction_defines.h file,
     #       containing human-readable gridfunction aliases
-    evolved_variables_list, auxiliary_variables_list, auxevol_variables_list = gri.output__gridfunction_defines_h__return_gf_lists(Ccodesdir)
+    evolved_variables_list, auxiliary_variables_list, auxevol_variables_list = gri.output__gridfunction_defines_h__return_gf_lists(Ccodesdir)[0:3]
 
     # Step 2.b: set the parity conditions on all gridfunctions in gf_list,
     #       based on how many digits are at the end of their names

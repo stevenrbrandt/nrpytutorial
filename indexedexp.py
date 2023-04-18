@@ -9,10 +9,58 @@ import sympy as sp               # SymPy: The Python computer algebra package up
 import sys                       # Standard Python module for multiplatform OS-level functions
 import re                        # Standard Python module for regular expressions
 
+# =====================
+# Things relating to grid function groups.
+# Essentially, the group name is the basename
+# for a rankN tensor.
+index_group = {}
+rev_index_group = {}
+
+def get_group_name(gf_name):
+    if gf_name in rev_index_group:
+        return rev_index_group[gf_name]
+
+    # Assume that if the name is not in the
+    # rev_index_group, then it is in a group
+    # with the same name as the gf
+    assert gf_name in gri.glb_gridfcs_map(), "Not a valid grid function: '"+gf_name+"'"
+    return gf_name
+
+def get_all_group_names():
+    group_names = {}
+    for gf_group in index_group:
+        group_names[gf_group]=1
+    for gf_name in gri.glb_gridfcs_map():
+        if gf_name not in rev_index_group:
+            group_names[gf_name]=1
+    return group_names
+
+def get_gfnames_for_group(gf_group):
+    if gf_group in index_group:
+        return index_group[gf_group]
+    assert gf_group in gri.glb_gridfcs_map(), "Not a valid grid group: '"+gf_group+"'"
+    return {gf_group:1}
+
+def find_gftype_for_group(gf_group,die=True):
+    for gf_name in get_gfnames_for_group(gf_group):
+        return gri.find_gftype(gf_name,die=die)
+    return None
+
+def find_gfmodule_for_group(gf_group,die=True):
+    for gf_name in get_gfnames_for_group(gf_group):
+        return gri.find_gfmodule(gf_name,die=die)
+    return None
+
+def find_centering_for_group(gf_group,die=True):
+    for gf_name in get_gfnames_for_group(gf_group):
+        return gri.find_centering(gf_name)
+    return None
+# =====================
+
 thismodule = __name__
 par.initialize_param(par.glb_param("char", thismodule, "symmetry_axes",  ""))
 
-def declare_indexedexp(rank, symbol=None, symmetry=None, dimension=None):
+def declare_indexedexp(rank, symbol=None, symmetry=None, dimension=None, namefun=None):
     """ Generate an indexed expression of specified rank and dimension
 
         >>> ixp = declare_indexedexp(rank=2, symbol='M', dimension=3, symmetry='sym01')
@@ -74,19 +122,22 @@ def declare_indexedexp(rank, symbol=None, symmetry=None, dimension=None):
     if dimension is not None:
         if not isinstance(dimension, int) or dimension <= 0:
             raise ValueError('dimension must be a positive integer')
-    indexedexp = _init(rank * [dimension], symbol)
+    indexedexp = _init(rank * [dimension], symbol, namefun=namefun)
     if symmetry: return symmetrize(rank, indexedexp, symmetry, dimension)
     return apply_symmetry_condition_to_derivatives(indexedexp)
 
-def _init(shape, symbol, index=None):
+def _init(shape, symbol, index=None, namefun=None):
     if isinstance(shape, int):
         shape = [shape]
     if not index: index = []
-    iterable = [sp.Symbol(symbol + ''.join(str(n) for n in index + [i]))
-        if symbol else sp.sympify(0) for i in range(shape[0])]
+    if namefun is None:
+        iterable = [sp.Symbol(symbol + ''.join(str(n) for n in index + [i]))
+            if symbol else sp.sympify(0) for i in range(shape[0])]
+    else:
+        iterable = namefun(symbol, index, shape)
     if len(shape) > 1:
         for i in range(shape[0]):
-            iterable[i] = _init(shape[1:], symbol, index + [i])
+            iterable[i] = _init(shape[1:], symbol, index + [i], namefun=namefun)
     return iterable
 
 def symmetrize(rank, indexedexp, symmetry, dimension):
@@ -251,17 +302,17 @@ def apply_symmetry_condition_to_derivatives(IDX_OBJ):
     return IDX_OBJ
 
 
-def declarerank1(symbol, DIM=-1):
-    return declare_indexedexp(rank=1, symbol=symbol, dimension=DIM)
+def declarerank1(symbol, DIM=-1,namefun=None):
+    return declare_indexedexp(rank=1, symbol=symbol, dimension=DIM, namefun=namefun)
 
 
-def register_gridfunctions_for_single_rank1(gf_type,gf_basename, DIM=-1, f_infinity=0.0, wavespeed=1.0):
+def register_gridfunctions_for_single_rank1(gf_type,gf_basename, DIM=-1, f_infinity=0.0, wavespeed=1.0, external_module=None, centering=None, namefun=None):
     # Step 0: Verify the gridfunction basename is valid:
     gri.verify_gridfunction_basename_is_valid(gf_basename)
 
     # Step 1: Declare a list of SymPy variables,
     #         where IDX_OBJ_TMP[i] = gf_basename+str(i)
-    IDX_OBJ_TMP = declarerank1(gf_basename, DIM)
+    IDX_OBJ_TMP = declarerank1(gf_basename, DIM, namefun=namefun)
 
     # Step 2: Register each gridfunction
     if DIM==-1:
@@ -269,23 +320,22 @@ def register_gridfunctions_for_single_rank1(gf_type,gf_basename, DIM=-1, f_infin
     gf_list = []
     for i in range(DIM):
         gf_list.append(str(IDX_OBJ_TMP[i]))
-    gri.register_gridfunctions(gf_type, gf_list, rank=1, is_indexed=True, DIM=DIM, f_infinity=f_infinity, wavespeed=wavespeed)
+    gri.register_gridfunctions(gf_type, gf_list, rank=1, is_indexed=True, DIM=DIM, f_infinity=f_infinity, wavespeed=wavespeed,external_module=external_module,centering=centering)
 
     # Step 3: Return array of SymPy variables
     return IDX_OBJ_TMP
 
 
-def declarerank2(symbol, symmetry, DIM=-1):
-    return declare_indexedexp(rank=2, symbol=symbol, symmetry=symmetry, dimension=DIM)
+def declarerank2(symbol, symmetry, DIM=-1, namefun=None):
+    return declare_indexedexp(rank=2, symbol=symbol, symmetry=symmetry, dimension=DIM, namefun=namefun)
 
-
-def register_gridfunctions_for_single_rank2(gf_type, gf_basename, symmetry_option, DIM=-1, f_infinity=0.0, wavespeed=1.0):
+def register_gridfunctions_for_single_rank2(gf_type, gf_basename, symmetry_option, DIM=-1, f_infinity=0.0, wavespeed=1.0,external_module=None,centering=None,namefun=None):
     # Step 0: Verify the gridfunction basename is valid:
     gri.verify_gridfunction_basename_is_valid(gf_basename)
 
     # Step 1: Declare a list of lists of SymPy variables,
     #         where IDX_OBJ_TMP[i][j] = gf_basename+str(i)+str(j)
-    IDX_OBJ_TMP = declarerank2(gf_basename,symmetry_option, DIM)
+    IDX_OBJ_TMP = declarerank2(gf_basename,symmetry_option, DIM, namefun)
 
     # Step 2: register each gridfunction, being careful not
     #         not to store duplicates due to rank-2 symmetries.
@@ -304,9 +354,65 @@ def register_gridfunctions_for_single_rank2(gf_type, gf_basename, symmetry_optio
                 gf_list.append(str(IDX_OBJ_TMP[i][j]))
 
     gri.register_gridfunctions(gf_type, gf_list, rank=2, is_indexed=True, DIM=DIM,
-                               f_infinity=f_infinity, wavespeed=wavespeed)
+                               f_infinity=f_infinity, wavespeed=wavespeed,
+                               external_module=external_module, centering=centering)
 
     # Step 3: Return array of SymPy variables
+    return IDX_OBJ_TMP
+
+def make_gf_set(gf_set, rank, IDX_TMP_OBJ, DIM):
+    """
+    Called by register_gridfunctions_for_single_rankN to
+    generate a list of gridfunction names.
+    """
+    if rank == 0:
+        gf_set[str(IDX_TMP_OBJ)] = 1
+        return
+    for d in range(DIM):
+        make_gf_set(gf_set, rank-1, IDX_TMP_OBJ[d], DIM)
+
+def add_index_group(basename, IDX_OBJ_TMP):
+    if type(IDX_OBJ_TMP) == list:
+        for row in IDX_OBJ_TMP:
+            add_index_group(basename, row)
+    else:
+        s = str(IDX_OBJ_TMP)
+        index_group[basename][s] = 1
+        rev_index_group[s] = basename
+
+def register_gridfunctions_for_single_rankN(rank, gf_type, gf_basename, symmetry_option="", DIM=-1, f_infinity=0.0, wavespeed=1.0,external_module=None,centering=None,namefun=None):
+
+    if rank==0:
+        return gri.register_gridfunctions(gf_type, [gf_basename], rank=rank, is_indexed=False, DIM=DIM,
+                                          f_infinity=f_infinity, wavespeed=wavespeed,
+                                          external_module=external_module, centering=centering)
+
+    # Step 0: Verify the gridfunction basename is valid:
+    gri.verify_gridfunction_basename_is_valid(gf_basename)
+
+    # Step 1: Declare a list of lists of SymPy variables,
+    #         where IDX_OBJ_TMP[i][j] = gf_basename+str(i)+str(j)
+    IDX_OBJ_TMP = declare_indexedexp(rank=rank, symbol=gf_basename, symmetry=symmetry_option, dimension=DIM, namefun=namefun)
+
+    # Step 2: register each gridfunction, being careful not
+    #         not to store duplicates due to rank-2 symmetries.
+    if DIM==-1:
+        DIM = par.parval_from_str("DIM")
+
+    # Step 3: generate the list of grid function names
+    gf_set = {}
+    make_gf_set(gf_set,rank,IDX_OBJ_TMP,DIM)
+    gf_list = list(gf_set.keys())
+
+    gri.register_gridfunctions(gf_type, gf_list, rank=rank, is_indexed=True, DIM=DIM,
+                               f_infinity=f_infinity, wavespeed=wavespeed,
+                               external_module=external_module, centering=centering)
+
+    assert gf_basename not in index_group, "Duplicate use of grid function "+gf_basename
+    index_group[gf_basename] = {}
+    add_index_group(gf_basename, IDX_OBJ_TMP)
+
+    # Step 4: Return array of SymPy variables
     return IDX_OBJ_TMP
 
 def declarerank3(symbol, symmetry, DIM=-1):

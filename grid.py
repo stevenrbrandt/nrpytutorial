@@ -8,10 +8,29 @@ import NRPy_param_funcs as par      # NRPy+: Parameter interface
 import sympy as sp                  # Import SymPy, a computer algebra system written entirely in Python
 from collections import namedtuple  # Standard Python `collections` module: defines named tuples data structure
 import os                           # Standard Python module for multiplatform OS-level functions
+from suffixes import setsuffix
+import re
+from fstr import f
 
 # Initialize globals related to the grid
+ET_driver = ""
+
+# These next two are needed by Tutorial-Numerical_Grids.py
+tile_tmp_variables_list = []
+scalar_tmp_variables_list = []
+
+glb_gridfc = namedtuple('gridfunction', 'gftype name rank DIM f_infinity wavespeed centering external_module')
+
 glb_gridfcs_list = []
-glb_gridfc = namedtuple('gridfunction', 'gftype name rank DIM f_infinity wavespeed')
+def glb_gridfcs_map():
+    m = {}
+    for gf in glb_gridfcs_list:
+        m[gf.name] = gf
+    assert len(glb_gridfcs_list) == len(m)
+    return m
+
+# Grids may have centerings. These will be C=cell-centered or V=vertex centered, with either one C or V per dimension
+gf_centering = {}
 
 # griddata_struct contains data needed by each grid
 glb_griddata = namedtuple('griddata', 'module string')
@@ -40,10 +59,8 @@ Cart_origin = par.Cparameters("REAL", thismodule, ["Cart_originx", "Cart_originy
 Cart_CoM_offset = par.Cparameters("REAL", thismodule, ["Cart_CoM_offsetx", "Cart_CoM_offsety", "Cart_CoM_offsetz"], 0.0)
 
 def variable_type(var):
-    var_is_gf = False
-    for gf in range(len(glb_gridfcs_list)):
-        if str(var) == glb_gridfcs_list[gf].name:
-            var_is_gf = True
+    var_data = glb_gridfcs_map().get(str(var),None)
+    var_is_gf = var_data is not None
     var_is_parameter = False
 #     for paramname in range(len(par.glb_params_list)):
 #         if str(var) == par.glb_params_list[paramname].parname:
@@ -52,39 +69,62 @@ def variable_type(var):
         if str(var) == par.glb_Cparams_list[paramname].parname:
             var_is_parameter = True
     if var_is_parameter and var_is_gf:
-        print("Error: variable "+str(var)+" is registered both as a gridfunction and as a Cparameter.")
-        sys.exit(1)
-    if not (var_is_parameter or var_is_gf):
+        raise Exception("Error: variable "+str(var)+" is registered both as a gridfunction and as a Cparameter.")
+    elif not (var_is_parameter or var_is_gf):
         return "other"
-    if var_is_parameter:
+    elif var_is_parameter:
         return "Cparameter"
-    if var_is_gf:
+    elif var_is_gf:
         return "gridfunction"
-    print("grid.py: Could not find variable_type.")
-    sys.exit(1)
-
-def find_gftype(varname):
-    for gf in glb_gridfcs_list:
-        if gf.name == varname:
-            return gf.gftype
-    print("grid.py: Could not find gftype.")
-    sys.exit(1)
-
-def gfaccess(gfarrayname = "", varname = "", ijklstring = ""):
-    found_registered_gf = False
-    for gf in glb_gridfcs_list:
-        if gf.name == varname:
-            if found_registered_gf:
-                print("Error: found duplicate gridfunction name: "+gf.name)
-                sys.exit(1)
-            found_registered_gf = True
-
+    else:
+        raise Exception("grid.py: Could not find variable_type for '"+var+"'.")
     if not found_registered_gf:
         print("Error: gridfunction \""+varname+"\" is not registered!")
         print("Here's the list of registered gridfunctions:", grid.glb_gridfcs_list)
         sys.exit(1)
 
-    gftype = find_gftype(varname)
+def find_gfnames():
+    return sorted(list(glb_gridfcs_map().keys()))
+
+def find_gftype(varname,die=True):
+    assert type(varname) == str
+    var_data = glb_gridfcs_map().get(varname, None)
+    if var_data is None:
+        if die:
+            raise Exception("grid.py: Could not find gftype for '"+varname+"'.")
+        else:
+            return None
+    else:
+        return var_data.gftype
+
+def find_gfmodule(varname,die=True):
+    var_data = glb_gridfcs_map().get(varname, None)
+    if var_data is None:
+        if die:
+            raise Exception("grid.py: Could not find module for '"+varname+"'.")
+        else:
+            return None
+    else:
+        return var_data.external_module
+
+from var_access import var_from_access, set_access
+
+def gfaccess(gfarrayname = "", varname = "", ijklstring = "", context = "DECL"):
+    ret = _gfaccess(gfarrayname, varname, ijklstring, context)
+    assert ret is not None, f("gfarrayname={gfarrayname}, varname={varname}, ijklstring={ijklstring}, context={context}")
+    #from_access[ret] = varname
+    set_access(ret, varname)
+    return ret
+    
+def _gfaccess(gfarrayname, varname, ijklstring, context):
+    var_data = glb_gridfcs_map().get(varname, None)
+
+    assert context in ["DECL","USE"], "The context must be either DECL or USE, not '"+context+"'"
+
+    if var_data is None:
+        raise Exception("Error: gridfunction '"+varname+"' is not registered!")
+
+    gftype = var_data.gftype
 
     DIM = par.parval_from_str("DIM")
     retstring = ""
@@ -99,6 +139,14 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = ""):
             gfarrayname = "aux_gfs"
         elif gftype == "AUXEVOL":
             gfarrayname = "auxevol_gfs"
+        elif gftype == "EXTERNAL":
+            gfarrayname = "ext_gfs"
+        elif gftype == "CORE":
+            gfarrayname = "core_gfs"
+        elif gftype == "TILE_TMP":
+            gfarrayname = "tile_tmp_gfs"
+        elif gftype == "SCALAR_TMP":
+            gfarrayname = "scalar_tmp_gfs"
         # Return gfarrayname[IDX3(varname,i0)] for DIM=1, gfarrayname[IDX3(varname,i0,i1)] for DIM=2, etc.
         retstring += gfarrayname + "[IDX" + str(DIM+1) + "S(" + varname.upper()+"GF" + ", "
     elif par.parval_from_str("GridFuncMemAccess") == "ETK":
@@ -106,10 +154,46 @@ def gfaccess(gfarrayname = "", varname = "", ijklstring = ""):
         if DIM != 3:
             print("Error: GridFuncMemAccess = ETK currently requires that gridfunctions be 3D. Can be easily extended.")
             sys.exit(1)
-        if gfarrayname == "rhs_gfs":
-            retstring += varname + "_rhsGF" + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
-        else:
-            retstring += varname + "GF" + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
+        if ET_driver == "Carpet":
+            if gfarrayname == "rhs_gfs":
+                retstring += varname + "_rhsGF" + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
+            elif gftype == "EXTERNAL":
+                retstring += varname + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
+            #elif gftype == "CORE":
+            #    print("Error: gftype = CORE should only be used with the CarpetX driver.")
+            #    sys.exit(1)
+            elif gftype == "TILE_TMP":
+                print("Error: gftype = TILE_TMP should only be used with the CarpetX driver.")
+                sys.exit(1)
+            elif gftype == "SCALAR_TMP":
+                print("Error: gftype = SCALAR_TMP should only be used with the CarpetX driver.")
+                sys.exit(1)
+            else:
+                retstring += varname + "GF" + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
+        elif ET_driver == "CarpetX":
+            vartype = par.parval_from_str("PRECISION")
+            mask = "mask, " if vartype == "CCTK_REALVEC" else ""
+            if gfarrayname == "rhs_gfs":
+                return retstring + varname + "_rhsGF" + "("+mask+get_centering(varname)+"_index)"
+            elif gftype == "EXTERNAL":
+                return retstring + varname + "("+mask+find_centering(varname)+"_index)"
+            elif gftype == "CORE":
+                return retstring + "p." + varname
+            elif gftype == "TILE_TMP":
+                if ijklstring == "":
+                    return retstring + varname + "("+mask+find_centering(varname)+"_tmp_index)"
+                else:
+                    return retstring + varname + "("+mask+find_centering(varname)+"_tmp_layout, p.I{ijklstring})"
+            elif gftype == "SCALAR_TMP":
+                if context == "DECL":
+                    return retstring + "const " + vartype + " " + varname + " CCTK_ATTRIBUTE_UNUSED /* decl */"
+                else:
+                    return varname
+            else:
+                if ijklstring == "":
+                    return retstring + varname + "GF("+mask+find_centering(varname)+"_index)"
+                else:
+                    return retstring + varname + "GF("+mask+find_centering(varname)+"_layout, p.I"+ijklstring+")"
     else:
         print("grid::GridFuncMemAccess = "+par.parval_from_str("GridFuncMemAccess")+" not supported")
         sys.exit(1)
@@ -153,18 +237,35 @@ def verify_gridfunction_basename_is_valid(gf_basename):
         print(" Gridfunctions with base names ending in an integer is forbidden; pick a new name.")
         sys.exit(1)
 
+def find_centering(gf_name):
+    gf = glb_gridfcs_map().get(gf_name, None)
+    if gf is not None:
+        return gf.centering
+
 import sys
-def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_infinity=None, wavespeed=None):
+def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_infinity=None, wavespeed=None, centering=None, external_module=None):
+    global gf_centering
+
     # Step 0: Sanity check
     if (rank > 0 and not is_indexed) or (rank == 0 and is_indexed):
         print("Error: Attempted to register *indexed* gridfunction(s) with rank 0, or *scalar* gridfunctions with rank>0.")
         print("       Gridfunctions = ",gf_names)
         sys.exit(1)
 
+    assert centering is None or type(centering) == str, \
+        f("Centering, if supplied, should be of type str. Type was '{type(centering)}'")
+    if centering is not None:
+        assert len(centering) == DIM, f("len(centering) ({len(centering)}) is not equal to DIM ({DIM})")
+        for c in centering:
+            assert c in "CV", f("Centering should contain only 'C' or 'V'. The letter '{c}' was found.")
+
     # Step 1: convert gf_names to a list if it's not already a list
     if not isinstance(gf_names, list):
         gf_namestmp = [gf_names]
         gf_names = gf_namestmp
+
+    for gf_name in gf_names:
+        gf_centering[gf_name] = centering
 
     f_inf = []
     if f_infinity is None:
@@ -183,8 +284,16 @@ def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_inf
             wavespd.append(wavespeed)
         wavespeed = wavespd
 
-    if len(f_infinity) != len(gf_names) or len(wavespeed) != len(gf_names):
-        print("ERROR: Tried to register a list of gridfunctions with length " + str(len(gf_names))+" but f_infinity (len="+str(len(f_infinity))+") or wavespeed (len="+str(len(wavespeed))+") lists not of the same length.")
+    cent = []
+    if centering is None:
+        centering = "VVV"
+    if not isinstance(centering, list):
+        for gf in gf_names:
+            cent.append(centering)
+        centering = cent
+
+    if len(f_infinity) != len(gf_names) or len(wavespeed) != len(gf_names) or len(centering) != len(gf_names):
+        print("ERROR: Tried to register a list of gridfunctions with length " + str(len(gf_names))+" but f_infinity (len="+str(len(f_infinity))+") or wavespeed (len="+str(len(wavespeed))+") or centering (len="+str(len(centering))+") lists not of the same length.")
         sys.exit(1)
 
     # Step 2: if the gridfunction is not indexed, then
@@ -195,24 +304,48 @@ def register_gridfunctions(gf_type,gf_names,rank=0,is_indexed=False,DIM=3, f_inf
             verify_gridfunction_basename_is_valid(gf_names[i])
 
     # Step 3: Verify that gridfunction type is valid.
-    if gf_type not in ('EVOL', 'AUX', 'AUXEVOL'):
+    if gf_type not in ('EVOL', 'AUX', 'AUXEVOL', 'EXTERNAL', 'CORE', 'TILE_TMP', 'SCALAR_TMP'):
         print("Error in registering gridfunction(s) with unsupported type "+gf_type+".")
         print("Supported gridfunction types include:")
         print("    \"EVOL\": for evolved quantities (i.e., quantities stepped forward in time),")
         print("    \"AUXEVOL\": for auxiliary quantities needed at all points by evolved quantities,")
         print("    \"AUX\": for all other quantities needed at all gridpoints.")
-        sys.exit(1)
+        print("    \"EXTERNAL\": for all quantities defined in other modules.")
+        print("    \"CORE\": for all quantities defined inside the CarpetX driver.")
+        print("    \"TILE_TMP\": for all temporary quantities defined for CarpetX tiles.")
+        print("    \"SCALAR_TMP\": for all temporary quantities defined for doubles.")
+        #sys.exit(1)
+        raise Exception("unsupported type")
+
+    if gf_type == "EXTERNAL":
+        for gf_name in gf_names:
+            setsuffix(gf_name, "_ext")
+
+    if gf_type == "CORE":
+        for gf_name in gf_names:
+            setsuffix(gf_name, "_core")
+
+    if gf_type == "TILE_TMP":
+        for gf_name in gf_names:
+            setsuffix(gf_name, "_tile_tmp")
+
+    if gf_type == "SCALAR_TMP":
+        for gf_name in gf_names:
+            setsuffix(gf_name, "")
 
     # Step 4: Check for duplicate grid function registrations. If:
     #         a) A duplicate is found, error out. Otherwise
-    #         b) Append to list of gridfunctions, stored in glb_gridfcs_list[].
+    #         b) Add to map of gridfunctions, stored in glb_gridfcs_list
     for i in range(len(gf_names)):
-        for j in range(len(glb_gridfcs_list)):
-            if gf_names[i] == glb_gridfcs_list[j].name:
-                print("Error: Tried to register the gridfunction \""+gf_names[i]+"\" twice (ignored type)\n\n")
-                sys.exit(1)
+        gf_name = gf_names[i]
+        if gf_name in glb_gridfcs_map():
+            assert gf_type == glb_gridfcs_map()[gf_name].gftype, \
+                'Error: Tried to register the gridfunction "'+gf_names[i]+'" twice with different types'
         # If no duplicate found, append to "gridfunctions" list:
-        glb_gridfcs_list.append(glb_gridfc(gf_type, gf_names[i], rank, DIM, f_infinity[i], wavespeed[i]))
+        var_data = (glb_gridfc(gf_type, gf_name, rank, DIM, f_infinity[i], wavespeed[i], centering[i], external_module))
+        glb_gridfcs_map()[gf_name] = var_data
+        if gf_name not in glb_gridfcs_map():
+            glb_gridfcs_list.append(var_data)
 
     # Step 5: Return SymPy object corresponding to symbol or
     #         list of symbols representing gridfunction in
@@ -259,23 +392,42 @@ def gridfunction_lists():
     evolved_variables_list   = []
     auxiliary_variables_list = []
     auxevol_variables_list = []
-    for i in range(len(glb_gridfcs_list)):
-        if glb_gridfcs_list[i].gftype == "EVOL":
-            evolved_variables_list.append(glb_gridfcs_list[i].name)
-        if glb_gridfcs_list[i].gftype == "AUX":
-            auxiliary_variables_list.append(glb_gridfcs_list[i].name)
-        if glb_gridfcs_list[i].gftype == "AUXEVOL":
-            auxevol_variables_list.append(glb_gridfcs_list[i].name)
+    external_variables_list = []
+    core_variables_list = []
+    tmp_variables_list = []
+    for gf in glb_gridfcs_list:
+        gf_type = gf.gftype
+        gf_name = gf.name
+        if gf_type == "EVOL":
+            evolved_variables_list.append(gf_name)
+        elif gf_type == "AUX":
+            auxiliary_variables_list.append(gf_name)
+        elif gf_type == "AUXEVOL":
+            auxevol_variables_list.append(gf_name)
+        elif gf_type == "EXTERNAL":
+            external_variables_list.append(gf_name)
+        elif gf_type == "CORE":
+           core_variables_list.append(gf_name)
+        elif gf_type == "TILE_TMP":
+           tile_tmp_variables_list.append(gf_name)
+        elif gf_type == "SCALAR_TMP":
+           scalar_tmp_variables_list.append(gf_name)
+        else:
+           raise Exception("Bad gftype '"+gf_type+"'")
 
     # Next we alphabetize the lists
     evolved_variables_list.sort()
     auxiliary_variables_list.sort()
     auxevol_variables_list.sort()
+    external_variables_list.sort()
+    core_variables_list.sort()
+    tile_tmp_variables_list.sort()
+    scalar_tmp_variables_list.sort()
 
-    return evolved_variables_list, auxiliary_variables_list, auxevol_variables_list
+    return evolved_variables_list, auxiliary_variables_list, auxevol_variables_list, external_variables_list, core_variables_list, tile_tmp_variables_list, scalar_tmp_variables_list
 
 def gridfunction_defines():
-    evolved_variables_list, auxiliary_variables_list, auxevol_variables_list = gridfunction_lists()
+    evolved_variables_list, auxiliary_variables_list, auxevol_variables_list, external_variables_list, core_variables_list, tile_tmp_variables_list, scalar_tmp_variables_list  = gridfunction_lists()
 
     outstr  = """// EVOLVED VARIABLES:
 #define NUM_EVOL_GFS """ + str(len(evolved_variables_list)) + "\n"
@@ -292,23 +444,39 @@ def gridfunction_defines():
     for i in range(len(auxevol_variables_list)):
         outstr += "#define " + auxevol_variables_list[i].upper() + "GF\t" + str(i) + "\n"
 
+    outstr += """\n\n// EXTERNAL VARIABLES:
+#define NUM_EXTERNAL_GFS """ + str(len(external_variables_list)) + "\n"
+    for i in range(len(external_variables_list)):
+        outstr += "#define " + external_variables_list[i].upper() + "GF\t" + str(i) + "\n"
+#If CarpetX: Do I need to do this for CORE vars? I don't think so.
+
     if(len(evolved_variables_list)) > 0:
         outstr += """\n\n// SET gridfunctions_f_infinity[i] = value of gridfunction i in the limit r->infinity:
 static const REAL gridfunctions_f_infinity[NUM_EVOL_GFS] = { """
-        for evol_var in evolved_variables_list:  # This list is sorted; glb_gridfcs_list is not.
+        for evol_var in evolved_variables_list:  # This list is sorted
             #                                      We need to preserve the order to ensure consistency with the #defines
-            for i, gf in enumerate(glb_gridfcs_list):
+            for gf in glb_gridfcs_list:
                 if gf.name == evol_var and gf.gftype == "EVOL":
-                    outstr += str(glb_gridfcs_list[i].f_infinity) + ", "
+                    outstr += str(gf.f_infinity) + ", "
         outstr = outstr[:-2] + " };\n"
 
         outstr += """\n\n// SET gridfunctions_wavespeed[i] = gridfunction i's characteristic wave speed:
 static const REAL gridfunctions_wavespeed[NUM_EVOL_GFS] = { """
-        for evol_var in evolved_variables_list:  # This list is sorted; glb_gridfcs_list is not.
+        for evol_var in evolved_variables_list:  # This list is sorted
             #                                      We need to preserve the order to ensure consistency with the #defines
-            for i, gf in enumerate(glb_gridfcs_list):
+            for gf in glb_gridfcs_list:
                 if gf.name == evol_var and gf.gftype == "EVOL":
-                    outstr += str(glb_gridfcs_list[i].wavespeed) + ", "
+                    outstr += str(gf.wavespeed) + ", "
+        outstr = outstr[:-2] + " };\n"
+
+        # This code could never have worked
+        outstr += """\n\n// SET gridfunctions_centering[i] = gridfunction i's vertex/cell centering:
+//static const REAL gridfunctions_centering[NUM_EVOL_GFS] = { """
+        for evol_var in evolved_variables_list:  # This list is sorted
+            #                                      We need to preserve the order to ensure consistency with the #defines
+            for gf in glb_gridfcs_list:
+                if gf.name == evol_var and gf.gftype == "EVOL":
+                    outstr += str(gf.centering) + ", "
         outstr = outstr[:-2] + " };\n"
 
     return outstr
@@ -323,7 +491,8 @@ def output__gridfunction_defines_h__return_gf_lists(outdir):
     return gridfunction_lists()
 ####################
 
-from outputC import outC_NRPy_basic_defines_h_dict
+#from outputC import outC_NRPy_basic_defines_h_dict
+import defines_dict
 def register_C_functions_and_NRPy_basic_defines(enable_griddata_struct=True,
                                                 list_of_extras_in_griddata_struct=None):
     # First register C functions needed by grid
@@ -366,4 +535,4 @@ typedef struct __griddata__ {
                 Nbd_str += "  " + extra + ";\n"
         Nbd_str += "} griddata_struct;\n"
 
-    outC_NRPy_basic_defines_h_dict["grid"] = Nbd_str
+    defines_dict.outC_NRPy_basic_defines_h_dict["grid"] = Nbd_str

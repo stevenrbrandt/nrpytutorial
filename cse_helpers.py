@@ -28,30 +28,30 @@ def cse_preprocess(expr_list, prefix='', declare=False, factor=True, negative=Fa
         >>> from sympy.abc import x, y, z
         >>> expr = -x/12 - y/12 + z
         >>> cse_preprocess(expr)
-        (_Rational_1_12*(-x - y) + z, OrderedDict([(_Rational_1_12, 1/12)]))
+        ([_Rational_1_12*(-x - y) + z], OrderedDict([(_Rational_1_12, 1/12)]))
 
         >>> cse_preprocess(expr, declare=True)
-        (_Rational_1_12*(_NegativeOne_*x + _NegativeOne_*y) + z, OrderedDict([(_Rational_1_12, 1/12), (_NegativeOne_, -1)]))
+        ([_Rational_1_12*(_NegativeOne_*x + _NegativeOne_*y) + z], OrderedDict([(_Rational_1_12, 1/12), (_NegativeOne_, -1)]))
 
         >>> expr = -x/12 - y/12 + z
         >>> cse_preprocess(expr, declare=True, negative=True)
-        (_NegativeOne_*_Rational_1_12*(x + y) + z, OrderedDict([(_Rational_1_12, 1/12), (_NegativeOne_, -1)]))
+        ([_NegativeOne_*_Rational_1_12*(x + y) + z], OrderedDict([(_Rational_1_12, 1/12), (_NegativeOne_, -1)]))
 
         >>> cse_preprocess(expr, factor=False)
-        ((-_Rational_1_12)*x + (-_Rational_1_12)*y + z, OrderedDict([(_Rational_1_12, 1/12)]))
+        ([(-_Rational_1_12)*x + (-_Rational_1_12)*y + z], OrderedDict([(_Rational_1_12, 1/12)]))
 
         >>> cse_preprocess(expr, prefix='FD')
-        (FD_Rational_1_12*(-x - y) + z, OrderedDict([(FD_Rational_1_12, 1/12)]))
+        ([FD_Rational_1_12*(-x - y) + z], OrderedDict([(FD_Rational_1_12, 1/12)]))
 
         >>> from sympy import exp
         >>> expr = exp(3*x + 3*y)
         >>> cse_preprocess(expr)
-        (exp(_Integer_3*(x + y)), OrderedDict([(_Integer_3, 3)]))
+        ([exp(_Integer_3*(x + y))], OrderedDict([(_Integer_3, 3)]))
 
         >>> from sympy import Mul
         >>> expr = Mul((-1)**3, (3*x + 3*y), evaluate=False)
         >>> cse_preprocess(expr, declare=True)
-        (_Integer_3*_NegativeOne_*(x + y), OrderedDict([(_NegativeOne_, -1), (_Integer_3, 3)]))
+        ([_Integer_3*_NegativeOne_*(x + y)], OrderedDict([(_NegativeOne_, -1), (_Integer_3, 3)]))
     """
     if not isinstance(expr_list, list):
         expr_list = [expr_list]
@@ -154,8 +154,10 @@ def cse_preprocess(expr_list, prefix='', declare=False, factor=True, negative=Fa
             if sp.simplify(expr_diff) != 0:
                 raise Warning('Expression Difference: ' + str(expr_diff))
         expr_list[i] = expr
-    if len(expr_list) == 1:
-        expr_list = expr_list[0]
+    # This conditional causing problems
+    # if len(expr_list) == 1:
+    #    expr_list = expr_list[0]
+    assert type(expr_list) == list
     return expr_list, map_sym_to_rat
 
 def cse_postprocess(cse_output):
@@ -206,6 +208,42 @@ def cse_postprocess(cse_output):
     """
     replaced, reduced = cse_output
     replaced, reduced = replaced[:], reduced[:]
+
+    # SCALAR_TMP's are coming in as sp.Eq. They are
+    # effectively "replace" expressions put in by hand.
+    # Move them to the replaced array.
+    reduced2 = []
+    for k in range(len(reduced)):
+        if type(reduced[k]) == sp.Eq:
+            replaced += [(reduced[k].lhs, reduced[k].rhs)]
+        else:
+            reduced2 += [reduced[k]]
+    reduced = reduced2
+
+    # Sort the replaced expressions
+    # so that none are evaluated before
+    # they are set.
+    lookup = {}
+    for repl in replaced:
+        lookup[str(repl[0])] = repl
+    replaced2 = []
+    while len(lookup) > 0:
+        new_lookup = {}
+        for repl in lookup.values():
+            found = False
+            for sym in repl[1].free_symbols:
+                if str(sym) in lookup:
+                    found = True
+                    break
+            if found:
+                new_lookup[str(repl[0])] = repl
+            else:
+                replaced2 += [repl]
+        assert len(new_lookup) < len(lookup)
+        lookup = new_lookup
+    assert len(replaced) == len(replaced2)
+    replaced = replaced2
+
     i = 0
     while i < len(replaced):
         sym, expr = replaced[i]; args = expr.args

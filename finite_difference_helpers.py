@@ -9,11 +9,13 @@
 # Author: Zachariah B. Etienne
 #         zachetie **at** gmail **dot* com
 from outputC import superfast_uniq, outputC, outC_function_dict, add_to_Cfunction_dict  # NRPy+: Core C code output module
+from suffixes import getsuffix
 import NRPy_param_funcs as par      # NRPy+: parameter interface
 import sympy as sp                  # SymPy: The Python computer algebra package upon which NRPy+ depends
 import grid as gri                  # NRPy+: Functions having to do with numerical grids
 import sys                          # Standard Python module for multiplatform OS-level functions
 from collections import namedtuple  # Standard Python: Enable namedtuple data type
+from fstr import f
 
 FDparams = namedtuple('FDparams', 'PRECISION FD_CD_order enable_FD_functions enable_SIMD DIM MemAllocStyle upwindcontrolvec fullindent outCparams')
 
@@ -68,7 +70,7 @@ def generate_list_of_deriv_vars_from_lhrh_sympyexpr_list(sympyexpr_list,FDparams
                     print("in NRPy+ as either a gridfunction or Cparameter, by calling")
                     print(str(var)+" = register_gridfunctions...() (in ixp/grid) if \""+str(var)+"\" is a gridfunction, or")
                     print(str(var)+" = Cparameters() (in par) otherwise (e.g., if it is a free parameter set at C runtime).")
-                    sys.exit(1)
+                    raise Exception()
     list_of_deriv_vars = superfast_uniq(list_of_deriv_vars_with_duplicates)
 
     # Upwinding with respect to a control vector: algorithm description.
@@ -169,7 +171,7 @@ def extract_from_list_of_deriv_vars__base_gfs_and_deriv_ops_lists(list_of_deriv_
 
 from operator import itemgetter
 
-def type__var(in_var,FDparams, AddPrefix_for_UpDownWindVars=True):
+def type__var(in_var,FDparams, AddPrefix_for_UpDownWindVars=True,is_const=True):
     """ Outputs [type] [variable name]; e.g.,
     "const double variable"
 
@@ -210,14 +212,19 @@ def type__var(in_var,FDparams, AddPrefix_for_UpDownWindVars=True):
             varname = "UpwindAlgInput"+varname
     if FDparams.enable_SIMD == "True":
         return "const REAL_SIMD_ARRAY " + varname
-    return "const " + FDparams.PRECISION + " " + varname
+    vartype = FDparams.PRECISION
+    if is_const:
+        return "const " + vartype + " " + varname
+    else:
+        return vartype + " " + varname
 
-def read_from_memory_Ccode_onept(gfname,idx, FDparams):
+def read_from_memory_Ccode_onept(gfname,idx, FDparams, idxs=set()):
     """
 
     :param gfname: gridfunction name; a string
     :param idx: Grid index relative to (i0,i1,i2,i3); e.g., "0,1,2,3" -> (i0,i1+1,i2+2,i3+3); later indices ignored for DIM<4
     :param FDparams: Parameters used in the finite-difference codegen
+    :param idxs: list of indexes used by the code
     :return: C code string for reading in this gridfunction at point idx from memory
     >>> import indexedexp as ixp
     >>> from finite_difference_helpers import FDparams, read_from_memory_Ccode_onept
@@ -231,12 +238,38 @@ def read_from_memory_Ccode_onept(gfname,idx, FDparams):
     idxsplit = idx.split(',')
     idx4 = [int(idxsplit[0]),int(idxsplit[1]),int(idxsplit[2]),int(idxsplit[3])]
     gf_array_name = "in_gfs" # Default array name.
-    gfaccess_str = gri.gfaccess(gf_array_name,gfname,ijkl_string(idx4, FDparams))
-    if FDparams.enable_SIMD == "True":
-        retstring = type__var(gfname, FDparams) + varsuffix(idx4, FDparams) + " = ReadSIMD(&" + gfaccess_str + ");"
+    if gri.ET_driver == "CarpetX":
+        ijklstring = ijk_carpetx(idx4)
+        assert FDparams.DIM == 3
     else:
-        retstring = type__var(gfname, FDparams) + varsuffix(idx4, FDparams) + " = " + gfaccess_str + ";"
+        ijklstring = ijkl_string(idx4, FDparams)
+    gfaccess_str = gri.gfaccess(gf_array_name,gfname,ijklstring)
+    idxs.add(",".join([str(ii) for ii in idx4]))
+    if FDparams.enable_SIMD == "True":
+        retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = ReadSIMD(&" + gfaccess_str + ");"
+    elif gri.find_gftype(gfname) == "SCALAR_TMP":
+        retstring = ""
+    else:
+        assert varsuffix(gfname, idx4, FDparams) is not None
+        assert gfaccess_str is not None
+        retstring = type__var(gfname, FDparams) + varsuffix(gfname, idx4, FDparams) + " = " + gfaccess_str + ";"
     return retstring+"\n"
+
+def ijk_carpetx(idx4):
+    result = ""
+    for i in range(len(idx4)):
+        ff = idx4[i]
+        if ff == 0:
+            pass
+        elif ff == 1:
+            result += f("+PointDesc::DI[{i}]")
+        elif ff == -1:
+            result += f("-PointDesc::DI[{i}]")
+        elif ff < 0:
+            result += f("-{-ff}*PointDesc::DI[{i}]")
+        else:
+            result += f("+{ff}*PointDesc::DI[{i}]")
+    return result
 
 def ijkl_string(idx4, FDparams):
     """Generate string for reading gridfunction from specific location in memory
@@ -260,6 +293,9 @@ def ijkl_string(idx4, FDparams):
     >>> ijkl_string([-2,-1,-1,-300], FDparams)
     \'i0-2,i1-1,i2-1\'
     """
+    if False and gri.ET_driver == "CarpetX":
+        assert FDparams.DIM == 3
+        return ijk_carpetx(idx4)
     retstring = ""
     for i in range(FDparams.DIM):
         if i > 0:
@@ -268,7 +304,7 @@ def ijkl_string(idx4, FDparams):
         retstring += "i" + str(i) + "+" + str(idx4[i])
     return retstring.replace("+-", "-").replace("+0", "")
 
-def varsuffix(idx4, FDparams):
+def varsuffix(name, idx4, FDparams):
     """Generate string for suffixing single point read in from memory
     Example: If a gridfunction is named hDD00, and we want to read from memory data at i0+1,i1,i2-1,
     we store the value of this gridfunction as hDD00_i0p1_i1_i2m1; this function provides the suffix.
@@ -281,14 +317,15 @@ def varsuffix(idx4, FDparams):
     :return: returns suffix to uniquely name a point of data for a gridfunction
     >>> from finite_difference_helpers import varsuffix, FDparams
     >>> FDparams.DIM=3
-    >>> varsuffix([-2,0,-1,-300], FDparams)
+    >>> varsuffix("", [-2,0,-1,-300], FDparams)
     \'_i0m2_i1_i2m1\'
     """
+    base_suffix = getsuffix(name)
     if idx4 == [0, 0, 0, 0]:
-        return ""
-    return "_" + ijkl_string(idx4, FDparams).replace(",", "_").replace("+", "p").replace("-", "m")
+        return base_suffix 
+    return base_suffix + "_" + ijkl_string(idx4, FDparams).replace(",", "_").replace("+", "p").replace("-", "m")
 
-def read_gfs_from_memory(list_of_base_gridfunction_names_in_derivs, fdstencl, sympyexpr_list, FDparams):
+def read_gfs_from_memory(list_of_base_gridfunction_names_in_derivs, fdstencl, sympyexpr_list, FDparams, idxs=None):
     # with open(list_of_base_gridfunction_names_in_derivs[0]+".txt","w") as file:
     #     file.write(str(list_of_base_gridfunction_names_in_derivs))
     #     file.write(str(fdstencl))
@@ -359,12 +396,20 @@ def read_gfs_from_memory(list_of_base_gridfunction_names_in_derivs, fdstencl, sy
                                                                               str(fdstencl[j][k][2]) + "," +
                                                                               str(fdstencl[j][k][3]))
 
+    def get_symbols(arg):
+        if hasattr(arg, "free_symbols"):
+            return list(arg.free_symbols)
+        elif type(arg) == str:
+            return [arg]
+        else:
+            assert False
+
     # Step 4b: "Zeroth derivative" case:
     #     If gridfunction appears in expression not
     #     as derivative (i.e., by itself), it must
     #     be read from memory as well.
     for expr in range(len(sympyexpr_list)):
-        for var in sympyexpr_list[expr].rhs.free_symbols:
+        for var in get_symbols(sympyexpr_list[expr].rhs) + get_symbols(sympyexpr_list[expr].lhs):
             vartype = gri.variable_type(var)
             if vartype == "gridfunction":
                 for i in range(len(gri.glb_gridfcs_list)):
@@ -451,11 +496,13 @@ def read_gfs_from_memory(list_of_base_gridfunction_names_in_derivs, fdstencl, sy
 
     read_from_memory_Ccode = ""
     count = 0
-    for gfidx in range(len(gri.glb_gridfcs_list)):
+    if idxs is None:
+        idxs = set()
+    for gfidx in range(len(sorted_list_of_points_read_from_memory)):
         for pt in range(len(sorted_list_of_points_read_from_memory[gfidx])):
             read_from_memory_Ccode += read_from_memory_Ccode_onept(read_from_memory_gf[count].name,
                                                                    sorted_list_of_points_read_from_memory[gfidx][pt],
-                                                                   FDparams)
+                                                                   FDparams,idxs)
             count += 1
     return read_from_memory_Ccode
 #################################
@@ -474,7 +521,7 @@ def construct_FD_exprs_as_SymPy_exprs(list_of_deriv_vars,
         FDlhsvarnames.append(type__var(list_of_deriv_vars[i], FDparams))
         var = list_of_base_gridfunction_names_in_derivs[i]
         for j in range(len(fdcoeffs[i])):
-            varname = str(var) + varsuffix(fdstencl[i][j], FDparams)
+            varname = str(var) + varsuffix(str(var),fdstencl[i][j], FDparams)
             FDexprs[i] += fdcoeffs[i][j] * sp.sympify(varname)
 
         # Multiply each expression by the appropriate power
@@ -527,7 +574,7 @@ def add_FD_func_to_outC_function_dict(list_of_deriv_vars,
 
         rhs_expr = sp.sympify(0)
         for j in range(len(fdcoeffs[which_op_idx])):
-            var = sp.sympify("f" + varsuffix(fdstencl[which_op_idx][j], FDparams))
+            var = sp.sympify("f" + varsuffix("f",fdstencl[which_op_idx][j], FDparams))
             rhs_expr += fdcoeffs[which_op_idx][j] * var
 
         # Multiply each expression by the appropriate power
@@ -559,7 +606,7 @@ def add_FD_func_to_outC_function_dict(list_of_deriv_vars,
                 outfunc_params += "const " + c_type + " invdx" + str(d) + ","
 
         for j in range(len(fdcoeffs[which_op_idx])):
-            var = sp.sympify("f" + varsuffix(fdstencl[which_op_idx][j], FDparams))
+            var = sp.sympify("f" + varsuffix("",fdstencl[which_op_idx][j], FDparams))
             outfunc_params += "const " + c_type + " " + str(var)
             if j != len(fdcoeffs[which_op_idx])-1:
                 outfunc_params += ","
@@ -573,7 +620,7 @@ def add_FD_func_to_outC_function_dict(list_of_deriv_vars,
                         funccall += "invdx" + str(d) + ","
                 gfname = list_of_base_gridfunction_names_in_derivs[i]
                 for j in range(len(fdcoeffs[which_op_idx])):
-                    funccall += gfname + varsuffix(fdstencl[which_op_idx][j], FDparams)
+                    funccall += gfname + varsuffix(gfname, fdstencl[which_op_idx][j], FDparams)
                     if j != len(fdcoeffs[which_op_idx])-1:
                         funccall += ","
                 funccall += ");"

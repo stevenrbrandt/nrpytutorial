@@ -140,7 +140,7 @@ class TestParser(unittest.TestCase):
                       'H': bssncon.H,
                       'MU': bssncon.MU,
                       'RbarDD': Bq.RbarDD},
-                    suppress_message=True)
+                    suppress_message=False)
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()

@@ -25,7 +25,7 @@ par.initialize_param(par.glb_param("int",  modulename, "FD_CENTDERIVS_ORDER",   
 par.initialize_param(par.glb_param("bool", modulename, "enable_FD_functions",      False))
 par.initialize_param(par.glb_param("int",  modulename, "FD_KO_ORDER__CENTDERIVS_PLUS", 2))
 
-def FD_outputC(filename, sympyexpr_list, params="", upwindcontrolvec=""):
+def FD_outputC(filename, sympyexpr_list, params="", upwindcontrolvec="",idxs=None):
     outCparams = parse_outCparams_string(params)
 
     # Step 0.a:
@@ -93,7 +93,6 @@ def FD_outputC(filename, sympyexpr_list, params="", upwindcontrolvec=""):
         if not is_gf:
             print("Error: Attempting to take the derivative of "+basegf+", which is not a registered gridfunction.")
             print("       Make sure your gridfunction name does not have any underscores in it!")
-            sys.exit(1)
 
     # Step 2c:
     # Check each derivative operator to make sure it is
@@ -127,8 +126,7 @@ def FD_outputC(filename, sympyexpr_list, params="", upwindcontrolvec=""):
         fdcoeffs[i], fdstencl[i] = compute_fdcoeffs_fdstencl(list_of_deriv_operators[i])
 
     # Step 4: Create C code to read gridfunctions from memory
-    read_from_memory_Ccode = read_gfs_from_memory(list_of_base_gridfunction_names_in_derivs, fdstencl, sympyexpr_list,
-                                                  FDparams)
+    read_from_memory_Ccode = read_gfs_from_memory(list_of_base_gridfunction_names_in_derivs, fdstencl, sympyexpr_list, FDparams, idxs)
 
     # Step 5: construct C code.
     Coutput = ""
