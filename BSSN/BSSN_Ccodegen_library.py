@@ -837,7 +837,7 @@ void lowlevel_decompose_psi4_into_swm2_modes(const int Nxx_plus_2NGHOSTS1,const 
     desc = ""
     name = "driver__spherlikegrids__psi4_spinweightm2_decomposition"
     params = r"""const paramstruct *restrict params,  REAL *restrict diagnostic_output_gfs,
-        const int *restrict list_of_R_ext_idxs, const int num_of_R_ext_idxs, const REAL time,
+        const int *restrict list_of_R_ext_idxs, const int num_of_R_ext_idxs,
         REAL *restrict xx[3],void xx_to_Cart(const paramstruct *restrict params, REAL *restrict xx[3],const int i0,const int i1,const int i2, REAL xCart[3])"""
 
     body = r"""  // Step 1: Allocate memory for 2D arrays used to store psi4, theta, sin(theta), and phi.

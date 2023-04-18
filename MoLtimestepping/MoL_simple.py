@@ -158,16 +158,16 @@ def single_RK_substep_input_symbolic(comment_block, substep_time_offset_dt, RHS_
                                      gf_aliases="", post_post_RHS_string=""):
     return_str = comment_block + "\n"
     substep_time_offset_str = "{:.17e}".format(float(substep_time_offset_dt))
-    return_str += "griddata->params.time = time_start + " + substep_time_offset_str + " * griddata->params.dt;\n"
+    substep_time_str = "params->time = time_start + " + substep_time_offset_str + " * params->dt;\n"
 
+    return_str += substep_time_str
     # Ensure all input lists are lists
     RK_lhs_list = [RK_lhs_list] if not isinstance(RK_lhs_list, list) else RK_lhs_list
     RK_rhs_list = [RK_rhs_list] if not isinstance(RK_rhs_list, list) else RK_rhs_list
     post_RHS_list = [post_RHS_list] if not isinstance(post_RHS_list, list) else post_RHS_list
     post_RHS_output_list = [post_RHS_output_list] if not isinstance(post_RHS_output_list, list) else post_RHS_output_list
 
-    return_str += "{\n" + indent_Ccode(gf_aliases, "  ")
-    indent = "  "
+    indent = ""
 
     # Part 1: RHS evaluation
     return_str += indent_Ccode(str(RHS_str).replace("RK_INPUT_GFS",  str(RHS_input_str).replace("gfsL", "gfs")).
@@ -198,7 +198,7 @@ def single_RK_substep_input_symbolic(comment_block, substep_time_offset_dt, RHS_
     if enable_SIMD:
         return_str += "{}  const REAL_SIMD_ARRAY DT = ConstSIMD(params->dt);\n".format(indent)
 
-    pre_indent = "2"
+    pre_indent = "1"
     kernel = outputC(RK_rhs_list, RK_lhs_str_list, filename="returnstring",
                      params="includebraces=False,preindent="+pre_indent+",outCverbose=False,enable_SIMD="+str(enable_SIMD))
     if enable_SIMD:
@@ -213,8 +213,6 @@ def single_RK_substep_input_symbolic(comment_block, substep_time_offset_dt, RHS_
     # Part 3: Call post-RHS functions
     for post_RHS, post_RHS_output in zip(post_RHS_list, post_RHS_output_list):
         return_str += indent_Ccode(post_RHS.replace("RK_OUTPUT_GFS", str(post_RHS_output).replace("gfsL", "gfs")))
-
-    return_str += "}\n"
 
     for post_RHS, post_RHS_output in zip(post_RHS_list, post_RHS_output_list):
         return_str += indent_Ccode(post_post_RHS_string.replace("RK_OUTPUT_GFS", str(post_RHS_output).replace("gfsL", "gfs")), "")
@@ -256,33 +254,31 @@ def add_to_Cfunction_dict_MoL_step_forward_in_time(MoL_method,
     desc  = "Method of Lines (MoL) for \"" + MoL_method + "\" method: Step forward one full timestep.\n"
     c_type = "void"
     name = "MoL_step_forward_in_time"
-    params = "griddata_struct *restrict griddata"
+    params  = "paramstruct *restrict params, "
+    if enable_rfm:
+        params += "const rfm_struct *restrict rfmstruct, "
+    else:
+        params += "REAL *restrict xx[3], "
+    if enable_curviBCs:
+        params += "const bc_struct *restrict bcstruct, "
+    params += "MoL_gridfunctions_struct *restrict gridfuncs"
 
     indent = ""  # We don't bother with an indent here.
 
     body = indent + "// C code implementation of -={ " + MoL_method + " }=- Method of Lines timestepping.\n\n"
     body += "// First set the initial time:\n"
-    body += "const REAL time_start = griddata->params.time;\n"
+    initial_time_str = "const REAL time_start = params->time;\n"
 
+    body += initial_time_str
     y_n_gridfunctions, non_y_n_gridfunctions_list, _throwaway, _throwaway2 = generate_gridfunction_names(MoL_method)
-
-    gf_prefix = "griddata->gridfuncs."
-
+    gf_prefix = "gridfuncs->"
     gf_aliases = """// Set gridfunction aliases from gridfuncs struct
 REAL *restrict """ + y_n_gridfunctions + " = "+gf_prefix + y_n_gridfunctions + """;  // y_n gridfunctions
 // Temporary timelevel & AUXEVOL gridfunctions:\n"""
     for gf in non_y_n_gridfunctions_list:
         gf_aliases += "REAL *restrict " + gf + " = "+gf_prefix + gf + ";\n"
 
-    gf_aliases += "paramstruct *restrict params = &griddata->params;\n"
-    if enable_rfm:
-        gf_aliases += "const rfm_struct *restrict rfmstruct = &griddata->rfmstruct;\n"
-    else:
-        gf_aliases += "REAL *restrict xx[3]; for(int ww=0;ww<3;ww++) xx[ww] = griddata->xx[ww];\n"
-    if enable_curviBCs:
-        gf_aliases += "const bc_struct *restrict bcstruct = &griddata->bcstruct;\n"
-    for i in ["0", "1", "2"]:
-        gf_aliases += "const int Nxx_plus_2NGHOSTS" + i + " = griddata->params.Nxx_plus_2NGHOSTS" + i + ";\n"
+    body += gf_aliases
 
     # Implement Method of Lines (MoL) Timestepping
     Butcher = Butcher_dict[MoL_method][0]  # Get the desired Butcher table from the dictionary
@@ -470,12 +466,13 @@ REAL *restrict """ + y_n_gridfunctions + " = "+gf_prefix + y_n_gridfunctions + "
     body += """
   // To minimize roundoff error (from adding dt to params.time lots of times),
   //   here we set time based on the iteration number.
-  griddata->params.time = (REAL)(griddata->params.n + 1) * griddata->params.dt;
+  params->time = (REAL)(params->n + 1) * params->dt;
 
   // Finally, increment the timestep n:
-  griddata->params.n++;
+  params->n++;
 """
-    enableCparameters=False
+
+    enableCparameters=True
     add_to_Cfunction_dict(
         includes=includes,
         desc=desc,
