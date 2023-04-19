@@ -17,6 +17,13 @@ from sympy.core.symbol import Symbol
 import indexedexp as ixp
 from fstr import f
 
+def get_user():
+    try:
+        import pwd
+        return pwd.getpwuid(os.getuid()).pw_name
+    except:
+        return os.environ.get("USER","jovyan")
+
 def flatten(lists):
     new_list = []
     for item in lists:
@@ -621,11 +628,9 @@ class CactusThorn:
                     if 'email' in user and self.email is None:
                         self.email = user['email']
         if self.author is None:
-            import pwd
-            self.author = pwd.getpwuid(os.getuid()).pw_name
+            self.author = get_user()
         if self.email is None:
-            import pwd
-            self.email = pwd.getpwuid(os.getuid()).pw_name
+            self.email = get_user()
 
     def get_full_name(self,gf_name):
         gfthorn = grid.find_gfmodule(gf_name,die=False)
