@@ -464,12 +464,12 @@ REAL *restrict """ + y_n_gridfunctions + " = "+gf_prefix + y_n_gridfunctions + "
                         post_post_RHS_string=post_post_RHS_string) + "// -={ END k" + str(s + 1) + " substep }=-\n\n"
 
     body += """
-  // To minimize roundoff error (from adding dt to params.time lots of times),
-  //   here we set time based on the iteration number.
-  params->time = (REAL)(params->n + 1) * params->dt;
+// To minimize roundoff error (from adding dt to params.time lots of times),
+//   here we set time based on the iteration number.
+params->time = (REAL)(params->n + 1) * params->dt;
 
-  // Finally, increment the timestep n:
-  params->n++;
+// Finally, increment the timestep n:
+params->n++;
 """
 
     enableCparameters=True

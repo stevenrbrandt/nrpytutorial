@@ -25,7 +25,7 @@ from ScalarWave.CommonParams import wavespeed # NRPy+: Common parameters for all
 thismodule = __name__
 
 # Set up spherically-symmetric Gaussian initial data
-def SphericalGaussian(CoordSystem="Cartesian",default_time=0,default_sigma=2):
+def SphericalGaussian(CoordSystem="Cartesian",default_sigma=2):
     # Step 1: Set parameters for the wave
     DIM = par.parval_from_str("grid::DIM")
 
@@ -39,7 +39,7 @@ def SphericalGaussian(CoordSystem="Cartesian",default_time=0,default_sigma=2):
     xx_to_Cart = rfm.xx_to_Cart
 
     # Step 3: Declare free parameters intrinsic to these initial data
-    time  = par.Cparameters("REAL", thismodule, "time",  default_time)
+    time = sp.symbols('time', Real=True)  # provided as a C parameter by MoLtimestepping.MoL
     sigma = par.Cparameters("REAL", thismodule, "sigma", default_sigma)
 
     # Step 4: Compute r
@@ -57,7 +57,7 @@ def SphericalGaussian(CoordSystem="Cartesian",default_time=0,default_sigma=2):
     vv_ID = sp.diff(uu_ID, time)
 
 # Set up monochromatic plane-wave initial data
-def PlaneWave(CoordSystem="Cartesian",default_time=0,default_k0=1,default_k1=1,default_k2=1):
+def PlaneWave(CoordSystem="Cartesian",default_k0=1,default_k1=1,default_k2=1):
     # Step 1: Set parameters defined in other modules
     DIM = par.parval_from_str("grid::DIM")
 
@@ -71,7 +71,7 @@ def PlaneWave(CoordSystem="Cartesian",default_time=0,default_k0=1,default_k1=1,d
     xx_to_Cart = rfm.xx_to_Cart
 
     # Step 3: Declare free parameters intrinsic to these initial data
-    time = par.Cparameters("REAL", thismodule, "time", default_time)
+    time = sp.symbols('time', Real=True)  # provided as a C parameter by MoLtimestepping.MoL
     kk   = par.Cparameters("REAL", thismodule, ["kk0", "kk1", "kk2"], [default_k0,default_k1,default_k2])
 
     # Step 4: Normalize the k vector
@@ -90,15 +90,13 @@ def PlaneWave(CoordSystem="Cartesian",default_time=0,default_k0=1,default_k1=1,d
     vv_ID = sp.diff(uu_ID, time)
 
 # Initial data driver routine
-def InitialData(Type="PlaneWave",CoordSystem="Cartesian",
-                default_time=0,
+def InitialData(WaveType="PlaneWave",CoordSystem="Cartesian",
                 default_k0=1,default_k1=1,default_k2=1,
                 default_sigma=3):
-    if Type=="PlaneWave":
-        PlaneWave(CoordSystem=CoordSystem, default_time=default_time,
-                  default_k0=default_k0,default_k1=default_k1,default_k2=default_k2)
-    elif Type=="SphericalGaussian":
-        SphericalGaussian(CoordSystem=CoordSystem, default_time=default_time,   default_sigma=default_sigma)
+    if WaveType=="PlaneWave":
+        PlaneWave(CoordSystem=CoordSystem, default_k0=default_k0,default_k1=default_k1,default_k2=default_k2)
+    elif WaveType=="SphericalGaussian":
+        SphericalGaussian(CoordSystem=CoordSystem, default_sigma=default_sigma)
     else:
-        print("Error: ScalarWave initial data Type="+str(Type)+" not supported.")
+        print("Error: ScalarWave initial data WaveType="+str(WaveType)+" not supported.")
         sys.exit(1)
