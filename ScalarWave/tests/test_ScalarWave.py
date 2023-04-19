@@ -7,7 +7,7 @@ def test_InitialData_PlaneWave():
 
     module_name = 'InitialData'
 
-    function_and_global_dict = {'InitialData(Type="PlaneWave")': ['uu_ID', 'vv_ID']}
+    function_and_global_dict = {'InitialData(WaveType="PlaneWave")': ['uu_ID', 'vv_ID']}
 
     create_test(module, module_name, function_and_global_dict)
 
@@ -17,7 +17,7 @@ def test_InitialData_SphericalGaussian():
 
     module_name = 'InitialData'
 
-    function_and_global_dict = {'InitialData(Type="SphericalGaussian")': ['uu_ID', 'vv_ID']}
+    function_and_global_dict = {'InitialData(WaveType="SphericalGaussian")': ['uu_ID', 'vv_ID']}
 
     create_test(module, module_name, function_and_global_dict)
 
