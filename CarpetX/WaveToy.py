@@ -79,14 +79,14 @@ def after_main_fn(fn):
     if kernel == "":
         return None
 
-    fc = "Cactus/test.cc"
+    fc = os.path.join("Cactus","test.cc")
     with open(fc, "w") as fd:
         fd.write(f"""
    {pre_kernel}
    {kernel}
    {post_kernel}
 """)
-    test = "Cactus/test"
+    test = os.path.join("Cactus","test")
     testc = test + ".cc"
     testo = test + "-out.txt"
     r = call(["g++","-std=c++17","-D_USE_MATH_DEFINES","-o",test,testc])
@@ -95,13 +95,13 @@ def after_main_fn(fn):
     with open(testo,"w") as fd:
         call([test],stdout=fd)
     data = np.genfromtxt(testo,encoding="ascii")
-    g = re.match(r'.*/wave_(.*)\.cc', fn)
+    g = re.match(r'.*\bwave_(.*)\.cc', fn)
     print("Setting:",g.group(1))
     globals()[g.group(1)] = [float(f) for f in data]
     return data
 
 def after_main():
-    dn = "Cactus/arrangements/TestOne/WaveToyNRPy/src"
+    dn = os.path.join("Cactus","arrangements","TestOne","WaveToyNRPy","src")
     da = []
     for fn in os.listdir(dn):
         data = after_main_fn(os.path.join(dn, fn))
