@@ -89,7 +89,7 @@ def after_main_fn(fn):
     test = "Cactus/test"
     testc = test + ".cc"
     testo = test + "-out.txt"
-    r = call(["g++","-std=c++17","-o",test,testc])
+    r = call(["g++","-std=c++17","-D_USE_MATH_DEFINES","-o",test,testc])
     if r != 0:
         raise Exception(f"Compile failure of {testc} while processing "+fn)
     with open(testo,"w") as fd:
