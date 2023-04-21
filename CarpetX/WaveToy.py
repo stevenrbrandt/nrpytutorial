@@ -7,6 +7,7 @@ from sympy import sympify, sin, cos, pi
 import NRPy_param_funcs as par
 from subprocess import call
 import numpy as np
+from fstr import f
 
 pre_kernel = """
 #include <iostream>
@@ -63,7 +64,10 @@ def before_main():
     os.environ["CACTUS_DRIVER"]="CarpetX"
 
     # Trick CactusThorn into believing this is a real install
-    os.makedirs("Cactus/arrangements/CarpetX/CarpetX",exist_ok=True)
+    try:
+        os.makedirs("Cactus/arrangements/CarpetX/CarpetX") #,exist_ok=True)
+    except OSError as oe:
+        pass
 
 def after_main_fn(fn):
     save = False
@@ -81,17 +85,17 @@ def after_main_fn(fn):
 
     fc = os.path.join("Cactus","test.cc")
     with open(fc, "w") as fd:
-        fd.write(f"""
+        fd.write(f("""
    {pre_kernel}
    {kernel}
    {post_kernel}
-""")
+"""))
     test = os.path.join("Cactus","test")
     testc = test + ".cc"
     testo = test + "-out.txt"
     r = call(["g++","-std=c++17","-D_USE_MATH_DEFINES","-o",test,testc])
     if r != 0:
-        raise Exception(f"Compile failure of {testc} while processing "+fn)
+        raise Exception(f("Compile failure of {testc} while processing "+fn))
     with open(testo,"w") as fd:
         call([test],stdout=fd)
     data = np.genfromtxt(testo,encoding="ascii")

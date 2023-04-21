@@ -1,6 +1,7 @@
 # An attempt at a WaveToy using the NRPy+ infrastructure
 # TODO: Parity on grid functions
 
+from __future__ import print_function
 import os, re
 from datetime import date
 from sympy import symbols, Function, diff
@@ -16,6 +17,15 @@ from safewrite import SafeWrite
 from sympy.core.symbol import Symbol
 import indexedexp as ixp
 from fstr import f
+
+def makedirs(dname, exist_ok):
+    if exist_ok:
+        try:
+            os.makedirs(dname)
+        except:
+            pass
+    else:
+        os.makedirs()
 
 def get_user():
     try:
@@ -666,9 +676,9 @@ class CactusThorn:
                 cwd = os.getcwd()
                 os.chdir(dirname)
             assert os.path.isdir("arrangements"), "Please run this script from a Cactus root directory"
-            os.makedirs(self.src_dir, exist_ok=True)
-            os.makedirs(self.test_dir, exist_ok=True)
-            os.makedirs(self.doc_dir, exist_ok=True)
+            makedirs(self.src_dir, exist_ok=True)
+            makedirs(self.test_dir, exist_ok=True)
+            makedirs(self.doc_dir, exist_ok=True)
             with SafeWrite(self.configuration_ccl) as fd:
                 print(f("# Configuration definitions for thorn {self.thornname}"),file=fd)
                 if gri.ET_driver == "CarpetX":
