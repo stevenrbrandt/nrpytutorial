@@ -147,6 +147,8 @@ def _gfaccess(gfarrayname, varname, ijklstring, context):
             gfarrayname = "tile_tmp_gfs"
         elif gftype == "SCALAR_TMP":
             gfarrayname = "scalar_tmp_gfs"
+        elif gftype == "EVOL":
+            pass
         # Return gfarrayname[IDX3(varname,i0)] for DIM=1, gfarrayname[IDX3(varname,i0,i1)] for DIM=2, etc.
         retstring += gfarrayname + "[IDX" + str(DIM+1) + "S(" + varname.upper()+"GF" + ", "
     elif par.parval_from_str("GridFuncMemAccess") == "ETK":
@@ -194,6 +196,8 @@ def _gfaccess(gfarrayname, varname, ijklstring, context):
                     return retstring + varname + "GF("+mask+find_centering(varname)+"_index)"
                 else:
                     return retstring + varname + "GF("+mask+find_centering(varname)+"_layout, p.I"+ijklstring+")"
+        else:
+            retstring += varname + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
     else:
         print("grid::GridFuncMemAccess = "+par.parval_from_str("GridFuncMemAccess")+" not supported")
         sys.exit(1)
