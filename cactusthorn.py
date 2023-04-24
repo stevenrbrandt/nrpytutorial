@@ -21,11 +21,12 @@ from fstr import f
 def makedirs(dname, exist_ok):
     if exist_ok:
         try:
-            os.makedirs(dname)
+            # Exist OK flag is not in Python2
+            os.makedirs(dname,exist_ok)
         except:
             pass
     else:
-        os.makedirs()
+        os.makedirs(dname)
 
 def get_user():
     try:
