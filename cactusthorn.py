@@ -22,7 +22,7 @@ def makedirs(dname, exist_ok):
     if exist_ok:
         try:
             # Exist OK flag is not in Python2
-            os.makedirs(dname,exist_ok)
+            os.makedirs(dname)
         except:
             pass
     else:
