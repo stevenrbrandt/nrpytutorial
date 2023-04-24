@@ -7,6 +7,7 @@ from sympy import sympify, sin, cos, pi
 import NRPy_param_funcs as par
 from subprocess import call
 import numpy as np
+from fstr import f
 
 pre_kernel = """
 #include <iostream>
@@ -63,7 +64,10 @@ def before_main():
     os.environ["CACTUS_DRIVER"]="CarpetX"
 
     # Trick CactusThorn into believing this is a real install
-    os.makedirs("Cactus/arrangements/CarpetX/CarpetX",exist_ok=True)
+    try:
+        os.makedirs("Cactus/arrangements/CarpetX/CarpetX") #,exist_ok=True)
+    except OSError as oe:
+        pass
 
 def after_main_fn(fn):
     save = False
@@ -79,29 +83,29 @@ def after_main_fn(fn):
     if kernel == "":
         return None
 
-    fc = "Cactus/test.cc"
+    fc = os.path.join("Cactus","test.cc")
     with open(fc, "w") as fd:
-        fd.write(f"""
+        fd.write(f("""
    {pre_kernel}
    {kernel}
    {post_kernel}
-""")
-    test = "Cactus/test"
+"""))
+    test = os.path.join("Cactus","test")
     testc = test + ".cc"
     testo = test + "-out.txt"
-    r = call(["g++","-std=c++17","-o",test,testc])
+    r = call(["g++","-std=c++17","-D_USE_MATH_DEFINES","-o",test,testc])
     if r != 0:
-        raise Exception(f"Compile failure of {testc} while processing "+fn)
+        raise Exception(f("Compile failure of {testc} while processing "+fn))
     with open(testo,"w") as fd:
         call([test],stdout=fd)
     data = np.genfromtxt(testo,encoding="ascii")
-    g = re.match(r'.*/wave_(.*)\.cc', fn)
+    g = re.match(r'.*\bwave_(.*)\.cc', fn)
     print("Setting:",g.group(1))
     globals()[g.group(1)] = [float(f) for f in data]
     return data
 
 def after_main():
-    dn = "Cactus/arrangements/TestOne/WaveToyNRPy/src"
+    dn = os.path.join("Cactus","arrangements","TestOne","WaveToyNRPy","src")
     da = []
     for fn in os.listdir(dn):
         data = after_main_fn(os.path.join(dn, fn))

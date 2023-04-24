@@ -4,8 +4,13 @@ import os
 from difflib import context_diff
 import sys
 from subprocess import Popen, PIPE
-from clang_format import _get_executable as get_executable
 from colored import colored
+
+try:
+    from clang_format import _get_executable as get_executable
+except:
+    def get_executable(_):
+        return "/bin/cat"
 
 clang_formatter = get_executable("clang-format")
 
