@@ -22,6 +22,7 @@ def pickle_NRPy_env():
         outstr.append(pickle.dumps(lst.DIM))
         outstr.append(pickle.dumps(lst.f_infinity))
         outstr.append(pickle.dumps(lst.wavespeed))
+        outstr.append(pickle.dumps(lst.centering))
 
     outstr.append(pickle.dumps(len(par.glb_params_list)))
     for lst in par.glb_params_list:
@@ -91,7 +92,8 @@ def unpickle_NRPy_env(NRPyEnvVars):
                                              DIM       =pickle.loads(WhichParamSet[i+3]),
                                              f_infinity=pickle.loads(WhichParamSet[i+4]),
                                              wavespeed =pickle.loads(WhichParamSet[i+5]),
-                                             centering=None, external_module=None)) ; i+=6
+                                             centering =pickle.loads(WhichParamSet[i+6]),
+                                             external_module=None)) ; i+=7
         # parameters
         num_elements = pickle.loads(WhichParamSet[i]); i+=1
         for lst in range(num_elements):
