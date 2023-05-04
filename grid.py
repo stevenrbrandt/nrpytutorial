@@ -176,7 +176,7 @@ def _gfaccess(gfarrayname, varname, ijklstring, context):
             vartype = par.parval_from_str("PRECISION")
             mask = "mask, " if vartype == "CCTK_REALVEC" else ""
             if gfarrayname == "rhs_gfs":
-                return retstring + varname + "_rhsGF" + "("+mask+get_centering(varname)+"_index)"
+                return retstring + varname + "_rhsGF" + "("+mask+find_centering(varname)+"_index)"
             elif gftype == "EXTERNAL":
                 return retstring + varname + "("+mask+find_centering(varname)+"_index)"
             elif gftype == "CORE":
