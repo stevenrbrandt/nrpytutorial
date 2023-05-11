@@ -1,6 +1,7 @@
 # An attempt at a WaveToy using the NRPy+ infrastructure
 # TODO: Parity on grid functions
 
+from __future__ import unicode_literals
 from __future__ import print_function
 import os, re
 from datetime import date
