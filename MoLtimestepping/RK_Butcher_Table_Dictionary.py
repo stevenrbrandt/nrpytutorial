@@ -116,18 +116,6 @@ Butcher_dict['DP5alt'] = (
 ["", sp.Rational(821, 10800), sp.sympify(0), sp.Rational(19683, 71825), sp.Rational(175273, 912600), sp.Rational(395, 3672), sp.Rational(785, 2704), sp.Rational(3, 50)]]
 , 5)
 
-# Step 2.a.xii:  RK5 Dormand-Prince Method Alternative
-Butcher_dict['DP5alt'] = (
-[[0],
-[sp.Rational(1,10), sp.Rational(1,10)],
-[sp.Rational(2,9), sp.Rational(-2, 81), sp.Rational(20, 81)],
-[sp.Rational(3,7), sp.Rational(615, 1372), sp.Rational(-270, 343), sp.Rational(1053, 1372)],
-[sp.Rational(3,5), sp.Rational(3243, 5500), sp.Rational(-54, 55), sp.Rational(50949, 71500), sp.Rational(4998, 17875)],
-[sp.Rational(4, 5), sp.Rational(-26492, 37125), sp.Rational(72, 55), sp.Rational(2808, 23375), sp.Rational(-24206, 37125), sp.Rational(338, 459)],
-[sp.sympify(1), sp.Rational(5561, 2376), sp.Rational(-35, 11), sp.Rational(-24117, 31603), sp.Rational(899983, 200772), sp.Rational(-5225, 1836), sp.Rational(3925, 4056)],
-["", sp.Rational(821, 10800), sp.sympify(0), sp.Rational(19683, 71825), sp.Rational(175273, 912600), sp.Rational(395, 3672), sp.Rational(785, 2704), sp.Rational(3, 50)]]
-, 5)
-
 # Step 2.a.xiii:  RK5 Cash-Karp Method
 
 Butcher_dict['CK5'] = (
