@@ -799,7 +799,8 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                     writegfs = sortedset()
 
                     for func in src.funcs:
-                        print(file=fd)
+                        # ignore empty line:
+                        # print(file=fd)
                         # We split the `schedule_bin` to allow conditions such as "initial AFTER ADMBase_Initial"
                         if func.schedule_bin.split()[0].lower() in [
                             "basegrid", "initial", "postinitial", "prestep", "evol", "poststep", "analysis"]:
