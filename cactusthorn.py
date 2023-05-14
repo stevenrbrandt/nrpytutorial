@@ -691,11 +691,11 @@ class CactusThorn:
                     vmin = vmin if vmin is not None else '*'
                     vmax = vmax if vmax is not None else '*'
                     if t == bool:
-                        print(f('BOOLEAN {name} "{doc}" {{}} {default}'), file=fd)
+                        print(f(u'BOOLEAN {name} "{doc}" {{}} {default}'), file=fd)
                     elif t == int:
-                        print(f('CCTK_INT {name} "{doc}" {{ {vmin}:{vmax} :: "" }} {default}'), file=fd)
+                        print(f(u'CCTK_INT {name} "{doc}" {{ {vmin}:{vmax} :: "" }} {default}'), file=fd)
                     elif t == float:
-                        print(f('CCTK_REAL {name} "{doc}" {{ {vmin}:{vmax} :: "" }} {default}'), file=fd)
+                        print(f(u'CCTK_REAL {name} "{doc}" {{ {vmin}:{vmax} :: "" }} {default}'), file=fd)
             with SafeWrite(self.interface_ccl) as fd:
                 print(f(u"# Interface definitions for thorn {self.thornname}"),file=fd)
                 print(f(u"IMPLEMENTS: {self.thornname}"),file=fd)
@@ -734,7 +734,7 @@ class CactusThorn:
                         gfs = ixp.get_gfnames_for_group(gf_group)
                         gfs_str = "GF, ".join(list(gfs))
                         if grid.ET_driver == "Carpet":
-                            print(f('REAL {gf_group}GF TYPE=gf TIMELEVELS=3 {{ {gfs_str}GF }} "{gf_group}"'), file=fd)
+                            print(f(u'REAL {gf_group}GF TYPE=gf TIMELEVELS=3 {{ {gfs_str}GF }} "{gf_group}"'), file=fd)
                         elif grid.ET_driver == "CarpetX":
                             # CarpetX does not use sub-cycling in time, so it only needs one time level
                             _centering = ixp.find_centering_for_group(gf_group)
@@ -742,7 +742,7 @@ class CactusThorn:
                                 _centering = ''
                             else:
                                 _centering=f("CENTERING={{ {_centering} }}")
-                            print(f('REAL {gf_group}GF TYPE=gf TIMELEVELS=1 {tag} {_centering} {{ {gfs_str}GF }} "{gf_group}"'), file=fd)
+                            print(f(u'REAL {gf_group}GF TYPE=gf TIMELEVELS=1 {tag} {_centering} {{ {gfs_str}GF }} "{gf_group}"'), file=fd)
 
             if grid.ET_driver == "Carpet":
                 with SafeWrite(self.register_cc,do_format=True) as fd:
@@ -829,7 +829,7 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                         sync = self.sync.get(func.name,None)
                         if sync is not None:
                             print(f(u"    SYNC: {sync}"),file=fd)
-                        print(f('}} "{func.doc}"'),file=fd)
+                        print(f(u'}} "{func.doc}"'),file=fd)
                 print(schedule_raw,end='',file=fd)
 
             if not os.path.exists(self.doc_tex):
@@ -884,23 +884,23 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                             print(f(u"  DECLARE_CCTK_ARGUMENTS_{func.name};"),file=fd)
                         elif gri.ET_driver == "CarpetX":
                             print(f(u"  DECLARE_CCTK_ARGUMENTSX_{func.name};"),file=fd)
-                        print( "  DECLARE_CCTK_PARAMETERS;",file=fd)
+                        print("  DECLARE_CCTK_PARAMETERS;",file=fd)
                         if gri.ET_driver == "CarpetX":
-                            print( "  using CCTK_BOOLVEC = simdl<CCTK_REAL>;",file=fd)
-                            print( "  using CCTK_REALVEC = simd<CCTK_REAL>;",file=fd)
-                            print( "  constexpr std::size_t CCTK_VECSIZE CCTK_ATTRIBUTE_UNUSED = std::tuple_size_v<CCTK_REALVEC>;",file=fd)
-                            print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED VVV_layout(cctkGH, {0,0,0});",file=fd)
-                            print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_layout(cctkGH, {0,0,1});",file=fd)
-                            print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED VCV_layout(cctkGH, {0,1,0});",file=fd)
-                            print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED VCC_layout(cctkGH, {0,1,1});",file=fd)
-                            print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED CVV_layout(cctkGH, {1,0,0});",file=fd)
-                            print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED CVC_layout(cctkGH, {1,0,1});",file=fd)
-                            print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED CCV_layout(cctkGH, {1,1,0});",file=fd)
-                            print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_layout(cctkGH, {1,1,1});",file=fd)
+                            print("  using CCTK_BOOLVEC = simdl<CCTK_REAL>;",file=fd)
+                            print("  using CCTK_REALVEC = simd<CCTK_REAL>;",file=fd)
+                            print("  constexpr std::size_t CCTK_VECSIZE CCTK_ATTRIBUTE_UNUSED = std::tuple_size_v<CCTK_REALVEC>;",file=fd)
+                            print("  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED VVV_layout(cctkGH, {0,0,0});",file=fd)
+                            print("  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_layout(cctkGH, {0,0,1});",file=fd)
+                            print("  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED VCV_layout(cctkGH, {0,1,0});",file=fd)
+                            print("  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED VCC_layout(cctkGH, {0,1,1});",file=fd)
+                            print("  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED CVV_layout(cctkGH, {1,0,0});",file=fd)
+                            print("  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED CVC_layout(cctkGH, {1,0,1});",file=fd)
+                            print("  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED CCV_layout(cctkGH, {1,1,0});",file=fd)
+                            print("  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_layout(cctkGH, {1,1,1});",file=fd)
                         for ii in range(3):
                             print(f(u"  const CCTK_REAL invdx{ii} CCTK_ATTRIBUTE_UNUSED = 1/CCTK_DELTA_SPACE({ii});"),file=fd)
                         print(f(u"  {func.body}"),file=fd)
-                        print(f('}}'),file=fd)
+                        print(f(u'}}'),file=fd)
 
             # Create the thorn_list entry if needed
             entry = f("{self.arrangement}/{self.thornname}")
