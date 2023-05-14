@@ -681,7 +681,7 @@ class CactusThorn:
             makedirs(self.test_dir, exist_ok=True)
             makedirs(self.doc_dir, exist_ok=True)
             with SafeWrite(self.configuration_ccl) as fd:
-                print(f("# Configuration definitions for thorn {self.thornname}"),file=fd)
+                print(f(u"# Configuration definitions for thorn {self.thornname}"),file=fd)
                 if gri.ET_driver == "CarpetX":
                     print(f("REQUIRES Arith Loop"),file=fd)
             with SafeWrite(self.param_ccl) as fd:
