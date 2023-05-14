@@ -889,7 +889,6 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                             print( "  using CCTK_BOOLVEC = simdl<CCTK_REAL>;",file=fd)
                             print( "  using CCTK_REALVEC = simd<CCTK_REAL>;",file=fd)
                             print( "  constexpr std::size_t CCTK_VECSIZE CCTK_ATTRIBUTE_UNUSED = std::tuple_size_v<CCTK_REALVEC>;",file=fd)
-                            print( "  constexpr auto DI CCTK_ATTRIBUTE_UNUSED = PointDesc::DI;",file=fd)
                             print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED VVV_layout(cctkGH, {0,0,0});",file=fd)
                             print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_layout(cctkGH, {0,0,1});",file=fd)
                             print( "  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED VCV_layout(cctkGH, {0,1,0});",file=fd)
