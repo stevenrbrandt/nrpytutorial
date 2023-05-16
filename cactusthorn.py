@@ -363,7 +363,10 @@ class CactusThorn:
                     pass
                 else:
                     writegfs.add(writem)
-                    cent_gf = grid.find_centering(writem)
+                    if writem == "regrid_error":
+                        cent_gf = "CCC"
+                    else:
+                        cent_gf = grid.find_centering(writem)
                     assert cent_gf is not None, f("Centering for grid function '{writem}' is unknown")
                     if centering is None:
                         centering = cent_gf
@@ -409,7 +412,7 @@ class CactusThorn:
         for c in centerings_needed:
             if c not in centerings_used:
                 nums = ",".join(["1" if n in ["c","C"] else "0" for n in c])
-                layout_decls += f(" CCTK_CENTERING_LAYOUT({c},({{ {nums} }})); ")
+                #layout_decls += f(" CCTK_CENTERING_LAYOUT({c},({{ {nums} }})); ")
         tmp_centerings = {}
         for gf in tmps:
             c = grid.find_centering(gf)
@@ -601,6 +604,8 @@ class CactusThorn:
         self.last_src_file = None
         self.params = []
         self.external_modules = {}
+        if self.ET_driver == "CarpetX":
+            self.external_modules["CarpetX"]=1
 
         self.param_ccl = os.path.join(self.thorn_dir, "param.ccl")
         self.interface_ccl = os.path.join(self.thorn_dir, "interface.ccl")
@@ -645,6 +650,8 @@ class CactusThorn:
             self.email = get_user()
 
     def get_full_name(self,gf_name):
+        if gf_name == "regrid_error":
+            return "CarpetX::regrid_error"
         gfthorn = grid.find_gfmodule(gf_name,die=False)
         if gfthorn is None:
             gfthorn = self.thornname
@@ -783,6 +790,8 @@ void {self.thornname}_RegisterVars(CCTK_ARGUMENTS)
                             continue
                         if grid.ET_driver == "Carpet":
                             print(f(u"STORAGE: {gf_group}GF[3]"), file=fd)
+                        elif gf_group == "regrid_error":
+                            pass
                         else:
                             print(f(u"STORAGE: {gf_group}GF[1]"), file=fd)
                 if grid.ET_driver == "Carpet":
@@ -923,6 +932,10 @@ schedule {self.thornname}_RegisterVars in MoL_Register
         else:
             assert "Bad value for grid.ET_driver={grid.ET_driver}"
         return x,y,z
+
+    def get_regrid_error(self):
+        assert self.ET_driver == grid.ET_driver and self.ET_driver == "CarpetX"
+        return self.register_gridfunctions("CORE", ["regrid_error"])
 
     def update_thornlist(self, entry, thorn_list):
         if not thorn_list.startswith("/"):
