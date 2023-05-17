@@ -23,7 +23,7 @@ def f(s):
     globs = currentframe().f_back.f_globals
     locs= currentframe().f_back.f_locals
     count = 0
-    ns = ''
+    ns = u''
     w = ''
     i = 0
     while i < len(s):

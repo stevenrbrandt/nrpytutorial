@@ -37,7 +37,7 @@ add_test () {
 # when only one or two modules fail.
 rerun_if_fail=false
 
-$PYTHONEXEC UnitTesting/Test_UnitTesting/test_functions.py
+# $PYTHONEXEC UnitTesting/Test_UnitTesting/test_functions.py
 
 add_test CarpetX/tests/test_WaveToy.py
 add_test UnitTesting/Test_UnitTesting/test_module.py

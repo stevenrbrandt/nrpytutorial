@@ -158,7 +158,7 @@ class CactusSrc:
 class CactusThorn:
 
     def _add_src(self, src):
-        if type(src) == str:
+        if type(src) == str or type(src) == unicode:
             csrc = CactusSrc(src)
         elif type(src) == CactusSrc:
             csrc = src
@@ -710,7 +710,7 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                     print(" ",src.name,sep="",end="",file=fd)
                 if grid.ET_driver == "Carpet":
                     print(" ","register.cc",file=fd)
-                print(file=fd)
+                print(u'',file=fd)
 
             for src in self.src_files.values():
                 fsrc = os.path.join(self.src_dir, src.name)
@@ -741,7 +741,7 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                     else:
                         assert "Bad value for grid.ET_driver={grid.ET_driver}"
                     for func in src.funcs:
-                        print(file=fd)
+                        print('',file=fd)
                         print(f(u"void {func.name}(CCTK_ARGUMENTS) {{"),file=fd)
                         if gri.ET_driver == "Carpet":
                             print(f(u"  DECLARE_CCTK_ARGUMENTS_{func.name};"),file=fd)
@@ -762,8 +762,8 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                             print("  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_layout(cctkGH, {1,1,1});",file=fd)
                         for ii in range(3):
                             print(f(u"  const CCTK_REAL invdx{ii} CCTK_ATTRIBUTE_UNUSED = 1/CCTK_DELTA_SPACE({ii});"),file=fd)
-                        print(f(u"  {func.body}"),file=fd)
-                        print(f(u'}}'),file=fd)
+                        print(f("  {func.body}"),file=fd)
+                        print(f('}}'),file=fd)
 
             # Create the thorn_list entry if needed
             entry = f("{self.arrangement}/{self.thornname}")

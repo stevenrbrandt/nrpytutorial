@@ -2,6 +2,7 @@ from __future__ import print_function
 from colored import colored
 import os
 import re
+import sys
 
 _here = os.path.realpath(os.getcwd())
 
@@ -19,11 +20,21 @@ def herell(usecc,*args):
         herestr = re.sub(r"^herecc\((.*)\)$",r"HERE: \1:",frame.code_context[0].strip())
     else:
         herestr = "HERE:"
-    fname = os.path.realpath(frame.filename)
+    if type(frame) == tuple:
+        frame = frame[0]
+        fname = _here
+        line = frame.f_lineno
+    else:
+        fname = os.path.realpath(frame.filename)
+        line = frame.linenum
     if fname.startswith(_here):
         fname = fname[len(_here)+1:]
-    nargs = [colored(herestr,"cyan"),fname+":"+colored(frame.lineno,"yellow")] + args #, flush=True)
-    print(*nargs, flush=True)
+    assert type(fname) == str
+    assert type(line) == int
+    nargs = [colored(herestr,"cyan"),fname+":"+colored(line,"yellow")] + list(args) #, flush=True)
+    print(*nargs)
+    sys.stdout.flush()
+    sys.stderr.flush()
     frame = None
     stack = None
 
