@@ -22,7 +22,8 @@ def herell(usecc,*args):
     fname = os.path.realpath(frame.filename)
     if fname.startswith(_here):
         fname = fname[len(_here)+1:]
-    print(colored(herestr,"cyan"),fname+":"+colored(frame.lineno,"yellow"), *args, flush=True)
+    nargs = [colored(herestr,"cyan"),fname+":"+colored(frame.lineno,"yellow")] + args #, flush=True)
+    print(*nargs, flush=True)
     frame = None
     stack = None
 
