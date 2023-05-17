@@ -103,7 +103,7 @@ def after_main_fn(fn):
     g = re.match(r'.*\bwave_(.*)\.cc', fn)
     if g is not None:
         print("Setting:",g.group(1))
-        globals()[g.group(1)] = [float(f) for f in data]
+        globals()[g.group(1)] = [float(ff) for ff in data]
         return data
 
 def after_main():

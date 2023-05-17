@@ -87,7 +87,7 @@ def find_gfnames():
     return sorted(list(glb_gridfcs_map().keys()))
 
 def find_gftype(varname,die=True):
-    assert type(varname) == str
+    assert type(varname) == str or type(varname) == unicode
     var_data = glb_gridfcs_map().get(varname, None)
     if var_data is None:
         if die:

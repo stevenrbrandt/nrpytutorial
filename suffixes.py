@@ -3,12 +3,12 @@ import sympy as sp
 subtable = {}
 
 def setsuffix(f,t):
-    assert type(f) == str
+    assert type(f) == str or type(f) == unicode
     assert type(t) == str
     subtable[f] = t
 
 def getsuffix(f):
-    assert type(f) == str
+    assert type(f) == str or type(f) == unicode
     return subtable.get(f,"")
 
 def dosubs(expr):

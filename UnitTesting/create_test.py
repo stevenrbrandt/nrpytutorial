@@ -87,7 +87,8 @@ class TestGlobals(unittest.TestCase):
 {}
         # Something failed
         except AssertionError:
-            pass
+            from traceback import print_exc
+            print_exc()
         # Nothing failed
         else:
             import os
@@ -158,6 +159,9 @@ if __name__ == '__main__':
             open(success_file)
             cmd.delete_existing_files(success_file)
         except IOError:
+            print(success_file)
+            from traceback import print_exc
+            print_exc()
             logging.error(' Test for function ' + function + ' in module ' + module_name +
                           ' failed! Please examine test file.\n'
                           '\n----------------------------------------------------------------------\n'
