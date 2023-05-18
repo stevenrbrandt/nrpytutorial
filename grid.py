@@ -87,7 +87,7 @@ def find_gfnames():
     return sorted(list(glb_gridfcs_map().keys()))
 
 def find_gftype(varname,die=True):
-    assert type(varname) == str
+    assert type(varname) == str or type(varname) == unicode
     var_data = glb_gridfcs_map().get(varname, None)
     if var_data is None:
         if die:
@@ -180,7 +180,12 @@ def _gfaccess(gfarrayname, varname, ijklstring, context):
             elif gftype == "EXTERNAL":
                 return retstring + varname + "("+mask+find_centering(varname)+"_index)"
             elif gftype == "CORE":
-                return retstring + "p." + varname
+                if varname in ["x", "y", "z"]:
+                    return retstring + "p." + varname
+                elif varname == "regrid_error":
+                    return retstring + varname + "(CCC_index)"
+                else:
+                    raise Exception("Unknown CORE variable: "+varname)
             elif gftype == "TILE_TMP":
                 if ijklstring == "":
                     return retstring + varname + "("+mask+find_centering(varname)+"_tmp_index)"

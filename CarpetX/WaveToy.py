@@ -35,9 +35,10 @@ inline double CCTK_DELTA_SPACE(int n) { return cctk_delta_space[n]; }
 
 int main() {
     int VVC_index = 0;
+    int CCC_index = 0;
     int VVC_tmp_index = 0;
     int VVC_layout = 0;
-    GF uuGF, vvGF, anaGF, rhs_uuGF, rhs_vvGF, tmp1v, tmp0v;
+    GF uuGF, vvGF, anaGF, rhs_uuGF, rhs_vvGF, tmp1v, tmp0v, regrid_error;
     PointDesc p;
     double cctk_time = 0;
     double wave_speed = .4;
@@ -100,9 +101,10 @@ def after_main_fn(fn):
         call([test],stdout=fd)
     data = np.genfromtxt(testo,encoding="ascii")
     g = re.match(r'.*\bwave_(.*)\.cc', fn)
-    print("Setting:",g.group(1))
-    globals()[g.group(1)] = [float(f) for f in data]
-    return data
+    if g is not None:
+        print("Setting:",g.group(1))
+        globals()[g.group(1)] = [float(ff) for ff in data]
+        return data
 
 def after_main():
     dn = os.path.join("Cactus","arrangements","TestOne","WaveToyNRPy","src")
@@ -141,6 +143,7 @@ def main():
     cctk_time = par.Cparameters("CCTK_REAL","Cactus",["cctk_time"],0)
     if grid.ET_driver == "CarpetX":
         tmp0, tmp1 = thorn.register_gridfunctions("TILE_TMP",["tmp0v","tmp1v"],centering=centering)
+        regrid_error = thorn.get_regrid_error()
     x,y,z = thorn.get_xyz()
 
     from outputC import lhrh
@@ -182,6 +185,12 @@ def main():
     anal_eqns = [
         lhrh(lhs=ana, rhs=sin(k*x)*sin(k*y)*sin(cctk_time*sq2*wave_speed*k+toff)-uu)
     ]
+
+    if grid.ET_driver == "CarpetX":
+        thorn.add_func("refine",
+            body=[lhrh(lhs=regrid_error, rhs=10/((x-20)**2 + (y-20)**2))],
+            doc="do the regrid",
+            schedule_bin="ODESolvers_EstimateError")
 
     # access a variable with a different centering using interpolation
     # looping cell-centered, access vertex-centered, not vice-versa

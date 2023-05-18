@@ -1,7 +1,8 @@
 # An attempt at a WaveToy using the NRPy+ infrastructure
 # TODO: Parity on grid functions
-
+from __future__ import unicode_literals
 from __future__ import print_function
+from doc_init import doc_init
 import os, re
 from datetime import date
 from sympy import symbols, Function, diff
@@ -106,154 +107,6 @@ SUBDIRS =
 # Source files in this directory
 SRCS ="""
 
-doc_init=r"""
-% *======================================================================*
-%  Cactus Thorn template for ThornGuide documentation
-%  Author: {author}
-%  Date: {date}
-%  $Header$
-%
-%  Thorn documentation in the latex file doc/documentation.tex
-%  will be included in ThornGuides built with the Cactus make system.
-%  The scripts employed by the make system automatically include
-%  pages about variables, parameters and scheduling parsed from the
-%  relevant thorn CCL files.
-%
-%  This template contains guidelines which help to assure that your
-%  documentation will be correctly added to ThornGuides. More
-%  information is available in the Cactus UsersGuide.
-%
-%  Guidelines:
-%   - Do not change anything before the line
-%       % START CACTUS THORNGUIDE",
-%     except for filling in the title, author, date, etc. fields.
-%        - Each of these fields should only be on ONE line.
-%        - Author names should be separated with a \\ or a comma.
-%   - You can define your own macros, but they must appear after
-%     the START CACTUS THORNGUIDE line, and must not redefine standard
-%     latex commands.
-%   - To avoid name clashes with other thorns, 'labels', 'citations',
-%     'references', and 'image' names should conform to the following
-%     convention:
-%       ARRANGEMENT_THORN_LABEL
-%     For example, an image wave.eps in the arrangement CactusWave and
-%     thorn WaveToyC should be renamed to CactusWave_WaveToyC_wave.eps
-%   - Graphics should only be included using the graphicx package.
-%     More specifically, with the "\includegraphics" command.  Do
-%     not specify any graphic file extensions in your .tex file. This
-%     will allow us to create a PDF version of the ThornGuide
-%     via pdflatex.
-%   - References should be included with the latex "\bibitem" command.
-%   - Use \begin{abstract}...\end{abstract} instead of \abstract{...}
-%   - Do not use \appendix, instead include any appendices you need as
-%     standard sections.
-%   - For the benefit of our Perl scripts, and for future extensions,
-%     please use simple latex.
-%
-% *======================================================================*
-%
-% Example of including a graphic image:
-%    \begin{figure}[ht]
-% 	\begin{center}
-%    	   \includegraphics[width=6cm]{MyArrangement_MyThorn_MyFigure}
-% 	\end{center}
-% 	\caption{Illustration of this and that}
-% 	\label{MyArrangement_MyThorn_MyLabel}
-%    \end{figure}
-%
-% Example of using a label:
-%   \label{MyArrangement_MyThorn_MyLabel}
-%
-% Example of a citation:
-%    \cite{MyArrangement_MyThorn_Author99}
-%
-% Example of including a reference
-%   \bibitem{MyArrangement_MyThorn_Author99}
-%   {J. Author, {\em The Title of the Book, Journal, or periodical}, 1 (1999),
-%   1--16. {\tt http://www.nowhere.com/}}
-%
-% *======================================================================*
-
-% If you are using CVS use this line to give version information
-% $Header$
-
-\documentclass{article}
-
-% Use the Cactus ThornGuide style file
-% (Automatically used from Cactus distribution, if you have a
-%  thorn without the Cactus Flesh download this from the Cactus
-%  homepage at www.cactuscode.org)
-\usepackage{../../../../doc/latex/cactus}
-
-\begin{document}
-
-% The author of the documentation
-\author{{author} \textless sbrandt@cct.lsu.edu\textgreater}
-
-% The title of the document (not necessarily the name of the Thorn)
-\title{{thornname}}
-
-% the date your document was last changed, if your document is in CVS,
-% please use:
-%    \date{$ $Date$ $}
-% when using git instead record the commit ID:
-%    \date{\gitrevision{<path-to-your-.git-directory>}}
-\date{{date}}
-
-\maketitle
-
-% Do not delete next line
-% START CACTUS THORNGUIDE
-
-% Add all definitions used in this documentation here
-%   \def\mydef etc
-
-% Add an abstract for this thorn's documentation
-\begin{abstract}
-
-\end{abstract}
-
-% The following sections are suggestive only.
-% Remove them or add your own.
-
-\section{Introduction}
-
-\section{Physical System}
-
-\section{Numerical Implementation}
-
-\section{Using This Thorn}
-
-\subsection{Obtaining This Thorn}
-
-\subsection{Basic Usage}
-
-\subsection{Special Behaviour}
-
-\subsection{Interaction With Other Thorns}
-
-\subsection{Examples}
-
-\subsection{Support and Feedback}
-
-\section{History}
-
-\subsection{Thorn Source Code}
-
-\subsection{Thorn Documentation}
-
-\subsection{Acknowledgements}
-
-
-\begin{thebibliography}{9}
-
-\end{thebibliography}
-
-% Do not delete next line
-% END CACTUS THORNGUIDE
-
-\end{document}
-""".lstrip()
 
 def check_centering(centering):
     if centering is None:
@@ -305,7 +158,7 @@ class CactusSrc:
 class CactusThorn:
 
     def _add_src(self, src):
-        if type(src) == str:
+        if type(src) == str or type(src) == unicode:
             csrc = CactusSrc(src)
         elif type(src) == CactusSrc:
             csrc = src
@@ -362,7 +215,10 @@ class CactusThorn:
                     pass
                 else:
                     writegfs.add(writem)
-                    cent_gf = grid.find_centering(writem)
+                    if writem == "regrid_error":
+                        cent_gf = "CCC"
+                    else:
+                        cent_gf = grid.find_centering(writem)
                     assert cent_gf is not None, f("Centering for grid function '{writem}' is unknown")
                     if centering is None:
                         centering = cent_gf
@@ -408,7 +264,7 @@ class CactusThorn:
         for c in centerings_needed:
             if c not in centerings_used:
                 nums = ",".join(["1" if n in ["c","C"] else "0" for n in c])
-                layout_decls += f(" CCTK_CENTERING_LAYOUT({c},({{ {nums} }})); ")
+                #layout_decls += f(" CCTK_CENTERING_LAYOUT({c},({{ {nums} }})); ")
         tmp_centerings = {}
         for gf in tmps:
             c = grid.find_centering(gf)
@@ -600,6 +456,8 @@ class CactusThorn:
         self.last_src_file = None
         self.params = []
         self.external_modules = {}
+        if self.ET_driver == "CarpetX":
+            self.external_modules["CarpetX"]=1
 
         self.param_ccl = os.path.join(self.thorn_dir, "param.ccl")
         self.interface_ccl = os.path.join(self.thorn_dir, "interface.ccl")
@@ -644,6 +502,8 @@ class CactusThorn:
             self.email = get_user()
 
     def get_full_name(self,gf_name):
+        if gf_name == "regrid_error":
+            return "CarpetX::regrid_error"
         gfthorn = grid.find_gfmodule(gf_name,die=False)
         if gfthorn is None:
             gfthorn = self.thornname
@@ -782,6 +642,8 @@ void {self.thornname}_RegisterVars(CCTK_ARGUMENTS)
                             continue
                         if grid.ET_driver == "Carpet":
                             print(f(u"STORAGE: {gf_group}GF[3]"), file=fd)
+                        elif gf_group == "regrid_error":
+                            pass
                         else:
                             print(f(u"STORAGE: {gf_group}GF[1]"), file=fd)
                 if grid.ET_driver == "Carpet":
@@ -848,7 +710,7 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                     print(" ",src.name,sep="",end="",file=fd)
                 if grid.ET_driver == "Carpet":
                     print(" ","register.cc",file=fd)
-                print(file=fd)
+                print(u'',file=fd)
 
             for src in self.src_files.values():
                 fsrc = os.path.join(self.src_dir, src.name)
@@ -879,7 +741,7 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                     else:
                         assert "Bad value for grid.ET_driver={grid.ET_driver}"
                     for func in src.funcs:
-                        print(file=fd)
+                        print('',file=fd)
                         print(f(u"void {func.name}(CCTK_ARGUMENTS) {{"),file=fd)
                         if gri.ET_driver == "Carpet":
                             print(f(u"  DECLARE_CCTK_ARGUMENTS_{func.name};"),file=fd)
@@ -900,8 +762,8 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                             print("  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED CCC_layout(cctkGH, {1,1,1});",file=fd)
                         for ii in range(3):
                             print(f(u"  const CCTK_REAL invdx{ii} CCTK_ATTRIBUTE_UNUSED = 1/CCTK_DELTA_SPACE({ii});"),file=fd)
-                        print(f(u"  {func.body}"),file=fd)
-                        print(f(u'}}'),file=fd)
+                        print(f("  {func.body}"),file=fd)
+                        print(f('}}'),file=fd)
 
             # Create the thorn_list entry if needed
             entry = f("{self.arrangement}/{self.thornname}")
@@ -922,6 +784,10 @@ schedule {self.thornname}_RegisterVars in MoL_Register
         else:
             assert "Bad value for grid.ET_driver={grid.ET_driver}"
         return x,y,z
+
+    def get_regrid_error(self):
+        assert self.ET_driver == grid.ET_driver and self.ET_driver == "CarpetX"
+        return self.register_gridfunctions("CORE", ["regrid_error"])
 
     def update_thornlist(self, entry, thorn_list):
         if not thorn_list.startswith("/"):
