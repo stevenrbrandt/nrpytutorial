@@ -26,7 +26,7 @@ def herell(usecc,*args):
         line = frame.f_lineno
     else:
         fname = os.path.realpath(frame.filename)
-        line = frame.linenum
+        line = frame.lineno
     if fname.startswith(_here):
         fname = fname[len(_here)+1:]
     assert type(fname) == str
