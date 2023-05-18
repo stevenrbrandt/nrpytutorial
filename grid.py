@@ -202,7 +202,7 @@ def _gfaccess(gfarrayname, varname, ijklstring, context):
                 else:
                     return retstring + varname + "GF("+mask+find_centering(varname)+"_layout, p.I"+ijklstring+")"
         else:
-            retstring += varname + "[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
+            retstring += varname + "GF[CCTK_GFINDEX"+str(DIM)+"D(cctkGH, "
     else:
         print("grid::GridFuncMemAccess = "+par.parval_from_str("GridFuncMemAccess")+" not supported")
         sys.exit(1)
