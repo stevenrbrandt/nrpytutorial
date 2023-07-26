@@ -726,6 +726,9 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                         assert "Bad value for gri.ET_driver={gri.ET_driver}"
                     for func in src.funcs:
                         print('',file=fd)
+                        if gri.ET_driver == "CarpetX":
+                            print("  using CCTK_BOOLVEC = simdl<CCTK_REAL>;",file=fd)
+                            print("  using CCTK_REALVEC = simd<CCTK_REAL>;",file=fd)
                         print(f(u"void {func.name}(CCTK_ARGUMENTS) {{"),file=fd)
                         if gri.ET_driver == "Carpet":
                             print(f(u"  DECLARE_CCTK_ARGUMENTS_{func.name};"),file=fd)
@@ -733,8 +736,6 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                             print(f(u"  DECLARE_CCTK_ARGUMENTSX_{func.name};"),file=fd)
                         print("  DECLARE_CCTK_PARAMETERS;",file=fd)
                         if gri.ET_driver == "CarpetX":
-                            print("  using CCTK_BOOLVEC = simdl<CCTK_REAL>;",file=fd)
-                            print("  using CCTK_REALVEC = simd<CCTK_REAL>;",file=fd)
                             print("  constexpr std::size_t CCTK_VECSIZE CCTK_ATTRIBUTE_UNUSED = std::tuple_size_v<CCTK_REALVEC>;",file=fd)
                             print("  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED VVV_layout(cctkGH, {0,0,0});",file=fd)
                             print("  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_layout(cctkGH, {0,0,1});",file=fd)

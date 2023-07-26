@@ -8,6 +8,9 @@ import NRPy_param_funcs as par
 from subprocess import call
 import numpy as np
 from fstr import f
+from outputC import lhrh
+
+par.set_parval_from_str("outputC::PRECISION", "CCTK_REALVEC")
 
 pre_kernel = """
 #include <iostream>
@@ -132,7 +135,7 @@ def main():
     z0 = thorn.declare_param('z0',default=0,vmin=-100,vmax=100,doc="The z pos of the wave")
     zero = thorn.declare_param('zero',default=0,vmin=0,vmax=0,doc="zero")
 
-    centering='CVV'
+    centering='VVC'
 
     # AUXEVOL needed for the evo, can be freed after evaluating rhs (1 time level)
     # AUX uu_rhs (1 time level)
@@ -146,7 +149,6 @@ def main():
         regrid_error = thorn.get_regrid_error()
     x,y,z = thorn.get_xyz()
 
-    from outputC import lhrh
     import indexedexp as ixp
     import NRPy_param_funcs as par
 

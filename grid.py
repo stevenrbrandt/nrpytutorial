@@ -179,10 +179,12 @@ def _gfaccess(gfarrayname, varname, ijklstring, context):
             elif gftype == "EXTERNAL":
                 return retstring + varname + "(" + mask + find_centering(varname) + "_index)"
             elif gftype == "CORE":
-                if varname in ["x", "y", "z"]:
+                if varname in ["y", "z"]:
                     return retstring + "p." + varname
+                elif varname == "x":
+                    return retstring + "p.x + Arith::iota<CCTK_REALVEC>() * p.dx"
                 elif varname == "regrid_error":
-                    return retstring + varname + "(CCC_index)"
+                    return retstring + varname + "("+mask+"CCC_index)"
                 else:
                     raise Exception("Unknown CORE variable: " + varname)
             elif gftype == "TILE_TMP":
