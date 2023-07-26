@@ -17,20 +17,29 @@ pre_kernel = """
 #include <cmath>
 
 const int nx = 10, ny = 10;
+int mask;
 
 using std::cos;
 using std::sin;
 
+typedef double CCTK_REALVEC;
+
 struct PointDesc {
     static constexpr int DI[3]={0,0,0};
-    double x,y;
+    double x,y,dx=.01,dy=.02;
     int I=0;
 };
+
+namespace Arith {
+template<typename T>
+double iota() { return T(0); }
+}
 
 struct GF {
     double data;
     double& operator()(int n) { return data; }
     double& operator()(int n,int p) { return data; }
+    double& operator()(int n,int l,int p) { return data; }
 };
 
 double cctk_delta_space[3] = {.5, .4};
