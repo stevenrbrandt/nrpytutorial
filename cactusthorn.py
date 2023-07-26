@@ -58,8 +58,7 @@ class sortedset(set):
         li = sorted(li)
         return li.__iter__()
 
-# FIXME: "name" is an unused argument:
-def check_eqns(name, eqns):
+def check_eqns(eqns):
     forgotten = sortedset()
     scalar_reads = sortedset()
     scalar_writes = sortedset()
@@ -166,7 +165,7 @@ class CactusThorn:
 
     def add_func(self, name, body, schedule_bin, doc, where='interior', centering=None, sync=None):
         body = flatten(body)
-        check_eqns(name, body)
+        check_eqns(body)
         self.sync[name] = sync
         check_centering(centering)
         if gri.ET_driver == "Carpet":
@@ -255,11 +254,6 @@ class CactusThorn:
         centerings_needed = sortedset()
         centerings_needed.add(centering)
         layout_decls = ""
-        # FIXME: dead code
-        # for c in centerings_needed:
-        #     if c not in centerings_used:
-        #         nums = ",".join(["1" if n in ["c","C"] else "0" for n in c])
-        #         #layout_decls += f(" CCTK_CENTERING_LAYOUT({c},({{ {nums} }})); ")
         tmp_centerings = {}
         for gf in tmps:
             c = gri.find_centering(gf)
@@ -401,8 +395,8 @@ class CactusThorn:
             body = f("""
   {decl}
   {checkbounds}
-  gri.loop_{wtag}_device<{centering}_centered[0], {centering}_centered[1], {centering}_centered[2], CCTK_VECSIZE>(
-  gri.nghostzones, [=] CCTK_DEVICE (
+  grid.loop_{wtag}_device<{centering}_centered[0], {centering}_centered[1], {centering}_centered[2], CCTK_VECSIZE>(
+  grid.nghostzones, [=] CCTK_DEVICE (
   const PointDesc &p) CCTK_ATTRIBUTE_ALWAYS_INLINE {{
   const GF3D5index CCTK_ATTRIBUTE_UNUSED {centering}_index({centering}_layout, p.I);
   const GF3D5index CCTK_ATTRIBUTE_UNUSED {centering}_tmp_index({centering}_tmp_layout, p.I);
@@ -679,12 +673,6 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                             if writegf in gri.find_gfnames():
                                 full_name = self.get_full_name(writegf)
                                 print(f(u"    WRITES: {full_name}({src.where})"),file=fd)
-                        # FIXME: dead code
-                        # if src.where == "interior":
-                        #     for writegf in func.writegfs:
-                        #         if writegf in gri.find_gfnames():
-                        #             full_name = self.get_full_group_name(writegf)
-                        #             pass #print(f(u"    SYNC: {full_name}"),file=fd)
                         sync = self.sync.get(func.name, None)
                         if sync is not None:
                             print(f(u"    SYNC: {sync}"), file=fd)
@@ -738,6 +726,9 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                         assert "Bad value for gri.ET_driver={gri.ET_driver}"
                     for func in src.funcs:
                         print('',file=fd)
+                        if gri.ET_driver == "CarpetX":
+                            print("  using CCTK_BOOLVEC = simdl<CCTK_REAL>;",file=fd)
+                            print("  using CCTK_REALVEC = simd<CCTK_REAL>;",file=fd)
                         print(f(u"void {func.name}(CCTK_ARGUMENTS) {{"),file=fd)
                         if gri.ET_driver == "Carpet":
                             print(f(u"  DECLARE_CCTK_ARGUMENTS_{func.name};"),file=fd)
@@ -745,8 +736,6 @@ schedule {self.thornname}_RegisterVars in MoL_Register
                             print(f(u"  DECLARE_CCTK_ARGUMENTSX_{func.name};"),file=fd)
                         print("  DECLARE_CCTK_PARAMETERS;",file=fd)
                         if gri.ET_driver == "CarpetX":
-                            print("  using CCTK_BOOLVEC = simdl<CCTK_REAL>;",file=fd)
-                            print("  using CCTK_REALVEC = simd<CCTK_REAL>;",file=fd)
                             print("  constexpr std::size_t CCTK_VECSIZE CCTK_ATTRIBUTE_UNUSED = std::tuple_size_v<CCTK_REALVEC>;",file=fd)
                             print("  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED VVV_layout(cctkGH, {0,0,0});",file=fd)
                             print("  const Loop::GF3D5layout CCTK_ATTRIBUTE_UNUSED VVC_layout(cctkGH, {0,0,1});",file=fd)

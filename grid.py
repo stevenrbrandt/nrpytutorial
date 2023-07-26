@@ -31,9 +31,6 @@ def glb_gridfcs_map():
     return m
 
 
-# Grids may have centerings. These will be C=cell-centered or V=vertex centered, with either one C or V per dimension
-gf_centering = {}
-
 # griddata_struct contains data needed by each grid
 glb_griddata = namedtuple('griddata', 'module string')
 glb_griddata_struct_list = []
@@ -182,10 +179,12 @@ def _gfaccess(gfarrayname, varname, ijklstring, context):
             elif gftype == "EXTERNAL":
                 return retstring + varname + "(" + mask + find_centering(varname) + "_index)"
             elif gftype == "CORE":
-                if varname in ["x", "y", "z"]:
+                if varname in ["y", "z"]:
                     return retstring + "p." + varname
+                elif varname == "x":
+                    return retstring + "p.x + Arith::iota<CCTK_REALVEC>() * p.dx"
                 elif varname == "regrid_error":
-                    return retstring + varname + "(CCC_index)"
+                    return retstring + varname + "("+mask+"CCC_index)"
                 else:
                     raise Exception("Unknown CORE variable: " + varname)
             elif gftype == "TILE_TMP":
@@ -259,8 +258,6 @@ def find_centering(gf_name):
 
 def register_gridfunctions(gf_type, gf_names, rank=0, is_indexed=False, DIM=3, f_infinity=None, wavespeed=None,
                            centering=None, external_module=None):
-    global gf_centering
-
     # Step 0: Sanity check
     if (rank > 0 and not is_indexed) or (rank == 0 and is_indexed):
         print(
@@ -279,9 +276,6 @@ def register_gridfunctions(gf_type, gf_names, rank=0, is_indexed=False, DIM=3, f
     if not isinstance(gf_names, list):
         gf_namestmp = [gf_names]
         gf_names = gf_namestmp
-
-    for gf_name in gf_names:
-        gf_centering[gf_name] = centering
 
     f_inf = []
     if f_infinity is None:

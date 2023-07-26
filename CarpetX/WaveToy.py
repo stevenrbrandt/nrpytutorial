@@ -8,6 +8,9 @@ import NRPy_param_funcs as par
 from subprocess import call
 import numpy as np
 from fstr import f
+from outputC import lhrh
+
+par.set_parval_from_str("outputC::PRECISION", "CCTK_REALVEC")
 
 pre_kernel = """
 #include <iostream>
@@ -146,7 +149,6 @@ def main():
         regrid_error = thorn.get_regrid_error()
     x,y,z = thorn.get_xyz()
 
-    from outputC import lhrh
     import indexedexp as ixp
     import NRPy_param_funcs as par
 
